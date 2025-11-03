@@ -6,8 +6,7 @@
 
 ## 📘 Visão Geral
 
-O **CineLog** é uma aplicação backend para gerenciar **mídias (filmes, séries, episódios, temporadas)** e **entradas de exibição (Watch Entries)**, com suporte a **usuários, gêneros e créditos**.  
-Seu design visa ser **plug-and-play**, servindo de **base de referência arquitetural** para aplicações B2C e sistemas distribuídos modernos.
+O **CineLog** é uma aplicação backend para gerenciar **mídias (filmes, séries, episódios, temporadas)** e **entradas de exibição (Watch Entries)**, com suporte a **usuários, gêneros e créditos**.
 
 ---
 
