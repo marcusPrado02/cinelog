@@ -169,7 +169,7 @@ docker-compose up -d
 
 ---
 
-## 📊 Observabilidade
+## 📊 Observabilidade (Planejada)
 
 - **OpenTelemetry auto-instrumentation** para Spring + JDBC
 - **Logs estruturados** (JSON com traceId/spanId)
