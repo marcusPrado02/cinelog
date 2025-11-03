@@ -32,7 +32,7 @@ com.cine.cinelog
 │   │   ├── persistence        # JPA Entities e RepositoryAdapters
 │   │   ├── mapper             # MapStruct mappers (Entity ↔ Domain ↔ DTO)
 │   │   ├── web                # Controllers + DTOs
-│   │   └── spring             # JPA repositories e beans de infraestrutura
+│   │   └── repository         # JPA repositories e beans de infraestrutura
 │
 ├── shared                     # Cross-cutting (OpenAPI, error handler, tracing)
 └── docker                     # Infraestrutura e docker-compose
