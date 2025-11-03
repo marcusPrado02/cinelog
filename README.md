@@ -9,6 +9,88 @@
 O **CineLog** é uma aplicação backend para gerenciar **mídias (filmes, séries, episódios, temporadas)** e **entradas de exibição (Watch Entries)**, com suporte a **usuários, gêneros e créditos**.
 
 ---
+## Modelo de dados
+```mermaid
+    erDiagram
+    users ||--o{ watch_entry : "has"
+    media ||--o{ watch_entry : "has"
+    media ||--o{ media_genres : "has"
+    genres ||--o{ media_genres : "classifies"
+    media ||--o{ credits : "has"
+    people ||--o{ credits : "participates"
+    media ||--o{ seasons : "optional"
+    seasons ||--o{ episodes : "optional"
+    episodes ||--o{ watch_entry : "optional per-episode"
+    users {
+      bigint id PK
+      varchar name
+      varchar email UK
+      datetime created_at
+    }
+    media {
+      bigint id PK
+      varchar title
+      enum type
+      year release_year
+      varchar original_title
+      varchar original_language
+      varchar poster_url
+      varchar backdrop_url
+      text overview
+      datetime created_at
+      datetime updated_at
+    }
+    genres {
+      smallint id PK
+      varchar name UK
+    }
+    media_genres {
+      bigint media_id FK,PK
+      smallint genre_id FK,PK
+    }
+    people {
+      bigint id PK
+      varchar name
+      date birth_date
+      varchar place_of_birth
+    }
+    credits {
+      bigint id PK
+      bigint media_id FK
+      bigint person_id FK
+      enum role
+      varchar character_name
+      smallint order_index
+    }
+    seasons {
+      bigint id PK
+      bigint media_id FK
+      int season_number
+      varchar name
+      date air_date
+    }
+    episodes {
+      bigint id PK
+      bigint season_id FK
+      int episode_number
+      varchar name
+      date air_date
+    }
+    watch_entry {
+      bigint id PK
+      bigint user_id FK
+      bigint media_id FK
+      bigint episode_id FK
+      tinyint rating
+      text comment
+      date watched_at
+      datetime created_at
+      datetime updated_at
+    }
+
+```
+
+
 
 ## 🧩 Arquitetura
 
