@@ -1,0 +1,22 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: cinelog-mysql
+    command: ["--default-authentication-plugin=mysql_native_password"]
+    environment:
+      MYSQL_DATABASE: cinelog
+      MYSQL_USER: cinelog
+      MYSQL_PASSWORD: cinelog
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "cinelog", "-pcinelog"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dbdata:

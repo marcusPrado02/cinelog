@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <!-- ===== MEDIA ===== -->
+
+    <!-- Drop antigos (id únicos) -->
+    <changeSet id="28102025195700-01-drop-trg_media_ins" author="maps">
+        <sql>DROP TRIGGER IF EXISTS trg_media_ins;</sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-02-create-trg_media_ins" author="maps">
+        <sql splitStatements="false" stripComments="true">
+      CREATE TRIGGER trg_media_ins
+      AFTER INSERT ON media
+      FOR EACH ROW
+      BEGIN
+        INSERT INTO audit.change_log(
+          table_name, pk_value, op, old_data, new_data,
+          actor_user_id, actor_email, source_app, app_version,
+          trace_id, span_id, client_ip, user_agent, tx_id, occurred_at
+        )
+        VALUES (
+          'media', CAST(NEW.id AS CHAR), 'INSERT', NULL,
+          JSON_OBJECT(
+            'id', NEW.id, 'title', NEW.title, 'type', NEW.type, 'release_year', NEW.release_year,
+            'original_title', NEW.original_title, 'original_language', NEW.original_language,
+            'poster_url', NEW.poster_url, 'backdrop_url', NEW.backdrop_url, 'overview', NEW.overview,
+            'created_at', NEW.created_at, 'updated_at', NEW.updated_at
+          ),
+          @app_user_id, @app_user_email, @source_app, @app_version,
+          @trace_id, @span_id, @client_ip, @user_agent, @tx_id, NOW(6)
+        );
+      END
+        </sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-03-drop-trg_media_upd" author="maps">
+        <sql>DROP TRIGGER IF EXISTS trg_media_upd;</sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-04-create-trg_media_upd" author="maps">
+        <sql splitStatements="false" stripComments="true">
+    CREATE TRIGGER trg_media_upd
+    AFTER UPDATE ON media
+    FOR EACH ROW
+    BEGIN
+      INSERT INTO audit.change_log(
+        table_name, pk_value, op, old_data, new_data,
+        actor_user_id, actor_email, source_app, app_version,
+        trace_id, span_id, client_ip, user_agent, tx_id, occurred_at
+      )
+      VALUES (
+        'media', CAST(NEW.id AS CHAR), 'UPDATE',
+        JSON_OBJECT(
+          'id', OLD.id, 'title', OLD.title, 'type', OLD.type, 'release_year', OLD.release_year,
+          'original_title', OLD.original_title, 'original_language', OLD.original_language,
+          'poster_url', OLD.poster_url, 'backdrop_url', OLD.backdrop_url, 'overview', OLD.overview,
+          'created_at', OLD.created_at, 'updated_at', OLD.updated_at
+        ),
+        JSON_OBJECT(
+          'id', NEW.id, 'title', NEW.title, 'type', NEW.type, 'release_year', NEW.release_year,
+          'original_title', NEW.original_title, 'original_language', NEW.original_language,
+          'poster_url', NEW.poster_url, 'backdrop_url', NEW.backdrop_url, 'overview', NEW.overview,
+          'created_at', NEW.created_at, 'updated_at', NEW.updated_at
+        ),
+        @app_user_id, @app_user_email, @source_app, @app_version,
+        @trace_id, @span_id, @client_ip, @user_agent, @tx_id, NOW(6)
+      );
+    END
+        </sql>
+    </changeSet>
+
+
+    <changeSet id="28102025195700-05-drop-trg_media_del" author="maps">
+        <sql>DROP TRIGGER IF EXISTS trg_media_del;</sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-06-create-trg_media_del" author="maps">
+        <sql splitStatements="false" stripComments="true">
+      CREATE TRIGGER trg_media_del
+      AFTER DELETE ON media
+      FOR EACH ROW
+      BEGIN
+        INSERT INTO audit.change_log(
+          table_name, pk_value, op, old_data, new_data,
+          actor_user_id, actor_email, source_app, app_version,
+          trace_id, span_id, client_ip, user_agent, tx_id, occurred_at
+        )
+        VALUES (
+          'media', CAST(OLD.id AS CHAR), 'DELETE',
+          JSON_OBJECT(
+            'id', OLD.id, 'title', OLD.title, 'type', OLD.type, 'release_year', OLD.release_year,
+            'original_title', OLD.original_title, 'original_language', OLD.original_language,
+            'poster_url', OLD.poster_url, 'backdrop_url', OLD.backdrop_url, 'overview', OLD.overview,
+            'created_at', OLD.created_at, 'updated_at', OLD.updated_at
+          ),
+          NULL,
+          @app_user_id, @app_user_email, @source_app, @app_version,
+          @trace_id, @span_id, @client_ip, @user_agent, @tx_id, NOW(6)
+        );
+      END
+        </sql>
+    </changeSet>
+
+    <!-- ===== WATCH_ENTRY ===== -->
+
+    <changeSet id="28102025195700-07-drop-trg_we_ins" author="maps">
+        <sql>DROP TRIGGER IF EXISTS trg_watch_entry_ins;</sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-08-create-trg_we_ins" author="maps">
+        <sql splitStatements="false" stripComments="true">
+      CREATE TRIGGER trg_watch_entry_ins
+      AFTER INSERT ON watch_entry
+      FOR EACH ROW
+      BEGIN
+        INSERT INTO audit.change_log(
+          table_name, pk_value, op, old_data, new_data,
+          actor_user_id, actor_email, source_app, app_version,
+          trace_id, span_id, client_ip, user_agent, tx_id, occurred_at
+        )
+        VALUES (
+          'watch_entry', CAST(NEW.id AS CHAR), 'INSERT', NULL,
+          JSON_OBJECT(
+            'id', NEW.id, 'user_id', NEW.user_id, 'media_id', NEW.media_id, 'episode_id', NEW.episode_id,
+            'rating', NEW.rating, 'comment', NEW.comment, 'watched_at', NEW.watched_at,
+            'created_at', NEW.created_at, 'updated_at', NEW.updated_at
+          ),
+          @app_user_id, @app_user_email, @source_app, @app_version,
+          @trace_id, @span_id, @client_ip, @user_agent, @tx_id, NOW(6)
+        );
+      END
+        </sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-09-drop-trg_we_upd" author="maps">
+        <sql>DROP TRIGGER IF EXISTS trg_watch_entry_upd;</sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-10-create-trg_we_upd" author="maps">
+        <sql splitStatements="false" stripComments="true">
+      CREATE TRIGGER trg_watch_entry_upd
+      AFTER UPDATE ON watch_entry
+      FOR EACH ROW
+      BEGIN
+        INSERT INTO audit.change_log(
+          table_name, pk_value, op, old_data, new_data,
+          actor_user_id, actor_email, source_app, app_version,
+          trace_id, span_id, client_ip, user_agent, tx_id, occurred_at
+        )
+        VALUES (
+          'watch_entry', CAST(NEW.id AS CHAR), 'UPDATE',
+          JSON_OBJECT(
+            'id', OLD.id, 'user_id', OLD.user_id, 'media_id', OLD.media_id, 'episode_id', OLD.episode_id,
+            'rating', OLD.rating, 'comment', OLD.comment, 'watched_at', OLD.watched_at,
+            'created_at', OLD.created_at, 'updated_at', OLD.updated_at
+          ),
+          JSON_OBJECT(
+            'id', NEW.id, 'user_id', NEW.user_id, 'media_id', NEW.media_id, 'episode_id', NEW.episode_id,
+            'rating', NEW.rating, 'comment', NEW.comment, 'watched_at', NEW.watched_at,
+            'created_at', NEW.created_at, 'updated_at', NEW.updated_at
+          ),
+          @app_user_id, @app_user_email, @source_app, @app_version,
+          @trace_id, @span_id, @client_ip, @user_agent, @tx_id, NOW(6)
+        );
+      END
+        </sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-11-drop-trg_we_del" author="maps">
+        <sql>DROP TRIGGER IF EXISTS trg_watch_entry_del;</sql>
+    </changeSet>
+
+    <changeSet id="28102025195700-12-create-trg_we_del" author="maps">
+        <sql splitStatements="false" stripComments="true">
+      CREATE TRIGGER trg_watch_entry_del
+      AFTER DELETE ON watch_entry
+      FOR EACH ROW
+      BEGIN
+        INSERT INTO audit.change_log(
+          table_name, pk_value, op, old_data, new_data,
+          actor_user_id, actor_email, source_app, app_version,
+          trace_id, span_id, client_ip, user_agent, tx_id, occurred_at
+        )
+        VALUES (
+          'watch_entry', CAST(OLD.id AS CHAR), 'DELETE',
+          JSON_OBJECT(
+            'id', OLD.id, 'user_id', OLD.user_id, 'media_id', OLD.media_id, 'episode_id', OLD.episode_id,
+            'rating', OLD.rating, 'comment', OLD.comment, 'watched_at', OLD.watched_at,
+            'created_at', OLD.created_at, 'updated_at', OLD.updated_at
+          ),
+          NULL,
+          @app_user_id, @app_user_email, @source_app, @app_version,
+          @trace_id, @span_id, @client_ip, @user_agent, @tx_id, NOW(6)
+        );
+      END
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
