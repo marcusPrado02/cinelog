@@ -47,13 +47,20 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain chain) throws ServletException, IOException {
 
+        String path = request.getRequestURI();
+
+        // Ignore Prometheus e Actuator Health
+        if (path.startsWith("/actuator/prometheus")
+                || path.startsWith("/actuator/health")) {
+            chain.doFilter(request, response);
+            return;
+        }
         // request id para correlacionar logs do mesmo ciclo
         String requestId = Optional.ofNullable(MDC.get("request_id"))
                 .orElse(UUID.randomUUID().toString());
         MDC.put("request_id", requestId);
 
         String method = request.getMethod();
-        String path = request.getRequestURI();
         String query = request.getQueryString();
         String ua = mask(piSafe(request.getHeader("User-Agent")));
         String ip = clientIp(request);

@@ -67,7 +67,7 @@ management:
   tracing:
     sampling:
       probability: 1.0
-    enabled: true
+    enabled: false
   metrics:
     tags:
       application: cinelog

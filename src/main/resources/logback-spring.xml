@@ -1,41 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-  <springProperty scope="context" name="APP_NAME" source="spring.application.name"
-    defaultValue="cinelog" />
-  <property name="LOG_PATTERN"
-    value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n" />
+  <!-- Console síncrono -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
 
-  <appender name="CONSOLE_JSON"
-    class="net.logstash.logback.appender.LoggingEventAsyncDisruptorAppender">
-    <appender class="net.logstash.logback.appender.LogstashConsoleAppender">
-      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-        <customFields>{"app":"${APP_NAME}"}</customFields>
-        <provider class="net.logstash.logback.composite.LoggingEventJsonProviders">
-          <timestamp />
-          <version />
-          <message />
-          <loggerName />
-          <threadName />
-          <logLevel />
-          <stackTrace />
-          <mdc />
-          <arguments />
-          <!-- Inclui campos de tracing do Micrometer -->
-          <provider class="net.logstash.logback.composite.loggingevent.MdcJsonProvider">
-            <includeMdcKeyName>traceId</includeMdcKeyName>
-            <includeMdcKeyName>spanId</includeMdcKeyName>
-            <includeMdcKeyName>txId</includeMdcKeyName>
-            <includeMdcKeyName>userId</includeMdcKeyName>
-          </provider>
-        </provider>
-      </encoder>
-    </appender>
+  <!-- Wrapper assíncrono (NÃO tem <encoder>) -->
+  <appender name="ASYNC" class="net.logstash.logback.appender.LoggingEventAsyncDisruptorAppender">
+    <appender-ref ref="CONSOLE" />
   </appender>
 
   <root level="INFO">
-    <appender-ref ref="CONSOLE_JSON" />
+    <appender-ref ref="ASYNC" />
   </root>
-
-  <!-- Reduz ruído -->
-  <logger name="org.hibernate.SQL" level="WARN" />
-  <logger name="org.springframework" level="INFO" />
 </configuration>

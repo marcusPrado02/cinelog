@@ -54,7 +54,7 @@ public class UseCaseLoggingAspect {
         String traceId = MDC.get("trace_id");
         String spanId = MDC.get("span_id");
 
-        log.info("▶️ usecase_start traceId={} spanId={} method={} args={}",
+        log.info(" usecase_start traceId={} spanId={} method={} args={}",
                 traceId, spanId, signature, safeArgs(proceedingJoinPoint.getArgs()));
 
         try {

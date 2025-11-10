@@ -36,17 +36,17 @@ public class WebLoggingAspect {
         String args = LogSanitizer.sanitize(java.util.Arrays.toString(proceedingJoinPoint.getArgs()));
 
         long start = System.nanoTime();
-        log.info("🌐 web_start traceId={} spanId={} endpoint={} args={}", traceId, spanId, signature, args);
+        log.info(" web_start traceId={} spanId={} endpoint={} args={}", traceId, spanId, signature, args);
 
         try {
             Object result = proceedingJoinPoint.proceed();
             long tookMs = (System.nanoTime() - start) / 1_000_000;
-            log.info("🌐 web_success traceId={} spanId={} endpoint={} tookMs={} result={}",
+            log.info(" web_success traceId={} spanId={} endpoint={} tookMs={} result={}",
                     traceId, spanId, signature, tookMs, LogSanitizer.sanitize(String.valueOf(result)));
             return result;
         } catch (Exception e) {
             long tookMs = (System.nanoTime() - start) / 1_000_000;
-            log.error("🌐 web_error traceId={} spanId={} endpoint={} tookMs={} errorClass={} msg={}",
+            log.error(" web_error traceId={} spanId={} endpoint={} tookMs={} errorClass={} msg={}",
                     traceId, spanId, signature, tookMs, e.getClass().getSimpleName(), e.getMessage(), e);
             throw e;
         }
