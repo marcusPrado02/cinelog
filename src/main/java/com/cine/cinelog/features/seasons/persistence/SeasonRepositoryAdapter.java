@@ -5,12 +5,12 @@ import com.cine.cinelog.core.domain.model.Season;
 import com.cine.cinelog.features.seasons.mapper.SeasonMapper;
 import com.cine.cinelog.features.seasons.repository.SeasonJpaRepository;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 public class SeasonRepositoryAdapter implements SeasonRepositoryPort {
 
     private final SeasonJpaRepository jpa;

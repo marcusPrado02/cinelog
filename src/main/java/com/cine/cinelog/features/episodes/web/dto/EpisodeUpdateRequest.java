@@ -4,7 +4,7 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
 public record EpisodeUpdateRequest(
-        @NotNull @Min(1) Integer episodeNumber,
-        @Size(max = 200) String name,
-        LocalDate airDate) {
+                @NotNull @Min(1) Integer episodeNumber,
+                @Size(max = 200) String name,
+                LocalDate airDate) {
 }

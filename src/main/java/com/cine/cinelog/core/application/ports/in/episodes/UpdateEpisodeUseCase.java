@@ -9,5 +9,12 @@ import com.cine.cinelog.core.domain.model.Episode;
  * Retorna o episódio atualizado.
  */
 public interface UpdateEpisodeUseCase {
+    /**
+     * Atualiza um episódio existente no sistema.
+     *
+     * @param id      O ID do episódio a ser atualizado.
+     * @param episode O objeto Episode com os novos dados do episódio.
+     * @return O episódio atualizado.
+     */
     Episode execute(Long id, Episode episode);
 }

@@ -5,20 +5,19 @@ import java.time.LocalDateTime;
 
 import com.cine.cinelog.core.domain.enums.MediaType;
 
+/**
+ * Entidade JPA que representa a tabela "media" no banco de dados.
+ *
+ * Esta classe mapeia os campos de persistência (colunas) e cuida de
+ * informações de auditoria simples (createdAt, updatedAt) através dos
+ * callbacks @PrePersist/@PreUpdate.
+ *
+ * Observação: a conversão entre `MediaEntity` e o modelo de domínio
+ * `Media` é feita pelo mapper `MediaEntityMapper`.
+ */
 @Entity
 @Table(name = "media")
 public class MediaEntity {
-
-    /**
-     * Entidade JPA que representa a tabela "media" no banco de dados.
-     *
-     * Esta classe mapeia os campos de persistência (colunas) e cuida de
-     * informações de auditoria simples (createdAt, updatedAt) através dos
-     * callbacks @PrePersist/@PreUpdate.
-     *
-     * Observação: a conversão entre `MediaEntity` e o modelo de domínio
-     * `Media` é feita pelo mapper `MediaEntityMapper`.
-     */
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

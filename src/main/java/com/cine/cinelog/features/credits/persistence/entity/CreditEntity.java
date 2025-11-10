@@ -25,7 +25,6 @@ public class CreditEntity {
     @Column(name = "order_index")
     private Short orderIndex;
 
-    // getters/setters
     public Long getId() {
         return id;
     }

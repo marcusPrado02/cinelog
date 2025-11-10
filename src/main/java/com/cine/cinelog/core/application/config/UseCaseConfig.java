@@ -1,5 +1,6 @@
 package com.cine.cinelog.core.application.config;
 
+import org.hibernate.sql.Update;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -38,6 +39,11 @@ import com.cine.cinelog.core.application.ports.in.user.DeleteUserUseCase;
 import com.cine.cinelog.core.application.ports.in.user.GetUserUseCase;
 import com.cine.cinelog.core.application.ports.in.user.ListUsersUseCase;
 import com.cine.cinelog.core.application.ports.in.user.UpdateUserUseCase;
+import com.cine.cinelog.core.application.ports.in.watchentry.CreateWatchEntryUseCase;
+import com.cine.cinelog.core.application.ports.in.watchentry.DeleteWatchEntryUseCase;
+import com.cine.cinelog.core.application.ports.in.watchentry.GetWatchEntryUseCase;
+import com.cine.cinelog.core.application.ports.in.watchentry.ListWatchEntriesUseCase;
+import com.cine.cinelog.core.application.ports.in.watchentry.UpdateWatchEntryUseCase;
 import com.cine.cinelog.core.application.ports.out.CreditRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.EpisodeRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.GenreRepositoryPort;
@@ -45,6 +51,7 @@ import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.PersonRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.SeasonRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.UserRepositoryPort;
+import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
 import com.cine.cinelog.core.application.usecase.credits.CreateCreditService;
 import com.cine.cinelog.core.application.usecase.credits.DeleteCreditService;
 import com.cine.cinelog.core.application.usecase.credits.GetCreditService;
@@ -80,6 +87,17 @@ import com.cine.cinelog.core.application.usecase.user.DeleteUserService;
 import com.cine.cinelog.core.application.usecase.user.GetUserService;
 import com.cine.cinelog.core.application.usecase.user.ListUsersService;
 import com.cine.cinelog.core.application.usecase.user.UpdateUserService;
+import com.cine.cinelog.core.application.usecase.watchentry.GetWatchEntryService;
+import com.cine.cinelog.core.application.usecase.watchentry.ListWatchEntriesService;
+import com.cine.cinelog.core.application.usecase.watchentry.CreateWatchEntryService;
+import com.cine.cinelog.core.application.usecase.watchentry.DeleteWatchEntryService;
+import com.cine.cinelog.core.application.usecase.watchentry.UpdateWatchEntryService;
+import com.cine.cinelog.core.domain.policy.MediaPolicy;
+import com.cine.cinelog.core.domain.policy.RatingPolicy;
+import com.cine.cinelog.core.domain.policy.WatchEntryPolicy;
+import com.cine.cinelog.core.domain.policy.impl.DefaultMediaPolicy;
+import com.cine.cinelog.core.domain.policy.impl.DefaultRatingPolicy;
+import com.cine.cinelog.core.domain.policy.impl.DefaultWatchEntryPolicy;
 
 /**
  * Configuração dos casos de uso da aplicação.
@@ -89,12 +107,30 @@ import com.cine.cinelog.core.application.usecase.user.UpdateUserService;
  */
 @Configuration
 public class UseCaseConfig {
-    // ===== MEDIAS =====
-    CreateMediaUseCase createMediaUseCase(MediaRepositoryPort repo) {
-        return new CreateMediaService(repo);
+    // ===== Policies (beans) =====
+    @Bean
+    public MediaPolicy mediaPolicy() {
+        return new DefaultMediaPolicy(1888, 1);
     }
 
-    UpdateMediaUseCase updateMediaUseCase(MediaRepositoryPort repo) {
+    @Bean
+    public RatingPolicy ratingPolicy() {
+        // rating 0..10 e permitir avaliação até 2 dias de diferença do watchedAt
+        return new DefaultRatingPolicy(0, 10, 2);
+    }
+
+    @Bean
+    public WatchEntryPolicy watchEntryPolicy() {
+        // comment até 1000 chars; proíbe watchedAt no futuro
+        return new DefaultWatchEntryPolicy(1000, true);
+    }
+
+    // ===== MEDIAS =====
+    CreateMediaUseCase createMediaUseCase(MediaRepositoryPort repo, MediaPolicy mediaPolicy) {
+        return new CreateMediaService(repo, mediaPolicy);
+    }
+
+    UpdateMediaUseCase updateMediaUseCase(MediaRepositoryPort repo, MediaPolicy mediaPolicy) {
         return new UpdateMediaService(repo);
     }
 
@@ -240,5 +276,28 @@ public class UseCaseConfig {
 
     public DeleteEpisodeUseCase deleteEpisodeUseCase(EpisodeRepositoryPort repo) {
         return new DeleteEpisodeService(repo);
+    }
+
+    // ===== WATCH ENTRIES =====
+
+    public CreateWatchEntryUseCase createWatchEntryUseCase(WatchEntryRepositoryPort repo) {
+        return new CreateWatchEntryService(repo);
+    }
+
+    public UpdateWatchEntryUseCase updateWatchEntryUseCase(WatchEntryRepositoryPort repo,
+            WatchEntryPolicy watchEntryPolicy, RatingPolicy ratingPolicy) {
+        return new UpdateWatchEntryService(repo, watchEntryPolicy, ratingPolicy);
+    }
+
+    public GetWatchEntryUseCase getWatchEntryUseCase(WatchEntryRepositoryPort repo) {
+        return new GetWatchEntryService(repo);
+    }
+
+    public ListWatchEntriesUseCase listWatchEntriesUseCase(WatchEntryRepositoryPort repo) {
+        return new ListWatchEntriesService(repo);
+    }
+
+    public DeleteWatchEntryUseCase deleteWatchEntryUseCase(WatchEntryRepositoryPort repo) {
+        return new DeleteWatchEntryService(repo);
     }
 }

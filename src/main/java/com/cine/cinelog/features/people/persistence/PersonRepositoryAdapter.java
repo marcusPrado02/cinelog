@@ -5,12 +5,12 @@ import com.cine.cinelog.core.domain.model.Person;
 import com.cine.cinelog.features.people.mapper.PersonMapper;
 import com.cine.cinelog.features.people.repository.PersonJpaRepository;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 public class PersonRepositoryAdapter implements PersonRepositoryPort {
 
     private final PersonJpaRepository jpa;

@@ -11,5 +11,11 @@ import com.cine.cinelog.core.domain.model.Media;
  * de aplicação, porém a porta define apenas o contrato.
  */
 public interface GetMediaUseCase {
+    /**
+     * Recupera uma mídia existente do sistema.
+     *
+     * @param id O ID da mídia a ser recuperada.
+     * @return A mídia correspondente ao ID fornecido.
+     */
     Media execute(Long id);
 }

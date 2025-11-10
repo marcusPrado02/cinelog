@@ -11,12 +11,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
 
 @Tag(name = "Genres", description = "CRUD de gêneros")
+@Validated
 @RestController
 @RequestMapping("/api/genres")
 public class GenreController {

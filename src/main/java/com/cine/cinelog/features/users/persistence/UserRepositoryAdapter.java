@@ -5,12 +5,12 @@ import com.cine.cinelog.core.domain.model.User;
 import com.cine.cinelog.features.users.mapper.UserMapper;
 import com.cine.cinelog.features.users.repository.UserJpaRepository;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 public class UserRepositoryAdapter implements UserRepositoryPort {
 
     private final UserJpaRepository jpa;

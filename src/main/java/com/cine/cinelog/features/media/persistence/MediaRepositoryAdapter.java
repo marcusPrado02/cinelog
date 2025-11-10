@@ -13,17 +13,16 @@ import com.cine.cinelog.features.media.repository.MediaJpaRepository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Adapter que implementa a porta de persistência `MediaRepositoryPort`
+ * usando Spring Data JPA (`MediaJpaRepository`).
+ *
+ * Esta classe faz o mapeamento entre o modelo de domínio `Media` e a
+ * entidade JPA `MediaEntity` através de `MediaEntityMapper` e delega as
+ * operações ao repositório JPA.
+ */
 @Repository
 public class MediaRepositoryAdapter implements MediaRepositoryPort {
-
-    /**
-     * Adapter que implementa a porta de persistência `MediaRepositoryPort`
-     * usando Spring Data JPA (`MediaJpaRepository`).
-     *
-     * Esta classe faz o mapeamento entre o modelo de domínio `Media` e a
-     * entidade JPA `MediaEntity` através de `MediaEntityMapper` e delega as
-     * operações ao repositório JPA.
-     */
 
     private final MediaJpaRepository repository;
     private final MediaMapper mapper;

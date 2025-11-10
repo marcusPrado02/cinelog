@@ -8,5 +8,11 @@ import com.cine.cinelog.core.domain.model.Genre;
  * recebendo um objeto Genre e retornando o gênero criado.
  */
 public interface CreateGenreUseCase {
+    /**
+     * Cria um novo gênero no sistema.
+     *
+     * @param genre O objeto Genre com os dados do gênero a ser criado.
+     * @return O gênero criado.
+     */
     Genre execute(Genre genre);
 }

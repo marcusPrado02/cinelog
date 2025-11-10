@@ -5,12 +5,12 @@ import com.cine.cinelog.core.domain.model.Episode;
 import com.cine.cinelog.features.episodes.mapper.EpisodeMapper;
 import com.cine.cinelog.features.episodes.repository.EpisodeJpaRepository;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 public class EpisodeRepositoryAdapter implements EpisodeRepositoryPort {
 
     private final EpisodeJpaRepository jpa;

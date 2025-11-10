@@ -6,11 +6,12 @@ import com.cine.cinelog.features.genres.mapper.GenreMapper;
 import com.cine.cinelog.features.genres.repository.GenreJpaRepository;
 
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 public class GenreRepositoryAdapter implements GenreRepositoryPort {
 
     private final GenreJpaRepository jpa;

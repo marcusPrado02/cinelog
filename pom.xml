@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.5.7</version>
-		<relativePath/>
+		<relativePath />
 		<!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.cine</groupId>
@@ -14,23 +15,25 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>cinelog</name>
 	<description>Demo project for Spring Boot</description>
-	<url/>
+	<url />
 	<licenses>
-		<license/>
+		<license />
 	</licenses>
 	<developers>
-		<developer/>
+		<developer />
 	</developers>
 	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
+		<connection />
+		<developerConnection />
+		<tag />
+		<url />
 	</scm>
 	<properties>
 		<java.version>21</java.version>
 		<liquibase.version>5.0.1</liquibase.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
+		<lombok.version>1.18.42</lombok.version>
+		<otel.version>1.41.0</otel.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -75,6 +78,22 @@
 			<artifactId>liquibase-core</artifactId>
 		</dependency>
 
+		<!-- Lombok -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Logs em JSON (Logback encoder) -->
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>7.4</version>
+		</dependency>
+
+
 		<!-- MapStruct -->
 		<dependency>
 			<groupId>org.mapstruct</groupId>
@@ -97,6 +116,25 @@
 			<groupId>net.ttddyy</groupId>
 			<artifactId>datasource-proxy</artifactId>
 			<version>1.11.0</version>
+		</dependency>
+		<!-- Actuator + Métricas -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+
+		<!-- Tracing (Micrometer Tracing + OpenTelemetry) -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-otel</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-exporter-otlp</artifactId>
 		</dependency>
 
 
@@ -174,6 +212,11 @@
 							<artifactId>mapstruct-processor</artifactId>
 							<version>${mapstruct.version}</version>
 						</path>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
@@ -203,6 +246,75 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.14</version>
+				<executions>
+					<!-- 1) Não instrumentar essas classes -->
+					<execution>
+						<id>jacoco-prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+						<configuration>
+							<destFile>${project.build.directory}/jacoco.exec</destFile>
+							<excludes>
+								<!-- build/infra -->
+								<exclude>**/target/**</exclude>
+								<exclude>**/generated/**</exclude>
+
+								<!-- records & interfaces (ajuste aos seus pacotes!) -->
+								<exclude>**/records/**</exclude>
+								<exclude>**/interfaces/**</exclude>
+								<exclude>**/*Record.class</exclude>
+								<exclude>**/*Interface.class</exclude>
+
+								<!-- DTOs/payloads sem lógica -->
+								<exclude>**/dto/**</exclude>
+								<exclude>**/*Dto.class</exclude>
+								<exclude>**/*Request.class</exclude>
+								<exclude>**/*Response.class</exclude>
+
+								<!-- Ignorar anotados (se usar @Generated/@ExcludeFromCoverage) -->
+								<!-- <exclude>@*Generated*</exclude> -->
+								<!-- <exclude>@*ExcludeFromCoverage*</exclude> -->
+							</excludes>
+						</configuration>
+					</execution>
+
+					<!-- 2) Não reportar essas classes -->
+					<execution>
+						<id>jacoco-report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+						<configuration>
+							<dataFile>${project.build.directory}/jacoco.exec</dataFile>
+							<outputDirectory>${project.build.directory}/site/jacoco</outputDirectory>
+							<excludes>
+								<exclude>**/target/**</exclude>
+								<exclude>**/generated/**</exclude>
+								<exclude>**/records/**</exclude>
+								<exclude>**/*Record.*</exclude>
+								<exclude>**/interfaces/**</exclude>
+								<exclude>**/*Interface.*</exclude>
+								<exclude>**/dto/**</exclude>
+								<exclude>**/*Dto.*</exclude>
+								<exclude>**/*Request.*</exclude>
+								<exclude>**/*Response.*</exclude>
+							</excludes>
+							<reports>
+								<xml enabled="true" />
+								<html enabled="true" />
+								<csv enabled="false" />
+							</reports>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 		</plugins>
 	</build>
 

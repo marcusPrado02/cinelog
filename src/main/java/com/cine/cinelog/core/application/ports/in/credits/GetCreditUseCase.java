@@ -8,5 +8,11 @@ import com.cine.cinelog.core.domain.model.Credit;
  * Retorna o objeto Credit correspondente.
  */
 public interface GetCreditUseCase {
+    /**
+     * Recupera um crédito existente do sistema.
+     *
+     * @param id O ID do crédito a ser recuperado.
+     * @return O crédito correspondente ao ID fornecido.
+     */
     Credit execute(Long id);
 }

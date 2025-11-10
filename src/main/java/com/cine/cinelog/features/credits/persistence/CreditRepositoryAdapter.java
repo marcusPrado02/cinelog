@@ -6,11 +6,12 @@ import com.cine.cinelog.features.credits.mapper.CreditMapper;
 import com.cine.cinelog.features.credits.repository.CreditJpaRepository;
 
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 public class CreditRepositoryAdapter implements CreditRepositoryPort {
 
     private final CreditJpaRepository jpa;

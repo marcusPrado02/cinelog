@@ -8,5 +8,12 @@ import com.cine.cinelog.core.domain.model.Credit;
  * recebendo um objeto Credit e retornando o crédito criado.
  */
 public interface CreateCreditUseCase {
+
+    /**
+     * Cria um novo crédito no sistema.
+     *
+     * @param credit O objeto Credit com os dados do crédito a ser criado.
+     * @return O crédito criado.
+     */
     Credit execute(Credit credit);
 }

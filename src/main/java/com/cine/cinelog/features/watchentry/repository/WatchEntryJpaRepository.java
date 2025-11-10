@@ -10,15 +10,15 @@ import java.time.LocalDate;
 
 public interface WatchEntryJpaRepository extends JpaRepository<WatchEntryEntity, Long> {
 
-        @Query("""
-                        SELECT w FROM WatchEntryEntity w
-                        WHERE w.userId = :userId
-                          AND (:mediaId IS NULL OR w.mediaId = :mediaId)
-                          AND (:episodeId IS NULL OR w.episodeId = :episodeId)
-                          AND (:minRating IS NULL OR w.rating >= :minRating)
-                          AND (:fromDate IS NULL OR w.watchedAt >= :fromDate)
-                          AND (:toDate IS NULL OR w.watchedAt <= :toDate)
-                        """)
-        Page<WatchEntryEntity> search(Long userId, Long mediaId, Long episodeId, Integer minRating,
-                        LocalDate fromDate, LocalDate toDate, Pageable pageable);
+  @Query("""
+      SELECT w FROM WatchEntryEntity w
+      WHERE w.userId = :userId
+        AND (:mediaId IS NULL OR w.mediaId = :mediaId)
+        AND (:episodeId IS NULL OR w.episodeId = :episodeId)
+        AND (:minRating IS NULL OR w.rating >= :minRating)
+        AND (:fromDate IS NULL OR w.watchedAt >= :fromDate)
+        AND (:toDate IS NULL OR w.watchedAt <= :toDate)
+      """)
+  Page<WatchEntryEntity> search(Long userId, Long mediaId, Long episodeId, Integer minRating,
+      LocalDate fromDate, LocalDate toDate, Pageable pageable);
 }

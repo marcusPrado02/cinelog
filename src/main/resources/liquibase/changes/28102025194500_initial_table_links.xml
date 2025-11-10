@@ -1,36 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
 
   <!-- MEDIA_GENRES (N:N) -->
   <changeSet id="28102025194500-1" author="maps">
     <createTable tableName="media_genres">
       <column name="media_id" type="BIGINT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
       <column name="genre_id" type="SMALLINT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
     </createTable>
-    <addPrimaryKey tableName="media_genres" columnNames="media_id, genre_id" constraintName="pk_media_genres"/>
-    <addForeignKeyConstraint baseTableName="media_genres" baseColumnNames="media_id" referencedTableName="media" referencedColumnNames="id" onDelete="CASCADE" constraintName="fk_mg_media"/>
-    <addForeignKeyConstraint baseTableName="media_genres" baseColumnNames="genre_id" referencedTableName="genres" referencedColumnNames="id" onDelete="CASCADE" constraintName="fk_mg_genre"/>
+    <addPrimaryKey tableName="media_genres" columnNames="media_id, genre_id"
+      constraintName="pk_media_genres" />
+    <addForeignKeyConstraint baseTableName="media_genres" baseColumnNames="media_id"
+      referencedTableName="media" referencedColumnNames="id" onDelete="CASCADE"
+      constraintName="fk_mg_media" />
+    <addForeignKeyConstraint baseTableName="media_genres" baseColumnNames="genre_id"
+      referencedTableName="genres" referencedColumnNames="id" onDelete="CASCADE"
+      constraintName="fk_mg_genre" />
   </changeSet>
 
   <!-- PEOPLE -->
   <changeSet id="28102025194500-2" author="maps">
     <createTable tableName="people">
       <column name="id" type="BIGINT AUTO_INCREMENT">
-        <constraints primaryKey="true" nullable="false"/>
+        <constraints primaryKey="true" nullable="false" />
       </column>
       <column name="name" type="VARCHAR(200)">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
-      <column name="birth_date" type="DATE"/>
-      <column name="place_of_birth" type="VARCHAR(200)"/>
+      <column name="birth_date" type="DATE" />
+      <column name="place_of_birth" type="VARCHAR(200)" />
     </createTable>
     <createIndex tableName="people" indexName="idx_people_name">
-      <column name="name"/>
+      <column name="name" />
     </createIndex>
   </changeSet>
 
@@ -38,29 +44,33 @@
   <changeSet id="28102025194500-3" author="maps">
     <createTable tableName="credits">
       <column name="id" type="BIGINT AUTO_INCREMENT">
-        <constraints primaryKey="true" nullable="false"/>
+        <constraints primaryKey="true" nullable="false" />
       </column>
       <column name="media_id" type="BIGINT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
       <column name="person_id" type="BIGINT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
       <column name="role" type="ENUM('DIRECTOR','WRITER','ACTOR','PRODUCER','COMPOSER')">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
-      <column name="character_name" type="VARCHAR(200)"/>
-      <column name="order_index" type="SMALLINT"/>
+      <column name="character_name" type="VARCHAR(200)" />
+      <column name="order_index" type="SMALLINT" />
     </createTable>
-    <addForeignKeyConstraint baseTableName="credits" baseColumnNames="media_id" referencedTableName="media" referencedColumnNames="id" onDelete="CASCADE" constraintName="fk_credits_media"/>
-    <addForeignKeyConstraint baseTableName="credits" baseColumnNames="person_id" referencedTableName="people" referencedColumnNames="id" onDelete="CASCADE" constraintName="fk_credits_person"/>
+    <addForeignKeyConstraint baseTableName="credits" baseColumnNames="media_id"
+      referencedTableName="media" referencedColumnNames="id" onDelete="CASCADE"
+      constraintName="fk_credits_media" />
+    <addForeignKeyConstraint baseTableName="credits" baseColumnNames="person_id"
+      referencedTableName="people" referencedColumnNames="id" onDelete="CASCADE"
+      constraintName="fk_credits_person" />
     <createIndex tableName="credits" indexName="idx_credits_media_role">
-      <column name="media_id"/>
-      <column name="role"/>
+      <column name="media_id" />
+      <column name="role" />
     </createIndex>
     <createIndex tableName="credits" indexName="idx_credits_person_role">
-      <column name="person_id"/>
-      <column name="role"/>
+      <column name="person_id" />
+      <column name="role" />
     </createIndex>
   </changeSet>
 
@@ -68,79 +78,94 @@
   <changeSet id="28102025194500-4" author="maps">
     <createTable tableName="seasons">
       <column name="id" type="BIGINT AUTO_INCREMENT">
-        <constraints primaryKey="true" nullable="false"/>
+        <constraints primaryKey="true" nullable="false" />
       </column>
       <column name="media_id" type="BIGINT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
       <column name="season_number" type="INT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
-      <column name="name" type="VARCHAR(200)"/>
-      <column name="air_date" type="DATE"/>
+      <column name="name" type="VARCHAR(200)" />
+      <column name="air_date" type="DATE" />
     </createTable>
-    <addForeignKeyConstraint baseTableName="seasons" baseColumnNames="media_id" referencedTableName="media" referencedColumnNames="id" onDelete="CASCADE" constraintName="fk_seasons_media"/>
-    <addUniqueConstraint tableName="seasons" columnNames="media_id, season_number" constraintName="uk_season_media_number"/>
+    <addForeignKeyConstraint baseTableName="seasons" baseColumnNames="media_id"
+      referencedTableName="media" referencedColumnNames="id" onDelete="CASCADE"
+      constraintName="fk_seasons_media" />
+    <addUniqueConstraint tableName="seasons" columnNames="media_id, season_number"
+      constraintName="uk_season_media_number" />
   </changeSet>
 
   <!-- EPISODES -->
   <changeSet id="28102025194500-5" author="maps">
     <createTable tableName="episodes">
       <column name="id" type="BIGINT AUTO_INCREMENT">
-        <constraints primaryKey="true" nullable="false"/>
+        <constraints primaryKey="true" nullable="false" />
       </column>
       <column name="season_id" type="BIGINT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
       <column name="episode_number" type="INT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
-      <column name="name" type="VARCHAR(200)"/>
-      <column name="air_date" type="DATE"/>
+      <column name="name" type="VARCHAR(200)" />
+      <column name="air_date" type="DATE" />
     </createTable>
-    <addForeignKeyConstraint baseTableName="episodes" baseColumnNames="season_id" referencedTableName="seasons" referencedColumnNames="id" onDelete="CASCADE" constraintName="fk_episodes_season"/>
-    <addUniqueConstraint tableName="episodes" columnNames="season_id, episode_number" constraintName="uk_episode_season_number"/>
+    <addForeignKeyConstraint baseTableName="episodes" baseColumnNames="season_id"
+      referencedTableName="seasons" referencedColumnNames="id" onDelete="CASCADE"
+      constraintName="fk_episodes_season" />
+    <addUniqueConstraint tableName="episodes" columnNames="season_id, episode_number"
+      constraintName="uk_episode_season_number" />
   </changeSet>
 
   <!-- WATCH_ENTRY -->
   <changeSet id="28102025194500-6" author="maps">
     <createTable tableName="watch_entry">
       <column name="id" type="BIGINT AUTO_INCREMENT">
-        <constraints primaryKey="true" nullable="false"/>
+        <constraints primaryKey="true" nullable="false" />
       </column>
       <column name="user_id" type="BIGINT">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
-      <column name="media_id" type="BIGINT"/>
-      <column name="episode_id" type="BIGINT"/>
-      <column name="rating" type="TINYINT"/>
-      <column name="comment" type="TEXT"/>
-      <column name="watched_at" type="DATE"/>
+      <column name="media_id" type="BIGINT" />
+      <column name="episode_id" type="BIGINT" />
+      <column name="rating" type="TINYINT" />
+      <column name="comment" type="TEXT" />
+      <column name="watched_at" type="DATE" />
       <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
-      <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)">
-        <constraints nullable="false"/>
+      <column name="updated_at" type="DATETIME(6)"
+        defaultValueComputed="CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)">
+        <constraints nullable="false" />
       </column>
     </createTable>
 
-    <addForeignKeyConstraint baseTableName="watch_entry" baseColumnNames="user_id" referencedTableName="users" referencedColumnNames="id" onDelete="CASCADE" constraintName="fk_we_user"/>
-    <addForeignKeyConstraint baseTableName="watch_entry" baseColumnNames="media_id" referencedTableName="media" referencedColumnNames="id" onDelete="SET NULL" constraintName="fk_we_media"/>
-    <addForeignKeyConstraint baseTableName="watch_entry" baseColumnNames="episode_id" referencedTableName="episodes" referencedColumnNames="id" onDelete="SET NULL" constraintName="fk_we_episode"/>
+    <addForeignKeyConstraint baseTableName="watch_entry" baseColumnNames="user_id"
+      referencedTableName="users" referencedColumnNames="id" onDelete="CASCADE"
+      constraintName="fk_we_user" />
+    <addForeignKeyConstraint baseTableName="watch_entry" baseColumnNames="media_id"
+      referencedTableName="media" referencedColumnNames="id" onDelete="SET NULL"
+      constraintName="fk_we_media" />
+    <addForeignKeyConstraint baseTableName="watch_entry" baseColumnNames="episode_id"
+      referencedTableName="episodes" referencedColumnNames="id" onDelete="SET NULL"
+      constraintName="fk_we_episode" />
 
-    <addUniqueConstraint tableName="watch_entry" columnNames="user_id, media_id, episode_id, watched_at" constraintName="uk_we_user_media_episode_date"/>
+    <addUniqueConstraint tableName="watch_entry"
+      columnNames="user_id, media_id, episode_id, watched_at"
+      constraintName="uk_we_user_media_episode_date" />
     <createIndex tableName="watch_entry" indexName="idx_we_user_date">
-      <column name="user_id"/>
-      <column name="watched_at"/>
+      <column name="user_id" />
+      <column name="watched_at" />
     </createIndex>
     <createIndex tableName="watch_entry" indexName="idx_we_media">
-      <column name="media_id"/>
+      <column name="media_id" />
     </createIndex>
     <createIndex tableName="watch_entry" indexName="idx_we_episode">
-      <column name="episode_id"/>
+      <column name="episode_id" />
     </createIndex>
     <createIndex tableName="watch_entry" indexName="idx_we_rating">
-      <column name="rating"/>
+      <column name="rating" />
     </createIndex>
   </changeSet>
 </databaseChangeLog>

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 
 public record PersonUpdateRequest(
-        @NotBlank @Size(max = 200) String name,
-        LocalDate birthDate,
-        @Size(max = 200) String placeOfBirth) {
+                @NotBlank @Size(max = 200) String name,
+                LocalDate birthDate,
+                @Size(max = 200) String placeOfBirth) {
 }

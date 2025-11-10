@@ -16,5 +16,14 @@ import com.cine.cinelog.core.domain.model.Media;
  * Retorna uma lista de entidades `Media` que atendem aos critérios.
  */
 public interface ListMediaUseCase {
+    /**
+     * Recupera uma lista de mídias existentes do sistema.
+     *
+     * @param type O tipo de mídia a ser filtrado.
+     * @param q    O termo de busca para títulos ou descrições.
+     * @param page O índice da página (0-based).
+     * @param size O número de itens por página.
+     * @return Uma lista de mídias que atendem aos critérios.
+     */
     List<Media> execute(MediaType type, String q, int page, int size);
 }

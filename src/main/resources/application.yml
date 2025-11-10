@@ -1,36 +1,40 @@
 spring:
+  application:
+    name: cinelog-api
   datasource:
     url: jdbc:mysql://localhost:3306/cinelog?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: cinelog
     password: cinelog
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: cinelog-pool
+      minimum-idle: 2
+      maximum-pool-size: 10
+      auto-commit: false
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+
   jpa:
     hibernate:
       ddl-auto: none
     show-sql: false
-    properties:
-      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
     open-in-view: false
-  hikari:
-    pool-name: cinelog-pool
-    minimum-idle: 2
-    maximum-pool-size: 10
-    auto-commit: false
-    connection-timeout: 30000
-    idle-timeout: 600000
-    max-lifetime: 1800000
-    transaction-isolation: TRANSACTION_READ_COMMITTED
 
   liquibase:
     enabled: true
     change-log: classpath:liquibase/db.changelog-master.xml
 
+  mvc:
+    problemdetails:
+      enabled: true
 
 springdoc:
   api-docs:
-    path: /v3/api-docs        # JSON da especificação
+    path: /v3/api-docs # JSON da especificação
   swagger-ui:
-    path: /swagger-ui         # UI acessível em /swagger-ui (redireciona p/ index)
+    path: /swagger-ui # UI acessível em /swagger-ui (redireciona p/ index)
     display-request-duration: true
     tags-sorter: alpha
     operations-sorter: method
@@ -39,8 +43,41 @@ server:
   error:
     include-message: always
     include-binding-errors: always
+    include-exception: false
+    include-stacktrace: never # stacktrace não vai pro cliente
 
 logging:
-  pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%X{traceId:-na}:%X{spanId:-na}] %logger{36} - %msg%n"
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.hibernate.SQL: WARN
+  usecase:
+    slow-threshold-ms: 800
+    sample-rate: 1.0 # 1.0 = logar tudo; 0.1 = 10%
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,loggers,env,metrics,threaddump,heapdump,prometheus,configprops
+  endpoint:
+    health:
+      show-details: always
+  # Micrometer tracing
+  tracing:
+    sampling:
+      probability: 1.0
+    enabled: true
+  metrics:
+    tags:
+      application: cinelog
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces # via OTel Collector
+    metrics:
+      export:
+        enabled: false # métricas vão via Prometheus (scrape), não OTLP
+info:
+  app:
+    name: cinelog
+    version: v1

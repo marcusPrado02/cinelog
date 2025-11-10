@@ -9,5 +9,11 @@ import com.cine.cinelog.core.domain.model.Media;
  * devolve a entidade criada (normalmente com o `id` gerado).
  */
 public interface CreateMediaUseCase {
+    /**
+     * Cria uma nova mídia no sistema.
+     *
+     * @param input O objeto Media com os dados da mídia a ser criada.
+     * @return A mídia criada.
+     */
     Media execute(Media input);
 }

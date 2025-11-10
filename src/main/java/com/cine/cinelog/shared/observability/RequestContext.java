@@ -1,5 +1,9 @@
 package com.cine.cinelog.shared.observability;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+
+@AllArgsConstructor
 public final class RequestContext {
     private static final ThreadLocal<RequestContext> context = new ThreadLocal<>();
 
@@ -24,17 +28,6 @@ public final class RequestContext {
     public final String clientIp;
     public final String userAgent;
     public final String txId;
+    public final Boolean diagSql;
 
-    public RequestContext(Long userId, String userEmail, String sourceApp, String appVersion,
-            String traceId, String spanId, String clientIp, String userAgent, String txId) {
-        this.userId = userId;
-        this.userEmail = userEmail;
-        this.sourceApp = sourceApp;
-        this.appVersion = appVersion;
-        this.traceId = traceId;
-        this.spanId = spanId;
-        this.clientIp = clientIp;
-        this.userAgent = userAgent;
-        this.txId = txId;
-    }
 }

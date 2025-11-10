@@ -121,6 +121,7 @@ com.cine.cinelog
 ```
 
 🧱 **Padrões aplicados**
+
 - Domain-Driven Design (Entities, Value Objects, Domain Services)
 - Ports & Adapters (Clean Architecture)
 - SOLID, 12-Factor e DRY
@@ -132,30 +133,30 @@ com.cine.cinelog
 
 ## 🚀 Tecnologias Principais
 
-| Camada | Stack | Propósito |
-|--------|--------|-----------|
-| Core | Java 21 + Spring Boot 3 | Base de domínio e aplicação |
-| Persistência | Spring Data JPA + Liquibase + MySQL 8 | ORM, versionamento e schema management |
-| Web | Spring Web MVC + OpenAPI 3 | API REST tipada e documentada |
-| Observabilidade | Micrometer + OpenTelemetry | Tracing, métricas e logs estruturados |
-| Build | Maven Wrapper | Reprodutibilidade |
-| Infra | Docker + Docker Compose | Execução local containerizada |
-| Testes | JUnit 5 + Testcontainers | Testes unitários e de integração isolados |
+| Camada          | Stack                                 | Propósito                                 |
+| --------------- | ------------------------------------- | ----------------------------------------- |
+| Core            | Java 21 + Spring Boot 3               | Base de domínio e aplicação               |
+| Persistência    | Spring Data JPA + Liquibase + MySQL 8 | ORM, versionamento e schema management    |
+| Web             | Spring Web MVC + OpenAPI 3            | API REST tipada e documentada             |
+| Observabilidade | Micrometer + OpenTelemetry            | Tracing, métricas e logs estruturados     |
+| Build           | Maven Wrapper                         | Reprodutibilidade                         |
+| Infra           | Docker + Docker Compose               | Execução local containerizada             |
+| Testes          | JUnit 5 + Testcontainers              | Testes unitários e de integração isolados |
 
 ---
 
 ## 📂 Estrutura de Domínio Atual
 
-| Entidade | Descrição | Relacionamentos |
-|-----------|------------|----------------|
-| **Media** | Filme ou série principal | 1-N com Season e Genre |
-| **Season** | Temporada de uma série | 1-N com Episode |
-| **Episode** | Episódio individual | Pertence a Season |
-| **Genre** | Categoria temática | N-N com Media |
-| **Credit** | Participação de uma pessoa (ator, diretor, etc.) | N-N Media ↔ Person |
-| **Person** | Pessoa (ator, diretor, roteirista) | Associada via Credit |
-| **User** | Usuário do sistema | 1-N WatchEntries |
-| **WatchEntry** | Registro de visualização | Relaciona User ↔ Media |
+| Entidade       | Descrição                                        | Relacionamentos        |
+| -------------- | ------------------------------------------------ | ---------------------- |
+| **Media**      | Filme ou série principal                         | 1-N com Season e Genre |
+| **Season**     | Temporada de uma série                           | 1-N com Episode        |
+| **Episode**    | Episódio individual                              | Pertence a Season      |
+| **Genre**      | Categoria temática                               | N-N com Media          |
+| **Credit**     | Participação de uma pessoa (ator, diretor, etc.) | N-N Media ↔ Person     |
+| **Person**     | Pessoa (ator, diretor, roteirista)               | Associada via Credit   |
+| **User**       | Usuário do sistema                               | 1-N WatchEntries       |
+| **WatchEntry** | Registro de visualização                         | Relaciona User ↔ Media |
 
 ---
 
@@ -194,6 +195,7 @@ Database (MySQL 8 / Liquibase)
 ```
 
 Todos os mapeamentos de entidade ↔ domínio ↔ DTO são feitos via **MapStruct**, garantindo:
+
 - Conversões puras e testáveis
 - Desacoplamento completo de frameworks
 - Coerência entre camadas
@@ -216,16 +218,19 @@ Todos os mapeamentos de entidade ↔ domínio ↔ DTO são feitos via **MapStruc
 ## 🐳 Execução Local
 
 ### 1. Banco e dependências
+
 ```bash
 docker-compose up -d
 ```
 
 ### 2. Build & Run
+
 ```bash
 ./mvnw spring-boot:run
 ```
 
 ### 3. Swagger/OpenAPI
+
 > http://localhost:8080/swagger-ui/index.html  
 > Documentação gerada via `springdoc-openapi`.
 
@@ -262,6 +267,7 @@ docker-compose up -d
 ## 🧱 Liquibase & Schema
 
 Arquivos em:
+
 ```
 src/main/resources/liquibase
 ├── db.changelog-master.xml
@@ -278,34 +284,34 @@ Cada `changelog` possui rollback definido e segue convenção `yyyymmddhhmmss_de
 
 ## 🧰 Roadmap Técnico (Short-Term)
 
-| Prioridade | Item | Objetivo |
-|-------------|------|-----------|
-| 🔹 1 | Autenticação JWT + RBAC | Camada de segurança real |
-| 🔹 2 | Observabilidade completa | Tracing, métricas e logs estruturados |
-| 🔹 3 | Cache e paginação avançada | Performance e UX |
-| 🔹 4 | Outbox / Event-Driven | Integração assíncrona e resiliência |
-| 🔹 5 | Testcontainers + Seed de dados | Testes isolados e realistas |
-| 🔹 6 | Documentação ADR + C4 | Transparência e governança |
-| 🔹 7 | SDK TypeScript (OpenAPI Generator) | Melhorar DX para consumidores |
+| Prioridade | Item                               | Objetivo                              |
+| ---------- | ---------------------------------- | ------------------------------------- |
+| 🔹 1       | Autenticação JWT + RBAC            | Camada de segurança real              |
+| 🔹 2       | Observabilidade completa           | Tracing, métricas e logs estruturados |
+| 🔹 3       | Cache e paginação avançada         | Performance e UX                      |
+| 🔹 4       | Outbox / Event-Driven              | Integração assíncrona e resiliência   |
+| 🔹 5       | Testcontainers + Seed de dados     | Testes isolados e realistas           |
+| 🔹 6       | Documentação ADR + C4              | Transparência e governança            |
+| 🔹 7       | SDK TypeScript (OpenAPI Generator) | Melhorar DX para consumidores         |
 
 ---
 
 ## 🧩 Stack Completa
 
-| Tipo | Tecnologia |
-|------|-------------|
-| Linguagem | Java 21 |
-| Framework | Spring Boot 3 |
-| Build | Maven Wrapper |
-| Banco | MySQL 8 |
-| ORM | Hibernate 6 / JPA |
-| Migrações | Liquibase |
-| Docs API | SpringDoc OpenAPI 3 |
-| Mapper | MapStruct |
-| Containerização | Docker Compose |
-| Testes | JUnit 5, Testcontainers |
-| Observabilidade | Micrometer, OpenTelemetry |
-| Segurança | Spring Security (planejada) |
+| Tipo            | Tecnologia                  |
+| --------------- | --------------------------- |
+| Linguagem       | Java 21                     |
+| Framework       | Spring Boot 3               |
+| Build           | Maven Wrapper               |
+| Banco           | MySQL 8                     |
+| ORM             | Hibernate 6 / JPA           |
+| Migrações       | Liquibase                   |
+| Docs API        | SpringDoc OpenAPI 3         |
+| Mapper          | MapStruct                   |
+| Containerização | Docker Compose              |
+| Testes          | JUnit 5, Testcontainers     |
+| Observabilidade | Micrometer, OpenTelemetry   |
+| Segurança       | Spring Security (planejada) |
 
 ---
 

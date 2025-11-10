@@ -3,6 +3,8 @@ package com.cine.cinelog.features.media.web.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.cine.cinelog.core.application.ports.in.media.CreateMediaUseCase;
@@ -19,6 +21,7 @@ import com.cine.cinelog.features.media.web.dto.MediaUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -28,6 +31,7 @@ import java.util.List;
  */
 
 @Tag(name = "Media", description = "CRUD de filmes e séries")
+@Validated
 @RestController
 @RequestMapping("/api/media")
 public class MediaController {
@@ -55,32 +59,36 @@ public class MediaController {
     @Operation(summary = "Cria uma mídia", description = "Cadastra um filme/série")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public MediaResponse create(@Valid @RequestBody MediaCreateRequest req) {
+    public ResponseEntity<MediaResponse> create(@Valid @RequestBody MediaCreateRequest req) {
         var saved = create.execute(mapper.toDomain(req));
-        return mapper.toResponse(saved);
+        return ResponseEntity.created(URI.create("/api/media/" + saved.getId()))
+                .body(mapper.toResponse(saved));
     }
 
     @Operation(summary = "Busca por id")
     @GetMapping("/{id}")
-    public MediaResponse get(@PathVariable Long id) {
-        return mapper.toResponse(get.execute(id));
+    public ResponseEntity<MediaResponse> get(@PathVariable Long id) {
+        return ResponseEntity.ok(mapper.toResponse(get.execute(id)));
     }
 
     @Operation(summary = "Lista mídias", description = "Filtro por type e busca por título")
     @GetMapping
-    public List<MediaResponse> list(@RequestParam(required = false) MediaType type,
+    public ResponseEntity<List<MediaResponse>> list(@RequestParam(required = false) MediaType type,
             @RequestParam(required = false, name = "q") String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         // Lista mídias aplicando filtros e paginação, mapeando para DTO.
-        return list.execute(type, q, page, size).stream().map(mapper::toResponse).toList();
+        var mediaList = list.execute(type, q, page, size).stream()
+                .map(mapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(mediaList);
     }
 
     @Operation(summary = "Atualiza uma mídia")
     @PutMapping("/{id}")
-    public MediaResponse update(@PathVariable Long id, @Valid @RequestBody MediaUpdateRequest req) {
+    public ResponseEntity<MediaResponse> update(@PathVariable Long id, @Valid @RequestBody MediaUpdateRequest req) {
         var updated = update.execute(id, mapper.toDomain(req));
-        return mapper.toResponse(updated);
+        return ResponseEntity.ok(mapper.toResponse(updated));
     }
 
     @Operation(summary = "Remove uma mídia")

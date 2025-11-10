@@ -3,16 +3,21 @@ package com.cine.cinelog.core.domain.model;
 import java.util.Objects;
 
 import com.cine.cinelog.core.domain.enums.MediaType;
+import lombok.Getter;
+import lombok.Setter;
 
+/**
+ * Representa a entidade de domínio 'Media' usada pela camada de domínio
+ * e pelos casos de uso da aplicação.
+ *
+ * Comentários em português explicam os campos e o propósito desta classe
+ * para facilitar a leitura e manutenção por desenvolvedores que preferem
+ * documentação em português.
+ */
+
+@Getter
+@Setter
 public class Media {
-    /**
-     * Representa a entidade de domínio 'Media' usada pela camada de domínio
-     * e pelos casos de uso da aplicação.
-     *
-     * Comentários em português explicam os campos e o propósito desta classe
-     * para facilitar a leitura e manutenção por desenvolvedores que preferem
-     * documentação em português.
-     */
     private Long id;
     private String title;
     private MediaType type;
@@ -47,42 +52,6 @@ public class Media {
             throw new IllegalArgumentException("releaseYear out of range");
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public MediaType getType() {
-        return type;
-    }
-
-    public Integer getReleaseYear() {
-        return releaseYear;
-    }
-
-    public String getOriginalTitle() {
-        return originalTitle;
-    }
-
-    public String getOriginalLanguage() {
-        return originalLanguage;
-    }
-
-    public String getPosterUrl() {
-        return posterUrl;
-    }
-
-    public String getBackdropUrl() {
-        return backdropUrl;
-    }
-
-    public String getOverview() {
-        return overview;
-    }
-
     public Media withId(Long id) {
         return new Media(id, title, type, releaseYear, originalTitle, originalLanguage, posterUrl, backdropUrl,
                 overview);
@@ -101,5 +70,14 @@ public class Media {
         this.backdropUrl = (patch.backdropUrl != null) ? patch.backdropUrl : this.backdropUrl;
         this.overview = (patch.overview != null) ? patch.overview : this.overview;
         return this;
+    }
+
+    public void normalize() {
+        if (this.title != null) {
+            this.title = this.title.trim();
+        }
+        if (this.originalTitle != null) {
+            this.originalTitle = this.originalTitle.trim();
+        }
     }
 }

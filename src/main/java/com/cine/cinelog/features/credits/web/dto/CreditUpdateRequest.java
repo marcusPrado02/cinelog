@@ -3,7 +3,7 @@ package com.cine.cinelog.features.credits.web.dto;
 import jakarta.validation.constraints.*;
 
 public record CreditUpdateRequest(
-        @NotBlank String role,
-        @Size(max = 200) String characterName,
-        @Min(0) @Max(32767) Short orderIndex) {
+                @NotBlank String role,
+                @Size(max = 200) String characterName,
+                @Min(0) @Max(32767) Short orderIndex) {
 }

@@ -4,16 +4,21 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class WatchEntry {
-    private final Long id;
-    private final Long userId;
-    private final Long mediaId;
-    private final Long episodeId;
-    private final Integer rating;
-    private final String comment;
-    private final LocalDate watchedAt;
-    private final OffsetDateTime createdAt;
-    private final OffsetDateTime updatedAt;
+    private Long id;
+    private Long userId;
+    private Long mediaId;
+    private Long episodeId;
+    private Integer rating;
+    private String comment;
+    private LocalDate watchedAt;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 
     public WatchEntry(Long id, Long userId, Long mediaId, Long episodeId,
             Integer rating, String comment, LocalDate watchedAt,
@@ -41,42 +46,6 @@ public class WatchEntry {
         return new WatchEntry(id, userId, mediaId, episodeId, rating, comment, watchedAt, createdAt, updatedAt);
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public Long getMediaId() {
-        return mediaId;
-    }
-
-    public Long getEpisodeId() {
-        return episodeId;
-    }
-
-    public Integer getRating() {
-        return rating;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public LocalDate getWatchedAt() {
-        return watchedAt;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
     @Override
     public boolean equals(Object o) {
         return o instanceof WatchEntry we && Objects.equals(id, we.id);
@@ -86,4 +55,13 @@ public class WatchEntry {
     public int hashCode() {
         return Objects.hash(id);
     }
+
+    public void applyRating(Integer rating, String comment) {
+        this.setRating(rating);
+        if (comment != null && !comment.isBlank()) {
+            this.setComment(comment.trim());
+        }
+        this.setUpdatedAt(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC));
+    }
+
 }

@@ -9,5 +9,10 @@ import java.util.List;
  * Retorna uma lista de objetos Credit.
  */
 public interface ListCreditsUseCase {
+    /**
+     * Recupera todos os créditos existentes do sistema.
+     *
+     * @return Uma lista de créditos disponíveis.
+     */
     List<Credit> execute();
 }

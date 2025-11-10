@@ -1,5 +1,6 @@
 package com.cine.cinelog.core.application.usecase.watchentry;
 
+import com.cine.cinelog.core.application.ports.in.watchentry.ListWatchEntriesUseCase;
 import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
 import com.cine.cinelog.core.domain.model.WatchEntry;
 import org.springframework.data.domain.Page;
@@ -7,9 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
-public class ListWatchEntriesService {
+public class ListWatchEntriesService implements ListWatchEntriesUseCase {
     private final WatchEntryRepositoryPort repo;
 
     public ListWatchEntriesService(WatchEntryRepositoryPort repo) {

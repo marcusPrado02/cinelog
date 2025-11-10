@@ -1,21 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
 
     <!-- USERS -->
     <changeSet id="28102025194000-1" author="maps">
         <createTable tableName="users">
             <column name="id" type="BIGINT AUTO_INCREMENT">
-                <constraints primaryKey="true" nullable="false"/>
+                <constraints primaryKey="true" nullable="false" />
             </column>
             <column name="name" type="VARCHAR(120)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" />
             </column>
             <column name="email" type="VARCHAR(255)">
-                <constraints nullable="false" unique="true" uniqueConstraintName="uk_users_email"/>
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_users_email" />
             </column>
             <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" />
             </column>
         </createTable>
     </changeSet>
@@ -24,36 +25,37 @@
     <changeSet id="28102025194000-2" author="maps">
         <createTable tableName="media">
             <column name="id" type="BIGINT AUTO_INCREMENT">
-                <constraints primaryKey="true" nullable="false"/>
+                <constraints primaryKey="true" nullable="false" />
             </column>
             <column name="title" type="VARCHAR(300)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" />
             </column>
             <column name="type" type="ENUM('MOVIE','SERIES')">
-                <constraints nullable="false"/>
+                <constraints nullable="false" />
             </column>
-            <column name="release_year" type="YEAR"/>
-            <column name="original_title" type="VARCHAR(300)"/>
-            <column name="original_language" type="VARCHAR(10)"/>
-            <column name="poster_url" type="VARCHAR(300)"/>
-            <column name="backdrop_url" type="VARCHAR(300)"/>
-            <column name="overview" type="TEXT"/>
+            <column name="release_year" type="YEAR" />
+            <column name="original_title" type="VARCHAR(300)" />
+            <column name="original_language" type="VARCHAR(10)" />
+            <column name="poster_url" type="VARCHAR(300)" />
+            <column name="backdrop_url" type="VARCHAR(300)" />
+            <column name="overview" type="TEXT" />
             <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
-                <constraints nullable="false"/>
+                <constraints nullable="false" />
             </column>
-            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)">
-                <constraints nullable="false"/>
+            <column name="updated_at" type="DATETIME(6)"
+                defaultValueComputed="CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
             </column>
         </createTable>
 
         <createIndex tableName="media" indexName="idx_media_type">
-            <column name="type"/>
+            <column name="type" />
         </createIndex>
         <createIndex tableName="media" indexName="idx_media_title">
-            <column name="title"/>
+            <column name="title" />
         </createIndex>
         <createIndex tableName="media" indexName="idx_media_year">
-            <column name="release_year"/>
+            <column name="release_year" />
         </createIndex>
     </changeSet>
 
@@ -61,10 +63,10 @@
     <changeSet id="28102025194000-3" author="maps">
         <createTable tableName="genres">
             <column name="id" type="SMALLINT AUTO_INCREMENT">
-                <constraints primaryKey="true" nullable="false"/>
+                <constraints primaryKey="true" nullable="false" />
             </column>
             <column name="name" type="VARCHAR(100)">
-                <constraints nullable="false" unique="true" uniqueConstraintName="uk_genres_name"/>
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_genres_name" />
             </column>
         </createTable>
     </changeSet>

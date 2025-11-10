@@ -1,53 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
 
   <changeSet id="28102025195500" author="maps">
-    <sql>CREATE SCHEMA IF NOT EXISTS audit DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci;</sql>
+    <sql>CREATE SCHEMA IF NOT EXISTS audit DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE
+      utf8mb4_unicode_ci;</sql>
   </changeSet>
 
   <changeSet id="28102025195501" author="maps">
     <createTable schemaName="audit" tableName="change_log">
       <column name="id" type="BIGINT AUTO_INCREMENT">
-        <constraints primaryKey="true" nullable="false"/>
+        <constraints primaryKey="true" nullable="false" />
       </column>
       <column name="table_name" type="VARCHAR(128)">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
       <column name="pk_value" type="VARCHAR(256)">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
       <column name="op" type="ENUM('INSERT','UPDATE','DELETE')">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
-      <column name="old_data" type="JSON"/>
-      <column name="new_data" type="JSON"/>
-      <column name="actor_user_id" type="BIGINT"/>
-      <column name="actor_email" type="VARCHAR(255)"/>
-      <column name="source_app" type="VARCHAR(64)"/>
-      <column name="app_version" type="VARCHAR(32)"/>
-      <column name="trace_id" type="VARCHAR(64)"/>
-      <column name="span_id" type="VARCHAR(32)"/>
-      <column name="client_ip" type="VARCHAR(64)"/>
-      <column name="user_agent" type="VARCHAR(255)"/>
-      <column name="tx_id" type="VARCHAR(64)"/>
+      <column name="old_data" type="JSON" />
+      <column name="new_data" type="JSON" />
+      <column name="actor_user_id" type="BIGINT" />
+      <column name="actor_email" type="VARCHAR(255)" />
+      <column name="source_app" type="VARCHAR(64)" />
+      <column name="app_version" type="VARCHAR(32)" />
+      <column name="trace_id" type="VARCHAR(64)" />
+      <column name="span_id" type="VARCHAR(32)" />
+      <column name="client_ip" type="VARCHAR(64)" />
+      <column name="user_agent" type="VARCHAR(255)" />
+      <column name="tx_id" type="VARCHAR(64)" />
       <column name="occurred_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
-        <constraints nullable="false"/>
+        <constraints nullable="false" />
       </column>
     </createTable>
 
     <createIndex schemaName="audit" tableName="change_log" indexName="idx_cl_table_pk">
-      <column name="table_name"/>
-      <column name="pk_value"/>
+      <column name="table_name" />
+      <column name="pk_value" />
     </createIndex>
     <createIndex schemaName="audit" tableName="change_log" indexName="idx_cl_when">
-      <column name="occurred_at"/>
+      <column name="occurred_at" />
     </createIndex>
     <createIndex schemaName="audit" tableName="change_log" indexName="idx_cl_trace">
-      <column name="trace_id"/>
+      <column name="trace_id" />
     </createIndex>
     <createIndex schemaName="audit" tableName="change_log" indexName="idx_cl_user">
-      <column name="actor_user_id"/>
+      <column name="actor_user_id" />
     </createIndex>
   </changeSet>
 </databaseChangeLog>

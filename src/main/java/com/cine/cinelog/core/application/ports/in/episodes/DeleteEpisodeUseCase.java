@@ -6,5 +6,10 @@ package com.cine.cinelog.core.application.ports.in.episodes;
  * identificando-o pelo seu ID.
  */
 public interface DeleteEpisodeUseCase {
+    /**
+     * Remove um episódio existente do sistema.
+     *
+     * @param id O ID do episódio a ser removido.
+     */
     void execute(Long id);
 }

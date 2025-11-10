@@ -10,5 +10,10 @@ import java.util.List;
  * Retorna uma lista de objetos Episode.
  */
 public interface ListEpisodesUseCase {
+    /**
+     * Recupera todos os episódios existentes do sistema.
+     *
+     * @return Uma lista de episódios disponíveis.
+     */
     List<Episode> execute();
 }

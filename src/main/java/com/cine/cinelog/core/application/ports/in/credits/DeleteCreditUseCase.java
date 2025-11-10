@@ -6,5 +6,10 @@ package com.cine.cinelog.core.application.ports.in.credits;
  * identificando-o pelo seu ID.
  */
 public interface DeleteCreditUseCase {
+    /**
+     * Remove um crédito existente do sistema.
+     *
+     * @param id O ID do crédito a ser removido.
+     */
     void execute(Long id);
 }

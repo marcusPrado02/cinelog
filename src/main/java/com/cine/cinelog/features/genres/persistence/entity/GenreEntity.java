@@ -7,16 +7,16 @@ import jakarta.persistence.*;
 public class GenreEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Short id;
+    private Long id;
 
     @Column(nullable = false, length = 100)
     private String name;
 
-    public Short getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Short id) {
+    public void setId(Long id) {
         this.id = id;
     }
 

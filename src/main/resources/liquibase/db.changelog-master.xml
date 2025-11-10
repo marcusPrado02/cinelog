@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="
-          http://www.liquibase.org/xml/ns/dbchangelog
-          https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
 
-    <!-- Propriedades (opcional) -->
-    <property name="app_name" value="cinelog"/>
-    <property name="charset" value="utf8mb4"/>
+  <!-- Propriedades (opcional) -->
+  <property name="app_name" value="cinelog" />
+  <property name="charset" value="utf8mb4" />
 
-    <!-- Inclui automaticamente todos os changelogs da pasta -->
-    <includeAll path="liquibase/changes" relativeToChangelogFile="false"/>
+  <!-- Inclui automaticamente todos os changelogs da pasta -->
+  <includeAll path="liquibase/changes" relativeToChangelogFile="false" />
 </databaseChangeLog>
