@@ -16,6 +16,11 @@ spring:
       max-lifetime: 1800000
       transaction-isolation: TRANSACTION_READ_COMMITTED
 
+  security:
+    jwt:
+      secret: ${CINELOG_JWT_SECRET:change-this-in-prod}
+      expiration-seconds: 3600
+
   jpa:
     hibernate:
       ddl-auto: none

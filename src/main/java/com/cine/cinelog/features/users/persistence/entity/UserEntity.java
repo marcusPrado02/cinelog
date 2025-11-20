@@ -18,6 +18,15 @@ public class UserEntity {
     @Column(nullable = false, length = 255)
     private String email;
 
+    @Column(name = "password_hash", nullable = false, length = 255)
+    private String passwordHash;
+
+    @Column(name = "role", nullable = false, length = 20)
+    private String role = "USER";
+
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = true;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -57,5 +66,29 @@ public class UserEntity {
 
     public void setCreatedAt(OffsetDateTime c) {
         this.createdAt = c;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

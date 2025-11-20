@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="20251114190000" author="maps">
+        <addColumn tableName="users">
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="role" type="VARCHAR(20)" defaultValue="USER">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="enabled" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
