@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <!-- Add version column to media table -->
+    <changeSet id="20251212030000-1" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="media" columnName="version" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="media">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to seasons table -->
+    <changeSet id="20251212030000-2" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="seasons" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="seasons">
+            <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="seasons">
+            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="seasons">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="seasons">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="seasons">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to episodes table -->
+    <changeSet id="20251212030000-3" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="episodes" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="episodes">
+            <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="episodes">
+            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="episodes">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="episodes">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="episodes">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to people table -->
+    <changeSet id="20251212030000-4" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="people" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="people">
+            <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to credits table -->
+    <changeSet id="20251212030000-5" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="credits" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="credits">
+            <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="credits">
+            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="credits">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="credits">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="credits">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to genres table -->
+    <changeSet id="20251212030000-6" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="genres" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="genres">
+            <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="genres">
+            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="genres">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="genres">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="genres">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to watch_entry table -->
+    <changeSet id="20251212030000-7" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="watch_entry" columnName="version" />
+            </not>
+        </preConditions>
+
+        <comment>Add missing audit columns to watch_entry table (created_at and updated_at already exist)</comment>
+
+        <addColumn tableName="watch_entry">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="watch_entry">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="watch_entry">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to watchlist table -->
+    <changeSet id="20251212030000-8" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="watchlist" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="watchlist">
+            <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="watchlist">
+            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="watchlist">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="watchlist">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="watchlist">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add audit columns to users table -->
+    <changeSet id="20251212030000-9" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="users" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="users">
+            <column name="created_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="updated_at" type="DATETIME(6)" defaultValueComputed="CURRENT_TIMESTAMP(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="users">
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

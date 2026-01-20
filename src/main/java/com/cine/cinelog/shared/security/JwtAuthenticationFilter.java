@@ -12,6 +12,14 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+/**
+ * Classe de configuração Spring para gerenciamento de jwtauthenticationfilter.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

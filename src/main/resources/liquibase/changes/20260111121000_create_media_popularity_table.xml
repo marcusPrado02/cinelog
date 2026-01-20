@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260111121000-1" author="copilot">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="media_popularity"/>
+            </not>
+        </preConditions>
+        
+        <comment>
+            PR6: Create media_popularity table for CQRS read model.
+            This table stores aggregated popularity metrics per media,
+            updated asynchronously via Kafka events (eventual consistency).
+            Used for top-rated and trending features.
+        </comment>
+
+        <createTable tableName="media_popularity">
+            <!-- Primary Key -->
+            <column name="media_id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_media_popularity"/>
+            </column>
+
+            <!-- Popularity Metrics -->
+            <column name="ratings_count" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="avg_rating" type="DECIMAL(3,2)">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="watch_count" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="last_watched_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Metadata -->
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="media_popularity"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260111121000-2" author="copilot">
+        <comment>Create index on avg_rating DESC for top-rated queries</comment>
+
+        <createIndex indexName="idx_media_pop_avg_rating" tableName="media_popularity">
+            <column name="avg_rating" descending="true"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="media_popularity" indexName="idx_media_pop_avg_rating"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260111121000-3" author="copilot">
+        <comment>Create index on watch_count DESC for trending queries</comment>
+
+        <createIndex indexName="idx_media_pop_watch_count" tableName="media_popularity">
+            <column name="watch_count" descending="true"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="media_popularity" indexName="idx_media_pop_watch_count"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260111121000-4" author="copilot">
+        <comment>Create index on last_watched_at DESC for recency queries</comment>
+
+        <createIndex indexName="idx_media_pop_last_watched" tableName="media_popularity">
+            <column name="last_watched_at" descending="true"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="media_popularity" indexName="idx_media_pop_last_watched"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260111121000-5" author="copilot">
+        <comment>Create composite index for trending queries (watch_count + last_watched_at)</comment>
+
+        <createIndex indexName="idx_media_pop_trending" tableName="media_popularity">
+            <column name="watch_count" descending="true"/>
+            <column name="last_watched_at" descending="true"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="media_popularity" indexName="idx_media_pop_trending"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

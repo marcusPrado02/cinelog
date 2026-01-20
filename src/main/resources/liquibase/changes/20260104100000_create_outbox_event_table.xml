@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260104100000-outbox-event-table" author="system">
+        <comment>
+            Cria tabela outbox_event para implementação do Outbox Pattern.
+            Garante publicação confiável de domain events em mensageria externa (Kafka).
+
+            Padrão Outbox:
+            1. Domain events são gravados nesta tabela na mesma transação do agregado
+            2. Job assíncrono processa eventos PENDING e publica no Kafka
+            3. Status é atualizado para SENT ou FAILED com retry backoff
+
+            Benefícios:
+            - Consistência transacional entre agregado e evento
+            - At-least-once delivery garantido
+            - Retry automático com backoff
+            - Auditoria completa de eventos publicados
+        </comment>
+
+        <createTable tableName="outbox_event">
+            <column name="id" type="BINARY(16)">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+
+            <column name="aggregate_type" type="VARCHAR(100)">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="aggregate_id" type="VARCHAR(100)">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="event_type" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="event_version" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="occurred_at" type="TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="payload" type="JSON">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="attempts" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="next_retry_at" type="TIMESTAMP">
+                <constraints nullable="true" />
+            </column>
+
+            <column name="last_error" type="TEXT">
+                <constraints nullable="true" />
+            </column>
+
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="processed_at" type="TIMESTAMP">
+                <constraints nullable="true" />
+            </column>
+        </createTable>
+
+        <createIndex tableName="outbox_event" indexName="idx_outbox_status_retry">
+            <column name="status" />
+            <column name="next_retry_at" />
+        </createIndex>
+
+        <createIndex tableName="outbox_event" indexName="idx_outbox_aggregate">
+            <column name="aggregate_type" />
+            <column name="aggregate_id" />
+        </createIndex>
+
+        <createIndex tableName="outbox_event" indexName="idx_outbox_event_type">
+            <column name="event_type" />
+        </createIndex>
+
+        <createIndex tableName="outbox_event" indexName="idx_outbox_created_at">
+            <column name="created_at" />
+        </createIndex>
+
+        <addNotNullConstraint tableName="outbox_event" columnName="status"
+            columnDataType="VARCHAR(20)" />
+
+        <sql> ALTER TABLE outbox_event ADD CONSTRAINT chk_outbox_status CHECK (status IN ('PENDING',
+            'SENT', 'FAILED')); </sql>
+    </changeSet>
+
+</databaseChangeLog>

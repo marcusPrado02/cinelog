@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+        PR6 - Fase 5: WatchProgress (State Extension)
+
+        Tabela: watch_entry_progress
+        Finalidade: Armazenar progresso de visualização de séries
+
+        Design:
+        - FK para watch_entry (1:1 relationship)
+        - Apenas para WatchEntry de episódios (episodeId NOT NULL)
+        - Progresso por episódio (season, episode, duração assistida)
+        - Índice em watch_entry_id para queries rápidas
+        - updated_at com @PreUpdate para tracking de mudanças
+    -->
+
+    <changeSet id="20260111140000-1" author="copilot">
+        <comment>Create watch_entry_progress table for series watch progress tracking</comment>
+
+        <createTable tableName="watch_entry_progress">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"
+                    primaryKeyName="pk_watch_entry_progress" />
+            </column>
+
+            <!-- FK para watch_entry (1:1) -->
+            <column name="watch_entry_id" type="BIGINT">
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="uk_progress_watch_entry" />
+            </column>
+
+            <!-- Progresso atual -->
+            <column name="current_season" type="INT">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="current_episode" type="INT">
+                <constraints nullable="false" />
+            </column>
+
+            <!-- Duração assistida em segundos -->
+            <column name="watched_duration_seconds" type="BIGINT">
+                <constraints nullable="false" />
+            </column>
+
+            <!-- Duração total do episódio em segundos -->
+            <column name="total_duration_seconds" type="BIGINT">
+                <constraints nullable="false" />
+            </column>
+
+            <!-- Auditoria -->
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20260111140000-2" author="copilot">
+        <comment>Add foreign key constraint to watch_entry table</comment>
+
+        <addForeignKeyConstraint
+            baseTableName="watch_entry_progress"
+            baseColumnNames="watch_entry_id"
+            constraintName="fk_progress_watch_entry"
+            referencedTableName="watch_entry"
+            referencedColumnNames="id"
+            onDelete="CASCADE"
+            onUpdate="CASCADE" />
+    </changeSet>
+
+    <changeSet id="20260111140000-3" author="copilot">
+        <comment>Add index on watch_entry_id for fast queries</comment>
+
+        <createIndex indexName="idx_progress_watch_entry_id" tableName="watch_entry_progress">
+            <column name="watch_entry_id" />
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260111140000-4" author="copilot">
+        <comment>Add check constraint: current_season >= 1</comment>
+
+        <sql dbms="mysql"> ALTER TABLE watch_entry_progress ADD CONSTRAINT
+            chk_progress_season_positive CHECK (current_season >= 1) </sql>
+    </changeSet>
+
+    <changeSet id="20260111140000-5" author="copilot">
+        <comment>Add check constraint: current_episode >= 1</comment>
+
+        <sql dbms="mysql"> ALTER TABLE watch_entry_progress ADD CONSTRAINT
+            chk_progress_episode_positive CHECK (current_episode >= 1) </sql>
+    </changeSet>
+
+    <changeSet id="20260111140000-6" author="copilot">
+        <comment>Add check constraint: watched_duration_seconds >= 0</comment>
+
+        <sql dbms="mysql"> ALTER TABLE watch_entry_progress ADD CONSTRAINT
+            chk_progress_watched_non_negative CHECK (watched_duration_seconds >= 0) </sql>
+    </changeSet>
+
+    <changeSet id="20260111140000-7" author="copilot">
+        <comment>Add check constraint: total_duration_seconds > 0</comment>
+
+        <sql dbms="mysql"> ALTER TABLE watch_entry_progress ADD CONSTRAINT
+            chk_progress_total_positive CHECK (total_duration_seconds > 0) </sql>
+    </changeSet>
+
+    <changeSet id="20260111140000-8" author="copilot">
+        <comment>Add check constraint: watched less than or equal to total</comment>
+
+        <sql dbms="mysql"> ALTER TABLE watch_entry_progress ADD CONSTRAINT
+            chk_progress_watched_lte_total CHECK (watched_duration_seconds &lt;=
+            total_duration_seconds) </sql>
+    </changeSet>
+
+</databaseChangeLog>

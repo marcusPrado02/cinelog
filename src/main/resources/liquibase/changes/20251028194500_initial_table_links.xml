@@ -4,7 +4,8 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
 
   <!-- MEDIA_GENRES (N:N) -->
-  <changeSet id="28102025194500-1" author="maps">
+  <changeSet id="28102025194500-1" author="maps"
+    logicalFilePath="liquibase/changes/28102025194500_initial_table_links.xml">
     <createTable tableName="media_genres">
       <column name="media_id" type="BIGINT">
         <constraints nullable="false" />
@@ -24,7 +25,8 @@
   </changeSet>
 
   <!-- PEOPLE -->
-  <changeSet id="28102025194500-2" author="maps">
+  <changeSet id="28102025194500-2" author="maps"
+    logicalFilePath="liquibase/changes/28102025194500_initial_table_links.xml">
     <createTable tableName="people">
       <column name="id" type="BIGINT AUTO_INCREMENT">
         <constraints primaryKey="true" nullable="false" />
@@ -41,7 +43,8 @@
   </changeSet>
 
   <!-- CREDITS -->
-  <changeSet id="28102025194500-3" author="maps">
+  <changeSet id="28102025194500-3" author="maps"
+    logicalFilePath="liquibase/changes/28102025194500_initial_table_links.xml">
     <createTable tableName="credits">
       <column name="id" type="BIGINT AUTO_INCREMENT">
         <constraints primaryKey="true" nullable="false" />
@@ -75,7 +78,8 @@
   </changeSet>
 
   <!-- SEASONS -->
-  <changeSet id="28102025194500-4" author="maps">
+  <changeSet id="28102025194500-4" author="maps"
+    logicalFilePath="liquibase/changes/28102025194500_initial_table_links.xml">
     <createTable tableName="seasons">
       <column name="id" type="BIGINT AUTO_INCREMENT">
         <constraints primaryKey="true" nullable="false" />
@@ -97,7 +101,8 @@
   </changeSet>
 
   <!-- EPISODES -->
-  <changeSet id="28102025194500-5" author="maps">
+  <changeSet id="28102025194500-5" author="maps"
+    logicalFilePath="liquibase/changes/28102025194500_initial_table_links.xml">
     <createTable tableName="episodes">
       <column name="id" type="BIGINT AUTO_INCREMENT">
         <constraints primaryKey="true" nullable="false" />
@@ -119,7 +124,8 @@
   </changeSet>
 
   <!-- WATCH_ENTRY -->
-  <changeSet id="28102025194500-6" author="maps">
+  <changeSet id="28102025194500-6" author="maps"
+    logicalFilePath="liquibase/changes/28102025194500_initial_table_links.xml">
     <createTable tableName="watch_entry">
       <column name="id" type="BIGINT AUTO_INCREMENT">
         <constraints primaryKey="true" nullable="false" />

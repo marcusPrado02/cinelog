@@ -4,7 +4,8 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
 
     <!-- USERS -->
-    <changeSet id="28102025194000-1" author="maps">
+    <changeSet id="28102025194000-1" author="maps"
+        logicalFilePath="liquibase/changes/28102025194000_create_initial_tables.xml">
         <createTable tableName="users">
             <column name="id" type="BIGINT AUTO_INCREMENT">
                 <constraints primaryKey="true" nullable="false" />
@@ -22,7 +23,8 @@
     </changeSet>
 
     <!-- MEDIA -->
-    <changeSet id="28102025194000-2" author="maps">
+    <changeSet id="28102025194000-2" author="maps"
+        logicalFilePath="liquibase/changes/28102025194000_create_initial_tables.xml">
         <createTable tableName="media">
             <column name="id" type="BIGINT AUTO_INCREMENT">
                 <constraints primaryKey="true" nullable="false" />
@@ -60,7 +62,8 @@
     </changeSet>
 
     <!-- GENRES -->
-    <changeSet id="28102025194000-3" author="maps">
+    <changeSet id="28102025194000-3" author="maps"
+        logicalFilePath="liquibase/changes/28102025194000_create_initial_tables.xml">
         <createTable tableName="genres">
             <column name="id" type="SMALLINT AUTO_INCREMENT">
                 <constraints primaryKey="true" nullable="false" />

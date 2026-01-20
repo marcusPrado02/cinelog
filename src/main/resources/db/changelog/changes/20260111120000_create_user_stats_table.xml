@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260111120000-1" author="copilot">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="user_stats" />
+            </not>
+        </preConditions>
+
+        <comment>
+            PR6: Create user_stats table for CQRS read model.
+            This table stores aggregated watch statistics per user,
+            updated asynchronously via Kafka events (eventual consistency).
+        </comment>
+
+        <createTable tableName="user_stats">
+            <!-- Primary Key -->
+            <column name="user_id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false" primaryKeyName="pk_user_stats" />
+            </column>
+
+            <!-- Aggregated Metrics -->
+            <column name="total_watched" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="total_movies" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="total_series" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="avg_rating" type="DECIMAL(3,2)">
+                <constraints nullable="true" />
+            </column>
+
+            <column name="last_watched_at" type="DATE">
+                <constraints nullable="true" />
+            </column>
+
+            <!-- Metadata -->
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="user_stats" />
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260111120000-2" author="copilot">
+        <comment>Create index on last_watched_at for trending queries</comment>
+
+        <createIndex indexName="idx_user_stats_last_watched" tableName="user_stats">
+            <column name="last_watched_at" descending="true" />
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="user_stats" indexName="idx_user_stats_last_watched" />
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260111120000-3" author="copilot">
+        <comment>Create index on avg_rating for top users queries</comment>
+
+        <createIndex indexName="idx_user_stats_avg_rating" tableName="user_stats">
+            <column name="avg_rating" descending="true" />
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="user_stats" indexName="idx_user_stats_avg_rating" />
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

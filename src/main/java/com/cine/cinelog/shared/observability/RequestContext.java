@@ -3,6 +3,14 @@ package com.cine.cinelog.shared.observability;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO para operação de RequestContext.
+ * 
+ * <p>Representa os dados necessários para operação requestcontext,
+ * incluindo validações e restrições de dados.</p>
+ * 
+ * @since 1.0
+ */
 @AllArgsConstructor
 public final class RequestContext {
     private static final ThreadLocal<RequestContext> context = new ThreadLocal<>();

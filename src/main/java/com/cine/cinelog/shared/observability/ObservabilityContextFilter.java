@@ -22,6 +22,14 @@ import java.util.UUID;
  * Também gera um log-resumo único por request.
  */
 @Component
+/**
+ * Classe de configuração Spring para gerenciamento de observabilitycontextfilter.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 @Order(1)
 public class ObservabilityContextFilter implements Filter {
 

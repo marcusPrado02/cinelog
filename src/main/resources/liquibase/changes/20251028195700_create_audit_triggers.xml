@@ -6,11 +6,13 @@
   <!-- ===== MEDIA ===== -->
 
   <!-- Drop antigos (id únicos) -->
-  <changeSet id="28102025195700-01-drop-trg_media_ins" author="maps">
+  <changeSet id="28102025195700-01-drop-trg_media_ins" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql>DROP TRIGGER IF EXISTS trg_media_ins;</sql>
   </changeSet>
 
-  <changeSet id="28102025195700-02-create-trg_media_ins" author="maps">
+  <changeSet id="28102025195700-02-create-trg_media_ins" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql splitStatements="false" stripComments="true"> CREATE TRIGGER trg_media_ins AFTER INSERT ON
       media FOR EACH ROW BEGIN INSERT INTO audit.change_log( table_name, pk_value, op, old_data,
       new_data, actor_user_id, actor_email, source_app, app_version, trace_id, span_id, client_ip,
@@ -23,11 +25,13 @@
       @user_agent, @tx_id, NOW(6) ); END </sql>
   </changeSet>
 
-  <changeSet id="28102025195700-03-drop-trg_media_upd" author="maps">
+  <changeSet id="28102025195700-03-drop-trg_media_upd" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql>DROP TRIGGER IF EXISTS trg_media_upd;</sql>
   </changeSet>
 
-  <changeSet id="28102025195700-04-create-trg_media_upd" author="maps">
+  <changeSet id="28102025195700-04-create-trg_media_upd" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql splitStatements="false" stripComments="true"> CREATE TRIGGER trg_media_upd AFTER UPDATE ON
       media FOR EACH ROW BEGIN INSERT INTO audit.change_log( table_name, pk_value, op, old_data,
       new_data, actor_user_id, actor_email, source_app, app_version, trace_id, span_id, client_ip,
@@ -45,11 +49,13 @@
   </changeSet>
 
 
-  <changeSet id="28102025195700-05-drop-trg_media_del" author="maps">
+  <changeSet id="28102025195700-05-drop-trg_media_del" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql>DROP TRIGGER IF EXISTS trg_media_del;</sql>
   </changeSet>
 
-  <changeSet id="28102025195700-06-create-trg_media_del" author="maps">
+  <changeSet id="28102025195700-06-create-trg_media_del" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql splitStatements="false" stripComments="true"> CREATE TRIGGER trg_media_del AFTER DELETE ON
       media FOR EACH ROW BEGIN INSERT INTO audit.change_log( table_name, pk_value, op, old_data,
       new_data, actor_user_id, actor_email, source_app, app_version, trace_id, span_id, client_ip,
@@ -64,11 +70,13 @@
 
   <!-- ===== WATCH_ENTRY ===== -->
 
-  <changeSet id="28102025195700-07-drop-trg_we_ins" author="maps">
+  <changeSet id="28102025195700-07-drop-trg_we_ins" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql>DROP TRIGGER IF EXISTS trg_watch_entry_ins;</sql>
   </changeSet>
 
-  <changeSet id="28102025195700-08-create-trg_we_ins" author="maps">
+  <changeSet id="28102025195700-08-create-trg_we_ins" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql splitStatements="false" stripComments="true"> CREATE TRIGGER trg_watch_entry_ins AFTER
       INSERT ON watch_entry FOR EACH ROW BEGIN INSERT INTO audit.change_log( table_name, pk_value,
       op, old_data, new_data, actor_user_id, actor_email, source_app, app_version, trace_id,
@@ -80,11 +88,13 @@
       @user_agent, @tx_id, NOW(6) ); END </sql>
   </changeSet>
 
-  <changeSet id="28102025195700-09-drop-trg_we_upd" author="maps">
+  <changeSet id="28102025195700-09-drop-trg_we_upd" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql>DROP TRIGGER IF EXISTS trg_watch_entry_upd;</sql>
   </changeSet>
 
-  <changeSet id="28102025195700-10-create-trg_we_upd" author="maps">
+  <changeSet id="28102025195700-10-create-trg_we_upd" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql splitStatements="false" stripComments="true"> CREATE TRIGGER trg_watch_entry_upd AFTER
       UPDATE ON watch_entry FOR EACH ROW BEGIN INSERT INTO audit.change_log( table_name, pk_value,
       op, old_data, new_data, actor_user_id, actor_email, source_app, app_version, trace_id,
@@ -98,11 +108,13 @@
       @app_version, @trace_id, @span_id, @client_ip, @user_agent, @tx_id, NOW(6) ); END </sql>
   </changeSet>
 
-  <changeSet id="28102025195700-11-drop-trg_we_del" author="maps">
+  <changeSet id="28102025195700-11-drop-trg_we_del" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql>DROP TRIGGER IF EXISTS trg_watch_entry_del;</sql>
   </changeSet>
 
-  <changeSet id="28102025195700-12-create-trg_we_del" author="maps">
+  <changeSet id="28102025195700-12-create-trg_we_del" author="maps"
+    logicalFilePath="liquibase/changes/28102025195700_create_audit_triggers.xml">
     <sql splitStatements="false" stripComments="true"> CREATE TRIGGER trg_watch_entry_del AFTER
       DELETE ON watch_entry FOR EACH ROW BEGIN INSERT INTO audit.change_log( table_name, pk_value,
       op, old_data, new_data, actor_user_id, actor_email, source_app, app_version, trace_id,

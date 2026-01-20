@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260105100000-add-failed-perm-status-to-outbox" author="system">
+        <comment>
+            Adiciona status FAILED_PERM ao outbox_event para eventos que falharam permanentemente.
+
+            FAILED_PERM é atingido quando:
+            - Número de tentativas (attempts) excede o máximo configurado (ex: 5)
+            - Indica que o evento deve ser investigado manualmente
+            - Não será mais processado automaticamente pelo publisher job
+
+            Esta mudança é parte do PR2: Outbox Robusto com retry backoff inteligente.
+        </comment>
+
+        <!-- Ignora erro se constraint não existir -->
+        <sql dbms="mysql" failOnError="false">ALTER TABLE outbox_event DROP CHECK chk_outbox_status;</sql>
+
+        <!-- Adiciona nova constraint com FAILED_PERM -->
+        <sql>ALTER TABLE outbox_event ADD CONSTRAINT chk_outbox_status CHECK (status IN ('PENDING',
+            'SENT', 'FAILED', 'FAILED_PERM'));</sql>
+
+        <!-- Adiciona índice para FAILED_PERM (útil para dashboards/alertas) -->
+        <createIndex tableName="outbox_event" indexName="idx_outbox_failed_perm">
+            <column name="status" />
+            <column name="created_at" />
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>

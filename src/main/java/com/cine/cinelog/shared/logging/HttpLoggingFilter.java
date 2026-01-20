@@ -25,6 +25,14 @@ import java.util.UUID;
  * - Registra método, path, status, tempo, tamanho e user-agent.
  */
 @Component
+/**
+ * Classe de configuração Spring para gerenciamento de httploggingfilter.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 @Order(1)
 public class HttpLoggingFilter extends OncePerRequestFilter {
 

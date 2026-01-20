@@ -21,6 +21,16 @@ import org.springframework.context.annotation.Configuration;
  */
 @Aspect
 @Configuration
+/**
+ * Serviço responsável por operação de UseCaseLoggingAspect.
+ * Implementa o caso de uso de operação aplicando regras de negócio e políticas de domínio.
+ * 
+ * <p>Este serviço coordena as operações necessárias e garante
+ * a consistência dos dados através de validações e políticas.</p>
+ * 
+ * @since 1.0
+ * @see UseCaseLoggingAspect
+ */
 @Order(10)
 public class UseCaseLoggingAspect {
 

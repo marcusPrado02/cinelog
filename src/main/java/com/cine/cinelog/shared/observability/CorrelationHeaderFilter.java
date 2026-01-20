@@ -16,6 +16,14 @@ import java.util.UUID;
  * Adiciona cabeçalhos X-Trace-Id, X-Span-Id, X-Request-Id e X-Tx-Id às
  * respostas.
  */
+/**
+ * Classe de configuração Spring para gerenciamento de correlationheaderfilter.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 @Component
 public class CorrelationHeaderFilter implements Filter {
 

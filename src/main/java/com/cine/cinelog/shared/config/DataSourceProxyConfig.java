@@ -23,6 +23,14 @@ import java.util.List;
  * Cada vez que uma conexão é obtida do DataSource, variáveis de sessão são
  * definidas com base no contexto da requisição atual.
  */
+/**
+ * Classe de configuração Spring para gerenciamento de datasourceproxy.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 @Configuration
 public class DataSourceProxyConfig {
 

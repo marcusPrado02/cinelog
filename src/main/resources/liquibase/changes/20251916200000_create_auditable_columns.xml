@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="20251916200000-1" author="maps">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="media" columnName="created_at" />
+            </not>
+        </preConditions>
+
+        <addColumn tableName="media">
+            <column name="created_at" type="DATETIME(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="media">
+            <column name="updated_at" type="DATETIME(6)">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="media">
+            <column name="created_by" type="BIGINT" />
+        </addColumn>
+
+        <addColumn tableName="media">
+            <column name="updated_by" type="BIGINT" />
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

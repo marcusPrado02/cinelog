@@ -7,6 +7,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+/**
+ * Classe de configuração Spring para gerenciamento de cineloguserdetails.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 
 public class CinelogUserDetails implements UserDetails {
 

@@ -7,6 +7,16 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+/**
+ * Serviço responsável por operação de JpaUserDetails.
+ * Implementa o caso de uso de operação aplicando regras de negócio e políticas de domínio.
+ * 
+ * <p>Este serviço coordena as operações necessárias e garante
+ * a consistência dos dados através de validações e políticas.</p>
+ * 
+ * @since 1.0
+ * @see JpaUserDetailsService
+ */
 @Service
 public class JpaUserDetailsService implements UserDetailsService {
 

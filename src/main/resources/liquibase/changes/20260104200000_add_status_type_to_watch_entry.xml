@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260104200000-add-status-type-to-watch-entry" author="developer">
+        <comment>
+            Adiciona coluna status_type à tabela watch_entry para suportar State Pattern.
+
+            Estados possíveis:
+            - PLANNING: planejando assistir (padrão)
+            - WATCHING: assistindo atualmente
+            - COMPLETED: completado
+            - DROPPED: abandonado
+
+            Todas as entradas existentes serão migradas para PLANNING (estado inicial).
+        </comment>
+
+        <addColumn tableName="watch_entry">
+            <column name="status_type" type="VARCHAR(20)" defaultValue="PLANNING">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="watch_entry" columnName="status_type" />
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260104200001-migrate-existing-watch-entries-status" author="developer">
+        <comment>
+            Migração inteligente de status para entradas existentes baseado em dados:
+
+            Regras de migração:
+            1. Se watchedAt != null E rating != null → COMPLETED (assistiu e avaliou)
+            2. Se watchedAt != null E rating IS null → WATCHING (assistiu mas não avaliou)
+            3. Caso contrário → PLANNING (padrão, apenas planejando)
+
+            Esta migração é idempotente e pode ser executada múltiplas vezes.
+        </comment>
+
+        <!-- Migrar para COMPLETED: tem watchedAt E rating -->
+        <update tableName="watch_entry">
+            <column name="status_type" value="COMPLETED" />
+            <where>watched_at IS NOT NULL AND rating IS NOT NULL</where>
+        </update>
+
+        <!-- Migrar para WATCHING: tem watchedAt mas SEM rating -->
+        <update tableName="watch_entry">
+            <column name="status_type" value="WATCHING" />
+            <where>watched_at IS NOT NULL AND rating IS NULL</where>
+        </update>
+
+        <!-- PLANNING já é o default, não precisa UPDATE -->
+
+        <rollback>
+            <update tableName="watch_entry">
+                <column name="status_type" value="PLANNING" />
+            </update>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260104200002-add-index-status-type" author="developer">
+        <comment>
+            Adiciona índice em status_type para otimizar queries que filtram por estado.
+
+            Exemplos de queries otimizadas:
+            - Listar todos PLANNING de um usuário (watchlist)
+            - Contar COMPLETED para estatísticas
+            - Buscar WATCHING para sugerir continuar assistindo
+        </comment>
+
+        <createIndex tableName="watch_entry" indexName="idx_watch_entry_status_type">
+            <column name="status_type" />
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="watch_entry" indexName="idx_watch_entry_status_type" />
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260104200003-add-composite-index-user-status" author="developer">
+        <comment>
+            Adiciona índice composto (user_id, status_type) para queries comuns:
+            - Listar watchlist de um usuário (user_id + PLANNING)
+            - Estatísticas por usuário (user_id + COMPLETED)
+            - "Continue assistindo" (user_id + WATCHING)
+        </comment>
+
+        <createIndex tableName="watch_entry" indexName="idx_watch_entry_user_status">
+            <column name="user_id" />
+            <column name="status_type" />
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="watch_entry" indexName="idx_watch_entry_user_status" />
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260104110000-inbox-event-table" author="system">
+        <comment>
+            Cria tabela inbox_event para garantir idempotência no consumo de eventos Kafka.
+
+            Pattern Idempotent Consumer:
+            1. Consumer verifica se eventId já existe na inbox antes de processar
+            2. Se existe, descarta (duplicate delivery)
+            3. Se não existe, processa e insere eventId transacionalmente
+
+            Garante exactly-once semantics no processamento de eventos.
+        </comment>
+
+        <createTable tableName="inbox_event">
+            <column name="event_id" type="BINARY(16)">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+
+            <column name="consumer_name" type="VARCHAR(100)">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="event_type" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="aggregate_id" type="VARCHAR(100)">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="received_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="processed_at" type="TIMESTAMP">
+                <constraints nullable="true" />
+            </column>
+
+            <column name="payload" type="JSON">
+                <constraints nullable="true" />
+            </column>
+        </createTable>
+
+        <createIndex tableName="inbox_event" indexName="idx_inbox_consumer_received">
+            <column name="consumer_name" />
+            <column name="received_at" />
+        </createIndex>
+
+        <createIndex tableName="inbox_event" indexName="idx_inbox_aggregate">
+            <column name="aggregate_id" />
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>

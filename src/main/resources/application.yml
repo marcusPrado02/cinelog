@@ -1,88 +1,172 @@
 spring:
-  application:
-    name: cinelog-api
-  datasource:
-    url: jdbc:mysql://localhost:3306/cinelog?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: cinelog
-    password: cinelog
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      pool-name: cinelog-pool
-      minimum-idle: 2
-      maximum-pool-size: 10
-      auto-commit: false
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      transaction-isolation: TRANSACTION_READ_COMMITTED
+    application:
+        name: cinelog-api
+    datasource:
+        url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/cinelog?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+        username: ${SPRING_DATASOURCE_USERNAME:cinelog}
+        password: ${SPRING_DATASOURCE_PASSWORD:cinelog}
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        hikari:
+            pool-name: cinelog-pool
+            minimum-idle: 2
+            maximum-pool-size: 10
+            auto-commit: false
+            connection-timeout: 30000
+            idle-timeout: 600000
+            max-lifetime: 1800000
+            transaction-isolation: TRANSACTION_READ_COMMITTED
+    data:
+        redis:
+            host: ${SPRING_DATA_REDIS_HOST:localhost}
+            port: ${SPRING_DATA_REDIS_PORT:6379}
+            database: 0
+            timeout: 2000
+    cache:
+        type: redis
 
-  security:
-    jwt:
-      secret: ${CINELOG_JWT_SECRET:change-this-in-prod}
-      expiration-seconds: 3600
+    jpa:
+        hibernate:
+            ddl-auto: none
+        show-sql: false
+        open-in-view: false
 
-  jpa:
-    hibernate:
-      ddl-auto: none
-    show-sql: false
-    open-in-view: false
+    liquibase:
+        enabled: true
+        change-log: classpath:liquibase/db.changelog-master.xml
 
-  liquibase:
-    enabled: true
-    change-log: classpath:liquibase/db.changelog-master.xml
+    mvc:
+        problemdetails:
+            enabled: true
 
-  mvc:
-    problemdetails:
-      enabled: true
+    # Kafka configuração (será usado no PR4)
+    kafka:
+        bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer
+            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+            acks: all
+            retries: 3
+            properties:
+                "[linger.ms]": 10
+                "[max.in.flight.requests.per.connection]": 5
+                "[enable.idempotence]": true
+        consumer:
+            group-id: cinelog-consumer-group
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            auto-offset-reset: earliest
+            enable-auto-commit: false
+            properties:
+                "[spring.json.trusted.packages]": "*"
+        listener:
+            ack-mode: manual
 
 springdoc:
-  api-docs:
-    path: /v3/api-docs # JSON da especificação
-  swagger-ui:
-    path: /swagger-ui # UI acessível em /swagger-ui (redireciona p/ index)
-    display-request-duration: true
-    tags-sorter: alpha
-    operations-sorter: method
+    api-docs:
+        path: /v3/api-docs # JSON da especificação
+    swagger-ui:
+        path: /swagger-ui # UI acessível em /swagger-ui (redireciona p/ index)
+        display-request-duration: true
+        tags-sorter: alpha
+        operations-sorter: method
+    default-flat-param-object: true # Usa parâmetros simples (não nested) para Pageable
 
 server:
-  error:
-    include-message: always
-    include-binding-errors: always
-    include-exception: false
-    include-stacktrace: never # stacktrace não vai pro cliente
+    error:
+        include-message: always
+        include-binding-errors: always
+        include-exception: false
+        include-stacktrace: never # stacktrace não vai pro cliente
 
 logging:
-  level:
-    root: INFO
-    org.springframework: INFO
-    org.hibernate.SQL: WARN
-  usecase:
-    slow-threshold-ms: 800
-    sample-rate: 1.0 # 1.0 = logar tudo; 0.1 = 10%
+    level:
+        root: INFO
+        org.springframework: INFO
+        org.hibernate.SQL: WARN
+    usecase:
+        slow-threshold-ms: 800
+        sample-rate: 1.0 # 1.0 = logar tudo; 0.1 = 10%
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,loggers,env,metrics,threaddump,heapdump,prometheus,configprops
-  endpoint:
-    health:
-      show-details: always
-  # Micrometer tracing
-  tracing:
-    sampling:
-      probability: 1.0
-    enabled: false
-  metrics:
-    tags:
-      application: cinelog
-  otlp:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,loggers,env,metrics,threaddump,heapdump,prometheus,configprops
+    endpoint:
+        health:
+            show-details: always
+    # Micrometer tracing
     tracing:
-      endpoint: http://localhost:4318/v1/traces # via OTel Collector
+        sampling:
+            probability: 1.0
+        enabled: true
     metrics:
-      export:
-        enabled: false # métricas vão via Prometheus (scrape), não OTLP
+        tags:
+            application: cinelog
+    otlp:
+        tracing:
+            endpoint: ${MANAGEMENT_OTLP_TRACING_ENDPOINT:http://localhost:4318/v1/traces} # via OTel Collector
+        metrics:
+            export:
+                enabled: false # métricas vão via Prometheus (scrape), não OTLP
 info:
-  app:
-    name: cinelog
-    version: v1
+    app:
+        name: cinelog
+        version: v1
+
+resilience4j:
+    circuitbreaker:
+        instances:
+            tmdb:
+                slidingWindowSize: 20
+                failureRateThreshold: 50
+                waitDurationInOpenState: 10s
+                permittedNumberOfCallsInHalfOpenState: 3
+                automaticTransitionFromOpenToHalfOpenEnabled: true
+
+    retry:
+        instances:
+            tmdb:
+                maxAttempts: 3
+                waitDuration: 500ms
+                retryExceptions:
+                    - org.springframework.web.reactive.function.client.WebClientRequestException
+                    - java.io.IOException
+
+cinelog:
+    security:
+        jwt:
+            # trunk-ignore(checkov/CKV_SECRET_6)
+            secret: ${CINELOG_SECURITY_JWT_SECRET:MINHA_CHAVE_MEGA_SECRETA_DE_NO_MINIMO_32_CHARS}
+            expiration-seconds: ${CINELOG_SECURITY_JWT_EXPIRATION_SECONDS:3600}
+        enabled: true
+    tmdb:
+        base-url: https://api.themoviedb.org/3
+        api-key: ${TMDB_API_KEY:coloque_sua_key_aqui}
+        language: pt-BR
+        region: BR
+        timeout-ms: 3000
+    metrics:
+        domain:
+            enabled: true
+        slow:
+            enabled: true
+
+    audit:
+        enabled: true
+
+    integration:
+        tracing:
+            enabled: true
+
+# Outbox Pattern configuração
+outbox:
+    publisher:
+        enabled: true
+        fixed-rate-ms: 5000 # Processa outbox a cada 5 segundos
+        initial-delay-ms: 10000 # Aguarda 10s após startup
+        batch-size: 100 # Processa até 100 eventos por vez
+        retention-days: 7 # Remove eventos SENT com mais de 7 dias
+    housekeeping:
+        cron: 0 0 1 * * ? # Diariamente às 01:00
+

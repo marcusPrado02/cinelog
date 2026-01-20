@@ -6,11 +6,27 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.cine.cinelog.shared.observability.aop.Measured;
+import com.cine.cinelog.shared.observability.aop.AlertIfSlow;
+
 import java.time.Instant;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
 
+/**
+ * Serviço responsável por operação de JwtToken.
+ * Implementa o caso de uso de operação aplicando regras de negócio e políticas
+ * de domínio.
+ * 
+ * <p>
+ * Este serviço coordena as operações necessárias e garante
+ * a consistência dos dados através de validações e políticas.
+ * </p>
+ * 
+ * @since 1.0
+ * @see JwtTokenService
+ */
 @Component
 public class JwtTokenService {
 
@@ -25,6 +41,8 @@ public class JwtTokenService {
         this.expirationSeconds = expirationSeconds;
     }
 
+    @Measured("cinelog.security.jwt.generate_token")
+    @AlertIfSlow(thresholdMs = 200)
     public String generateToken(String subject) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(expirationSeconds);
@@ -37,6 +55,8 @@ public class JwtTokenService {
                 .compact();
     }
 
+    @Measured("cinelog.security.jwt.extract_subject")
+    @AlertIfSlow(thresholdMs = 200)
     public String extractSubject(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key)

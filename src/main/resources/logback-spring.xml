@@ -1,18 +1,130 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-  <!-- Console síncrono -->
-  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
-    </encoder>
-  </appender>
+<configuration scan="true" scanPeriod="30 seconds">
 
-  <!-- Wrapper assíncrono (NÃO tem <encoder>) -->
-  <appender name="ASYNC" class="net.logstash.logback.appender.LoggingEventAsyncDisruptorAppender">
-    <appender-ref ref="CONSOLE" />
-  </appender>
+    <!-- ========= Variáveis ========= -->
+    <property name="APP_NAME" value="cinelog" />
+    <property name="LOG_PATH" value="./logs" />
 
-  <root level="INFO">
-    <appender-ref ref="ASYNC" />
-  </root>
+    <!-- ========= Pattern fallback (dev) - PR4: Added correlationId ========= -->
+    <property name="CONSOLE_PATTERN"
+        value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{correlationId:-NO_CORRELATION_ID}] %logger{36} - %msg%n" />
+
+    <!-- ========= Encoder JSON comum ========= -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp />
+                <version />
+                <logLevel />
+                <loggerName />
+                <threadName />
+                <message />
+                <mdc />          <!-- requestId, userId, traceId, etc. -->
+                <context />      <!-- properties globais -->
+                <stackTrace />
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- Console “simples” só pra profile dev/local -->
+    <appender name="PLAIN_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>${CONSOLE_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ========= Rolling file JSON ========= -->
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}.log</file>
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp />
+                <version />
+                <logLevel />
+                <loggerName />
+                <threadName />
+                <message />
+                <mdc />
+                <context />
+                <stackTrace />
+            </providers>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Gira diariamente e guarda 30 dias -->
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <!-- ========= Appender para Logstash (TCP) ========= -->
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <!-- nome do serviço do docker-compose -->
+        <destination>logstash:5000</destination>
+
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp />
+                <version />
+                <logLevel />
+                <loggerName />
+                <threadName />
+                <message />
+                <mdc />
+                <context />
+                <stackTrace />
+            </providers>
+        </encoder>
+
+        <!-- Reconexão automática em caso de falha -->
+        <reconnectionDelay>5000</reconnectionDelay>
+    </appender>
+
+    <!-- ========= Wrappers assíncronos ========= -->
+    <appender name="ASYNC_JSON_CONSOLE"
+        class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="JSON_CONSOLE" />
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <appender name="ASYNC_JSON_FILE"
+        class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="JSON_FILE" />
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <appender name="ASYNC_LOGSTASH"
+        class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="LOGSTASH" />
+        <queueSize>8192</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
+    <!-- ========= Perfis ========= -->
+
+    <!-- Profile dev/local: console texto + arquivo JSON -->
+    <springProfile name="dev,local">
+        <root level="DEBUG">
+            <appender-ref ref="PLAIN_CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+        </root>
+    </springProfile>
+
+    <!-- Profile prod: só JSON (console + file + logstash) -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_JSON_CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+            <appender-ref ref="ASYNC_LOGSTASH" />
+        </root>
+    </springProfile>
+
+    <!-- Fallback profile -->
+    <springProfile name="default">
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE" />
+        </root>
+    </springProfile>
+
 </configuration>

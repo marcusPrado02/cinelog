@@ -15,6 +15,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Classe de configuração Spring para gerenciamento de security.
+ *
+ * <p>
+ * Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.
+ * </p>
+ *
+ * @since 1.0
+ */
 @Configuration
 public class SecurityConfig {
 
@@ -63,6 +73,10 @@ public class SecurityConfig {
                                 "/actuator/**",
                                 "/api/auth/**")
                         .permitAll()
+                        // Endpoints ADMIN
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
+                        // Endpoints gerais (usuário logado)
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

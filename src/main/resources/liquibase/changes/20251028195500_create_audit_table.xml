@@ -3,12 +3,14 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
 
-  <changeSet id="28102025195500" author="maps">
+  <changeSet id="28102025195500" author="maps"
+    logicalFilePath="liquibase/changes/28102025195500_create_audit_table.xml">
     <sql>CREATE SCHEMA IF NOT EXISTS audit DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE
       utf8mb4_unicode_ci;</sql>
   </changeSet>
 
-  <changeSet id="28102025195501" author="maps">
+  <changeSet id="28102025195501" author="maps"
+    logicalFilePath="liquibase/changes/28102025195500_create_audit_table.xml">
     <createTable schemaName="audit" tableName="change_log">
       <column name="id" type="BIGINT AUTO_INCREMENT">
         <constraints primaryKey="true" nullable="false" />

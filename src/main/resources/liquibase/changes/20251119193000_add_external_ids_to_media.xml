@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="20251119193000-1" author="maps">
+        <addColumn tableName="media">
+            <!-- TMDb usa integer como id -->
+            <column name="tmdb_id" type="INT">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+
+        <!-- Opcional, mas bem útil pra evitar duplicidade -->
+        <addUniqueConstraint tableName="media"
+            columnNames="tmdb_id"
+            constraintName="uk_media_tmdb_id"
+            deferrable="false"
+            initiallyDeferred="false"
+            disabled="true" />
+    </changeSet>
+</databaseChangeLog>

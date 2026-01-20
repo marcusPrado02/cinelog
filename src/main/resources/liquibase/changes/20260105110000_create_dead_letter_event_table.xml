@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="20260105110000-create-dead-letter-event-table" author="engineering-team">
+        <comment>
+            Create dead_letter_event table to persist poison messages from Kafka DLQ.
+            This enables operational visibility, investigation, and replay of failed events.
+
+            Related to PR3: DLQ Registry + Admin Endpoints
+            Related to ADR-006: Kafka Outbox Idempotent Consumer
+        </comment>
+
+        <createTable tableName="dead_letter_event">
+            <!-- Primary Key -->
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+
+            <!-- Kafka Context -->
+            <column name="original_topic" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="consumer_group" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="partition_number" type="INT">
+                <constraints nullable="true" />
+            </column>
+            <column name="offset_number" type="BIGINT">
+                <constraints nullable="true" />
+            </column>
+
+            <!-- Event Identification -->
+            <column name="event_id" type="VARCHAR(36)">
+                <constraints nullable="false" />
+            </column>
+            <column name="event_type" type="VARCHAR(100)">
+                <constraints nullable="true" />
+            </column>
+
+            <!-- Event Content (stored as JSON for investigation) -->
+            <column name="envelope_json" type="TEXT">
+                <constraints nullable="false" />
+            </column>
+
+            <!-- Error Details -->
+            <column name="error_message" type="TEXT">
+                <constraints nullable="false" />
+            </column>
+            <column name="error_class" type="VARCHAR(500)">
+                <constraints nullable="true" />
+            </column>
+            <column name="stack_trace" type="TEXT">
+                <constraints nullable="true" />
+            </column>
+
+            <!-- Status: PENDING_REPLAY, REPLAYED, IGNORED -->
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING_REPLAY">
+                <constraints nullable="false" />
+            </column>
+
+            <!-- Replay Tracking -->
+            <column name="replayed_at" type="TIMESTAMP">
+                <constraints nullable="true" />
+            </column>
+            <column name="replayed_by" type="VARCHAR(100)">
+                <constraints nullable="true" />
+            </column>
+
+            <!-- Timestamps -->
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+            <column name="updated_at" type="TIMESTAMP"
+                defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+
+        <!-- Index for admin queries (filter by status + topic) -->
+        <createIndex indexName="idx_dlq_status_topic" tableName="dead_letter_event">
+            <column name="status" />
+            <column name="original_topic" />
+            <column name="created_at" descending="true" />
+        </createIndex>
+
+        <!-- Index for event_id lookup (deduplication check) -->
+        <createIndex indexName="idx_dlq_event_id" tableName="dead_letter_event">
+            <column name="event_id" />
+        </createIndex>
+
+        <!-- Index for consumer_group queries -->
+        <createIndex indexName="idx_dlq_consumer_group" tableName="dead_letter_event">
+            <column name="consumer_group" />
+            <column name="created_at" descending="true" />
+        </createIndex>
+
+        <!-- Add constraint for status enum -->
+        <sql> ALTER TABLE dead_letter_event ADD CONSTRAINT chk_dlq_status CHECK (status IN
+            ('PENDING_REPLAY', 'REPLAYED', 'IGNORED')) </sql>
+    </changeSet>
+
+</databaseChangeLog>

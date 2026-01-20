@@ -14,6 +14,14 @@ import org.springframework.stereotype.Component;
  * Registra entrada, saída e erros lançados pelos endpoints.
  */
 @Aspect
+/**
+ * Classe de configuração Spring para gerenciamento de webloggingaspect.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 @Component
 public class WebLoggingAspect {
     private static final Logger log = LoggerFactory.getLogger(WebLoggingAspect.class);

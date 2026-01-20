@@ -10,6 +10,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Classe de configuração Spring para gerenciamento de springsecuritycurrentuserprovider.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 @Component
 public class SpringSecurityCurrentUserProvider implements CurrentUserProvider {
 
@@ -17,7 +25,7 @@ public class SpringSecurityCurrentUserProvider implements CurrentUserProvider {
     public Optional<AuthenticatedUser> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-        if (auth == null || !auth.isAuthenticated()) {
+        if (auth == null || auth.getPrincipal() == null) {
             return Optional.empty();
         }
 
