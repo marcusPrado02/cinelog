@@ -6,10 +6,27 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
 /**
- * DTO usado para criar ou atualizar uma mídia via API.
+ * DTO de requisição para criação de nova mídia (filme ou série).
  *
- * Possui validações Jakarta Bean Validation para garantir dados mínimos
- * antes de chegar à camada de aplicação.
+ * <p>
+ * Contém todos os dados necessários para cadastrar uma mídia no sistema:
+ * <ul>
+ * <li>title: título da mídia (obrigatório, máx. 300 caracteres)</li>
+ * <li>type: tipo de mídia - MOVIE ou SERIES (obrigatório)</li>
+ * <li>releaseYear: ano de lançamento (entre 1888 e 3000)</li>
+ * <li>originalTitle: título original (máx. 300 caracteres)</li>
+ * <li>originalLanguage: idioma original (máx. 10 caracteres)</li>
+ * <li>posterUrl: URL da imagem do poster (máx. 300 caracteres)</li>
+ * <li>backdropUrl: URL da imagem de fundo (máx. 300 caracteres)</li>
+ * <li>overview: sinopse/descrição da mídia</li>
+ * <li>tmdbId: ID da mídia no TMDB (The Movie Database)</li>
+ * </ul>
+ *
+ * <p>
+ * Validações: título e tipo são obrigatórios. O ano de lançamento, quando
+ * fornecido, deve estar entre 1888 (primeiro filme) e 3000.
+ *
+ * @since 1.0
  */
 @Schema(name = "MediaCreateRequest")
 public class MediaCreateRequest {
@@ -38,6 +55,9 @@ public class MediaCreateRequest {
     private String backdropUrl;
     @Schema(description = "Sinopse", example = "Um ladrão que invade os sonhos das pessoas.")
     private String overview;
+
+    @Schema(description = "ID do TMDB", example = "27205")
+    private Long tmdbId;
 
     public String getTitle() {
         return title;
@@ -101,5 +121,13 @@ public class MediaCreateRequest {
 
     public void setOverview(String v) {
         overview = v;
+    }
+
+    public Long getTmdbId() {
+        return tmdbId;
+    }
+
+    public void setTmdbId(Long tmdbId) {
+        this.tmdbId = tmdbId;
     }
 }

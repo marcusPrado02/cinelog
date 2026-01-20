@@ -1,13 +1,27 @@
 package com.cine.cinelog.features.users.persistence.entity;
 
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+
+import com.cine.cinelog.shared.persistence.AuditableEntity;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(name = "uk_users_email", columnNames = "email")
+/**
+ * Entidade JPA que representa a tabela de user no banco de dados.
+ * Mapeia a estrutura de persistência para User.
+ * 
+ * <p>Esta entidade contém as anotações JPA necessárias para mapeamento objeto-relacional
+ * e é convertida para/de User pelo UserMapper.</p>
+ * 
+ * @since 1.0
+ * @see User
+ */
 })
-public class UserEntity {
+public class UserEntity extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -27,13 +41,10 @@ public class UserEntity {
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
     @PrePersist
     void pre() {
         if (createdAt == null)
-            createdAt = OffsetDateTime.now();
+            createdAt = LocalDateTime.now();
     }
 
     public Long getId() {
@@ -58,14 +69,6 @@ public class UserEntity {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime c) {
-        this.createdAt = c;
     }
 
     public String getPasswordHash() {

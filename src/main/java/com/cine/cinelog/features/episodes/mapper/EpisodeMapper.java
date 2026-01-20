@@ -9,7 +9,21 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Mapper para conversão entre diferentes representações de episódios.
+ * Mapper responsável pela conversão entre Episode e seus DTOs/Entidades.
+ * 
+ * <p>
+ * Utiliza MapStruct para gerar implementações automatizadas das conversões
+ * entre:
+ * <ul>
+ * <li>Modelo de domínio (Episode)</li>
+ * <li>DTOs de requisição/resposta (EpisodeCreateRequest, EpisodeUpdateRequest,
+ * EpisodeResponse)</li>
+ * <li>Entidade de persistência (EpisodeEntity)</li>
+ * </ul>
+ * 
+ * @since 1.0
+ * @see Episode
+ * @see EpisodeEntity
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface EpisodeMapper {

@@ -1,13 +1,25 @@
 package com.cine.cinelog.features.credits.persistence.entity;
 
+import com.cine.cinelog.shared.persistence.AuditableEntity;
+
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "credits", indexes = {
         @Index(name = "idx_credits_media_role", columnList = "media_id, role"),
         @Index(name = "idx_credits_person_role", columnList = "person_id, role")
+/**
+ * Entidade JPA que representa a tabela de credit no banco de dados.
+ * Mapeia a estrutura de persistência para Credit.
+ * 
+ * <p>Esta entidade contém as anotações JPA necessárias para mapeamento objeto-relacional
+ * e é convertida para/de Credit pelo CreditMapper.</p>
+ * 
+ * @since 1.0
+ * @see Credit
+ */
 })
-public class CreditEntity {
+public class CreditEntity extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

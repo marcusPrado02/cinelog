@@ -4,9 +4,21 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
+import com.cine.cinelog.shared.persistence.AuditableEntity;
+
 @Entity
+/**
+ * Entidade JPA que representa a tabela de person no banco de dados.
+ * Mapeia a estrutura de persistência para Person.
+ * 
+ * <p>Esta entidade contém as anotações JPA necessárias para mapeamento objeto-relacional
+ * e é convertida para/de Person pelo PersonMapper.</p>
+ * 
+ * @since 1.0
+ * @see Person
+ */
 @Table(name = "people", indexes = @Index(name = "idx_people_name", columnList = "name"))
-public class PersonEntity {
+public class PersonEntity extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

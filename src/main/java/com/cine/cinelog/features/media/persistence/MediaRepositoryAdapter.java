@@ -1,14 +1,25 @@
 package com.cine.cinelog.features.media.persistence;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.application.pagination.PageResultMapper;
 import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
+import com.cine.cinelog.core.application.query.MediaSearchCriteria;
 import com.cine.cinelog.core.domain.enums.MediaType;
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.model.MediaWithRating;
 import com.cine.cinelog.features.media.mapper.MediaMapper;
 import com.cine.cinelog.features.media.persistence.entity.MediaEntity;
+import com.cine.cinelog.features.media.projection.MediaWithRatingProjection;
 import com.cine.cinelog.features.media.repository.MediaJpaRepository;
+import com.cine.cinelog.features.media.repository.MediaSpecifications;
+import com.cine.cinelog.shared.observability.aop.AlertIfSlow;
+import com.cine.cinelog.shared.observability.aop.Measured;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +31,21 @@ import java.util.Optional;
  * Esta classe faz o mapeamento entre o modelo de domínio `Media` e a
  * entidade JPA `MediaEntity` através de `MediaEntityMapper` e delega as
  * operações ao repositório JPA.
+ */
+/**
+ * Adaptador de repositório para persistência de Media.
+ * Implementa a interface de porta de saída convertendo operações de domínio
+ * em operações de persistência JPA.
+ * 
+ * <p>
+ * Este adaptador faz a ponte entre a camada de domínio e a infraestrutura,
+ * realizando conversões entre Media e MediaEntity.
+ * </p>
+ * 
+ * @since 1.0
+ * @see MediaRepositoryPort
+ * @see MediaEntity
+ * @see Media
  */
 @Repository
 public class MediaRepositoryAdapter implements MediaRepositoryPort {
@@ -49,15 +75,42 @@ public class MediaRepositoryAdapter implements MediaRepositoryPort {
     }
 
     @Override
-    public List<Media> find(MediaType type, String q, int page, int size) {
-        var pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1));
-        var result = (type != null && q != null && !q.isBlank())
-                ? repository.findByTypeAndTitleContainingIgnoreCase(type, q, pageable)
-                : (type != null)
-                        ? repository.findByType(type, pageable)
-                        : (q != null && !q.isBlank())
-                                ? repository.findByTitleContainingIgnoreCase(q, pageable)
-                                : repository.findAll(pageable);
-        return result.map(mapper::toDomain).getContent();
+    @Measured("cinelog.repository.search_media")
+    @AlertIfSlow(thresholdMs = 500, metricName = "cinelog.slow_db_search")
+    public PageResult<Media> search(MediaSearchCriteria criteria, PageQuery pageQuery) {
+        var pageable = PageRequest.of(pageQuery.page(), pageQuery.size());
+        var spec = MediaSpecifications.byCriteria(criteria);
+
+        Page<MediaEntity> page = repository.findAll(spec, (Pageable) pageable);
+
+        return PageResultMapper.from(page, mapper::toDomain);
+    }
+
+    @Override
+    public PageResult<Media> listAll(PageQuery query) {
+        PageRequest pageRequest = PageRequest.of(query.page(), query.size());
+        var result = repository.findAll(pageRequest);
+        return PageResultMapper.from(result, mapper::toDomain);
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return repository.existsById(id);
+    }
+
+    @Override
+    @Measured("cinelog.repository.find_candidates")
+    @AlertIfSlow(thresholdMs = 800, metricName = "cinelog.slow_recommendation_query")
+    public List<MediaWithRating> findCandidatesForUser(Long userId) {
+        List<MediaWithRatingProjection> projections = repository.findCandidatesForUser(userId);
+
+        return projections.stream()
+                .map(item -> new MediaWithRating(
+                        item.getMediaId(),
+                        item.getTitle(),
+                        MediaType.valueOf(item.getType()),
+                        item.getAverageRating(),
+                        item.getRatingCount()))
+                .toList();
     }
 }

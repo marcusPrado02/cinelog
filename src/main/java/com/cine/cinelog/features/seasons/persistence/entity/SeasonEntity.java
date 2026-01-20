@@ -4,10 +4,22 @@ import jakarta.persistence.*;
 
 import java.time.LocalDate;
 
+import com.cine.cinelog.shared.persistence.AuditableEntity;
+
 @Entity
 @Table(name = "seasons", uniqueConstraints = @UniqueConstraint(name = "uk_season_media_number", columnNames = {
+/**
+ * Entidade JPA que representa a tabela de season no banco de dados.
+ * Mapeia a estrutura de persistência para Season.
+ * 
+ * <p>Esta entidade contém as anotações JPA necessárias para mapeamento objeto-relacional
+ * e é convertida para/de Season pelo SeasonMapper.</p>
+ * 
+ * @since 1.0
+ * @see Season
+ */
         "media_id", "season_number" }))
-public class SeasonEntity {
+public class SeasonEntity extends AuditableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

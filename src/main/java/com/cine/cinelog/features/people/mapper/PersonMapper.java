@@ -9,7 +9,21 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Mapper MapStruct para conversão entre DTOs REST e o modelo de domínio.
+ * Mapper responsável pela conversão entre Person e seus DTOs/Entidades.
+ * 
+ * <p>
+ * Utiliza MapStruct para gerar implementações automatizadas das conversões
+ * entre:
+ * <ul>
+ * <li>Modelo de domínio (Person)</li>
+ * <li>DTOs de requisição/resposta (PersonCreateRequest, PersonUpdateRequest,
+ * PersonResponse)</li>
+ * <li>Entidade de persistência (PersonEntity)</li>
+ * </ul>
+ * 
+ * @since 1.0
+ * @see Person
+ * @see PersonEntity
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PersonMapper {

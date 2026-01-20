@@ -10,13 +10,31 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Mapper para conversão entre diferentes representações de usuários.
+ * Mapper responsável pela conversão entre User e seus DTOs/Entidades.
+ *
+ * <p>
+ * Utiliza MapStruct para gerar implementações automatizadas das conversões
+ * entre:
+ * <ul>
+ * <li>Modelo de domínio (User)</li>
+ * <li>DTOs de requisição/resposta (UserCreateRequest, UserUpdateRequest,
+ * UserResponse)</li>
+ * <li>Entidade de persistência (UserEntity)</li>
+ * </ul>
+ *
+ * <p>
+ * A configuração unmappedTargetPolicy = IGNORE permite que campos não mapeados
+ * sejam ignorados silenciosamente, facilitando conversões parciais.
+ *
+ * @since 1.0
+ * @see User
+ * @see UserEntity
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {
     /**
      * Converte o modelo de domínio `User` para o DTO de resposta.
-     * 
+     *
      * @param user
      * @return
      */
@@ -24,7 +42,7 @@ public interface UserMapper {
 
     /**
      * Converte o DTO de criação para a entidade JPA `UserEntity`.
-     * 
+     *
      * @param request
      * @return
      */
@@ -32,7 +50,7 @@ public interface UserMapper {
 
     /**
      * Converte a entidade JPA `UserEntity` para o DTO de criação.
-     * 
+     *
      * @param user
      * @return
      */
@@ -40,7 +58,7 @@ public interface UserMapper {
 
     /**
      * Converte o DTO de resposta para a entidade JPA `UserEntity`.
-     * 
+     *
      * @param response
      * @return
      */
@@ -48,7 +66,7 @@ public interface UserMapper {
 
     /**
      * Converte a entidade JPA `UserEntity` para o DTO de resposta.
-     * 
+     *
      * @param user
      * @return
      */
@@ -56,23 +74,55 @@ public interface UserMapper {
 
     /**
      * Converte o modelo de domínio `User` para a entidade JPA.
-     * 
+     *
      * @param user
      * @return
      */
-    UserEntity toEntity(User user);
+    default UserEntity toEntity(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        UserEntity entity = new UserEntity();
+        entity.setId(user.getId());
+        entity.setName(user.getName());
+        entity.setEmail(user.getEmail());
+        entity.setCreatedAt(user.getCreatedAt());
+        entity.setUpdatedAt(user.getUpdatedAt());
+        entity.setCreatedBy(user.getCreatedBy());
+        entity.setUpdatedBy(user.getUpdatedBy());
+        entity.setVersion(user.getVersion());
+
+        return entity;
+    }
 
     /**
      * Converte `UserEntity` (persistência) para o modelo de domínio `User`.
-     * 
+     *
      * @param entity
      * @return
      */
-    User toDomain(UserEntity entity);
+    default User toDomain(UserEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+
+        User user = new User();
+        user.setId(entity.getId());
+        user.setName(entity.getName());
+        user.setEmail(entity.getEmail());
+        user.setCreatedAt(entity.getCreatedAt());
+        user.setUpdatedAt(entity.getUpdatedAt());
+        user.setCreatedBy(entity.getCreatedBy());
+        user.setUpdatedBy(entity.getUpdatedBy());
+        user.setVersion(entity.getVersion());
+
+        return user;
+    }
 
     /**
      * Converte o DTO de criação para o modelo de domínio `User`.
-     * 
+     *
      * @param req
      * @return
      */
@@ -80,7 +130,7 @@ public interface UserMapper {
 
     /**
      * Converte o modelo de domínio `User` para o DTO de resposta.
-     * 
+     *
      * @param user
      * @return
      */
@@ -88,7 +138,7 @@ public interface UserMapper {
 
     /**
      * Converte o DTO de atualização para o modelo de domínio `User`.
-     * 
+     *
      * @param req
      * @return
      */
@@ -96,7 +146,7 @@ public interface UserMapper {
 
     /**
      * Converte o modelo de domínio `User` para o DTO de atualização.
-     * 
+     *
      * @param user
      * @return
      */

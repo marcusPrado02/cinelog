@@ -1,9 +1,9 @@
 package com.cine.cinelog.features.media.persistence.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 
 import com.cine.cinelog.core.domain.enums.MediaType;
+import com.cine.cinelog.shared.persistence.AuditableEntity;
 
 /**
  * Entidade JPA que representa a tabela "media" no banco de dados.
@@ -16,8 +16,21 @@ import com.cine.cinelog.core.domain.enums.MediaType;
  * `Media` é feita pelo mapper `MediaEntityMapper`.
  */
 @Entity
+/**
+ * Entidade JPA que representa a tabela de media no banco de dados.
+ * Mapeia a estrutura de persistência para Media.
+ *
+ * <p>
+ * Esta entidade contém as anotações JPA necessárias para mapeamento
+ * objeto-relacional
+ * e é convertida para/de Media pelo MediaMapper.
+ * </p>
+ *
+ * @since 1.0
+ * @see Media
+ */
 @Table(name = "media")
-public class MediaEntity {
+public class MediaEntity extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,23 +61,8 @@ public class MediaEntity {
     @Lob
     private String overview;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    void prePersist() {
-        var now = LocalDateTime.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void preUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+    @Column(name = "tmdb_id")
+    private Long tmdbId;
 
     public Long getId() {
         return id;
@@ -138,19 +136,11 @@ public class MediaEntity {
         this.overview = overview;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public Long getTmdbId() {
+        return tmdbId;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setTmdbId(Long tmdbId) {
+        this.tmdbId = tmdbId;
     }
 }

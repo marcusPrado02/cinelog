@@ -9,8 +9,21 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Mapper para converter entre o modelo de domínio `Credit`, entidades JPA e
- * DTOs.
+ * Mapper responsável pela conversão entre Credit e seus DTOs/Entidades.
+ * 
+ * <p>
+ * Utiliza MapStruct para gerar implementações automatizadas das conversões
+ * entre:
+ * <ul>
+ * <li>Modelo de domínio (Credit)</li>
+ * <li>DTOs de requisição/resposta (CreditCreateRequest, CreditUpdateRequest,
+ * CreditResponse)</li>
+ * <li>Entidade de persistência (CreditEntity)</li>
+ * </ul>
+ * 
+ * @since 1.0
+ * @see Credit
+ * @see CreditEntity
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CreditMapper {

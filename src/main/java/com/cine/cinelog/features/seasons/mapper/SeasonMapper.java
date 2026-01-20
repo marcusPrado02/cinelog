@@ -9,8 +9,21 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Mapper para conversão entre DTOs, entidades JPA e o modelo de domínio
- * `Season`.
+ * Mapper responsável pela conversão entre Season e seus DTOs/Entidades.
+ * 
+ * <p>
+ * Utiliza MapStruct para gerar implementações automatizadas das conversões
+ * entre:
+ * <ul>
+ * <li>Modelo de domínio (Season)</li>
+ * <li>DTOs de requisição/resposta (SeasonCreateRequest, SeasonUpdateRequest,
+ * SeasonResponse)</li>
+ * <li>Entidade de persistência (SeasonEntity)</li>
+ * </ul>
+ * 
+ * @since 1.0
+ * @see Season
+ * @see SeasonEntity
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface SeasonMapper {

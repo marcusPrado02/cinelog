@@ -2,12 +2,29 @@ package com.cine.cinelog.features.watchentry.persistence.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+
+import com.cine.cinelog.core.domain.model.WatchEntryStatusType;
+import com.cine.cinelog.shared.persistence.AuditableEntity;
 
 @Entity
 @Table(name = "watch_entry", uniqueConstraints = @UniqueConstraint(name = "uk_we_user_media_episode_date", columnNames = {
+        /**
+         * Entidade JPA que representa a tabela de watchentry no banco de dados.
+         * Mapeia a estrutura de persistência para WatchEntry.
+         *
+         * <p>
+         * Esta entidade contém as anotações JPA necessárias para mapeamento
+         * objeto-relacional
+         * e é convertida para/de WatchEntry pelo WatchEntryMapper.
+         * </p>
+         *
+         * @since 1.0
+         * @see WatchEntry
+         */
         "user_id", "media_id", "episode_id", "watched_at" }))
-public class WatchEntryEntity {
+public class WatchEntryEntity extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,15 +48,13 @@ public class WatchEntryEntity {
     @Column(name = "watched_at")
     private LocalDate watchedAt;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_type", nullable = false, length = 20)
+    private WatchEntryStatusType statusType = WatchEntryStatusType.PLANNING;
 
     @PrePersist
     void prePersist() {
-        var now = OffsetDateTime.now();
+        var now = LocalDateTime.now();
         if (createdAt == null)
             createdAt = now;
         if (updatedAt == null)
@@ -48,7 +63,7 @@ public class WatchEntryEntity {
 
     @PreUpdate
     void preUpdate() {
-        updatedAt = OffsetDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     // getters/setters
@@ -108,19 +123,12 @@ public class WatchEntryEntity {
         this.watchedAt = watchedAt;
     }
 
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
+    public WatchEntryStatusType getStatusType() {
+        return statusType;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setStatusType(WatchEntryStatusType statusType) {
+        this.statusType = statusType;
     }
 
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
 }

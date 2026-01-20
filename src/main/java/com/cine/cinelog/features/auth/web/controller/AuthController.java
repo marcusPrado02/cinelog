@@ -1,12 +1,11 @@
 package com.cine.cinelog.features.auth.web.controller;
 
-import com.cine.cinelog.core.application.ports.in.user.CreateUserUseCase;
-import com.cine.cinelog.core.domain.model.User;
 import com.cine.cinelog.features.auth.web.dto.LoginRequest;
 import com.cine.cinelog.features.auth.web.dto.LoginResponse;
 import com.cine.cinelog.features.auth.web.dto.RegisterRequest;
 import com.cine.cinelog.features.users.persistence.entity.UserEntity;
 import com.cine.cinelog.features.users.repository.UserJpaRepository;
+import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
 import com.cine.cinelog.shared.security.JwtTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,7 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -29,19 +28,19 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
-    private final CreateUserUseCase createUserUseCase;
     private final UserJpaRepository userRepository;
+    private final BusinessMetricsService metricsService;
 
     public AuthController(AuthenticationManager authenticationManager,
             JwtTokenService jwtTokenService,
             PasswordEncoder passwordEncoder,
-            CreateUserUseCase createUserUseCase,
-            UserJpaRepository userRepository) {
+            UserJpaRepository userRepository,
+            BusinessMetricsService metricsService) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenService = jwtTokenService;
         this.passwordEncoder = passwordEncoder;
-        this.createUserUseCase = createUserUseCase;
         this.userRepository = userRepository;
+        this.metricsService = metricsService;
     }
 
     @PostMapping("/login")
@@ -52,8 +51,16 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
             String token = jwtTokenService.generateToken(request.email());
+
+            // Métrica de negócio: login bem-sucedido
+            metricsService.incrementLogin(true);
+
             return ResponseEntity.ok(new LoginResponse(token));
         } catch (BadCredentialsException e) {
+            // Métricas de negócio: login falhou
+            metricsService.incrementLogin(false);
+            metricsService.incrementLoginFailed();
+
             return ResponseEntity.status(401).build();
         }
     }
@@ -62,25 +69,25 @@ public class AuthController {
     @Operation(summary = "Registra um novo usuário e retorna um token JWT")
     public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
 
-        // 1) Cria usuário via caso de uso (sem senha)
-        User domainUser = new User();
-        domainUser.setName(request.name());
-        domainUser.setEmail(request.email());
-        domainUser.setCreatedAt(OffsetDateTime.now());
-
-        User created = createUserUseCase.execute(domainUser);
-
-        // 2) Atualiza entidade com senha + role
-        UserEntity entity = userRepository.findById(created.getId())
-                .orElseThrow(); // em teoria não deve acontecer
-
+        // Criar a entidade com todos os campos necessários
+        UserEntity entity = new UserEntity();
+        entity.setName(request.name());
+        entity.setEmail(request.email());
         entity.setPasswordHash(passwordEncoder.encode(request.password()));
         entity.setRole("USER");
         entity.setEnabled(true);
-        userRepository.save(entity);
+        entity.setCreatedAt(LocalDateTime.now());
+        entity.setVersion(0L);
 
-        // 3) Gera token para já logar o cara
-        String token = jwtTokenService.generateToken(entity.getEmail());
+        // Salvar a entidade
+        UserEntity saved = userRepository.save(entity);
+
+        // Gera token para já logar o usuário
+        String token = jwtTokenService.generateToken(saved.getEmail());
+
+        // Métrica de negócio: novo usuário registrado
+        metricsService.incrementUserRegistered();
+
         return ResponseEntity.ok(new LoginResponse(token));
     }
 }
