@@ -8,8 +8,22 @@
 
 O **CineLog** é uma aplicação backend para gerenciar **mídias (filmes, séries, episódios, temporadas)** e **entradas de exibição (Watch Entries)**, com suporte a **usuários, gêneros e créditos**.
 
+### ⭐ Novidade: PR6 - Features de Negócio
+
+**5 novas features prontas para produção:**
+
+-   📊 **User Insights** - Estatísticas agregadas do usuário (CQRS + Kafka)
+-   🔥 **Media Popularity** - Rankings trending e top-rated (CQRS + Kafka)
+-   🔍 **Media Search** - Busca avançada com filtros dinâmicos (Specification Pattern)
+-   📺 **Watch Progress** - Rastreamento de progresso em séries (Value Object)
+-   🎯 **Recommendations** - Sistema de recomendações personalizadas (Strategy Pattern)
+
+**16 novos endpoints REST** | **5 Design Patterns** | **55+ testes** | [Ver documentação completa →](./docs/PR6_QUICK_REFERENCE.md)
+
 ---
+
 ## Modelo de dados
+
 ```mermaid
     erDiagram
     users ||--o{ watch_entry : "has"
@@ -90,8 +104,6 @@ O **CineLog** é uma aplicação backend para gerenciar **mídias (filmes, séri
 
 ```
 
-
-
 ## 🧩 Arquitetura
 
 O projeto segue uma **arquitetura hexagonal (ports & adapters)** com **camadas bem isoladas**:
@@ -122,12 +134,12 @@ com.cine.cinelog
 
 🧱 **Padrões aplicados**
 
-- Domain-Driven Design (Entities, Value Objects, Domain Services)
-- Ports & Adapters (Clean Architecture)
-- SOLID, 12-Factor e DRY
-- Spring Boot autoconfiguration modular (starter style)
-- Observability nativa (OpenTelemetry, logs estruturados)
-- Liquibase versionado com rollback seguro
+-   Domain-Driven Design (Entities, Value Objects, Domain Services)
+-   Ports & Adapters (Clean Architecture)
+-   SOLID, 12-Factor e DRY
+-   Spring Boot autoconfiguration modular (starter style)
+-   Observability nativa (OpenTelemetry, logs estruturados)
+-   Liquibase versionado com rollback seguro
 
 ---
 
@@ -196,18 +208,18 @@ Database (MySQL 8 / Liquibase)
 
 Todos os mapeamentos de entidade ↔ domínio ↔ DTO são feitos via **MapStruct**, garantindo:
 
-- Conversões puras e testáveis
-- Desacoplamento completo de frameworks
-- Coerência entre camadas
+-   Conversões puras e testáveis
+-   Desacoplamento completo de frameworks
+-   Coerência entre camadas
 
 ---
 
 ## 🧪 Testes
 
-- **Unit Tests** → validam lógica de domínio e casos de uso (`core.application.usecase.*`)
-- **Integration Tests** → simulam API e repositórios (`features.*.web` e `features.*.persistence`)
-- **Liquibase Testcontainers** → inicializa schema real automaticamente
-- **Coverage** → Jacoco configurado para 80%+ mínimo
+-   **Unit Tests** → validam lógica de domínio e casos de uso (`core.application.usecase.*`)
+-   **Integration Tests** → simulam API e repositórios (`features.*.web` e `features.*.persistence`)
+-   **Liquibase Testcontainers** → inicializa schema real automaticamente
+-   **Coverage** → Jacoco configurado para 80%+ mínimo
 
 ```bash
 ./mvnw clean test
@@ -238,29 +250,29 @@ docker-compose up -d
 
 ## 🧭 Padrões de Código e Convenções
 
-- Pacotes organizados por **feature**, não por camada.
-- **DTOs, Entities e Domain Models** têm mappers dedicados.
-- **Controllers** expõem contratos REST puros (sem lógica).
-- **Liquibase** versiona o schema incrementalmente.
-- **Observabilidade** configurada via `shared/observability`.
+-   Pacotes organizados por **feature**, não por camada.
+-   **DTOs, Entities e Domain Models** têm mappers dedicados.
+-   **Controllers** expõem contratos REST puros (sem lógica).
+-   **Liquibase** versiona o schema incrementalmente.
+-   **Observabilidade** configurada via `shared/observability`.
 
 ---
 
 ## 🔐 Segurança (Planejada)
 
-- JWT (Access + Refresh)
-- RBAC (`Role.USER`, `Role.ADMIN`)
-- Password hashing (Argon2 / BCrypt)
-- Feature Flags (`featureFlags.security.enabled=true`)
+-   JWT (Access + Refresh)
+-   RBAC (`Role.USER`, `Role.ADMIN`)
+-   Password hashing (Argon2 / BCrypt)
+-   Feature Flags (`featureFlags.security.enabled=true`)
 
 ---
 
 ## 📊 Observabilidade (Planejada)
 
-- **OpenTelemetry auto-instrumentation** para Spring + JDBC
-- **Logs estruturados** (JSON com traceId/spanId)
-- **MDC context propagation**
-- **Future:** exporter para Grafana / Tempo / Prometheus
+-   **OpenTelemetry auto-instrumentation** para Spring + JDBC
+-   **Logs estruturados** (JSON com traceId/spanId)
+-   **MDC context propagation**
+-   **Future:** exporter para Grafana / Tempo / Prometheus
 
 ---
 
