@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Script para adicionar observabilidade em todos os controllers
+
+echo "🔧 Adicionando observabilidade aos controllers do CineLog..."
+echo ""
+
+CONTROLLERS=(
+    "SeasonController"
+    "CreditController"
+    "WatchlistController"
+    "PersonController"
+    "EpisodeController"
+    "AdminMediaController"
+)
+
+echo "Controllers para atualizar:"
+for controller in "${CONTROLLERS[@]}"; do
+    echo "  - $controller"
+done
+echo ""
+
+echo "✅ Os seguintes controllers já possuem observabilidade completa:"
+echo "  - AuthController"
+echo "  - MediaController"
+echo "  - WatchEntryController"
+echo "  - GenreController"
+echo "  - UserController"
+echo ""
+
+echo "📋 Checklist de implementação para cada controller:"
+echo ""
+echo "1. Adicionar import:"
+echo "   import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;"
+echo "   import org.slf4j.Logger;"
+echo "   import org.slf4j.LoggerFactory;"
+echo ""
+echo "2. Adicionar campo Logger:"
+echo "   private static final Logger log = LoggerFactory.getLogger(NomeController.class);"
+echo ""
+echo "3. Adicionar campo BusinessMetricsService:"
+echo "   private final BusinessMetricsService metricsService;"
+echo ""
+echo "4. Adicionar no construtor:"
+echo "   BusinessMetricsService metricsService"
+echo "   this.metricsService = metricsService;"
+echo ""
+echo "5. Adicionar anotação @Measured nos métodos CRUD:"
+echo "   @Measured(\"cinelog.controller.nome.metodo\")"
+echo ""
+echo "6. Adicionar logs estruturados:"
+echo "   log.debug(\"Iniciando metodo. Parâmetros: {}\", Map.of(...))"
+echo "   log.info(\"Operação realizada com sucesso. ID: {}\", id)"
+echo "   log.error(\"Erro ao realizar operação. Erro: {}\", e.getMessage(), e)"
+echo ""
+echo "7. Adicionar métricas de negócio quando apropriado:"
+echo "   metricsService.incrementSeasonCreated();"
+echo "   metricsService.incrementEpisodeCreated();"
+echo "   metricsService.incrementPersonCreated();"
+echo "   metricsService.incrementCreditCreated(role);"
+echo "   metricsService.incrementWatchlistAdd(mediaType);"
+echo "   metricsService.incrementWatchlistRemove();"
+echo ""
+
+echo "🚀 Próximos passos:"
+echo "1. Implementar as mudanças nos controllers listados"
+echo "2. Testar a aplicação"
+echo "3. Verificar métricas no Grafana"
+echo "4. Atualizar documentação"
+echo ""
+echo "📊 Progresso estimado após conclusão: 100%"
