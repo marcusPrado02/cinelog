@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+
+    <Match>
+        <!-- Ignorar classes anotadas com Lombok -->
+        <Annotation name="lombok.Data" />
+        <Annotation name="lombok.Builder" />
+        <Annotation name="lombok.Value" />
+        <Annotation name="lombok.Getter" />
+        <Annotation name="lombok.Setter" />
+    </Match>
+
+    <Match>
+        <!-- Ignorar entidades JPA (SpotBugs costuma dar falso positivo em equals/hashCode) -->
+        <Annotation name="javax.persistence.Entity" />
+    </Match>
+
+    <Match>
+        <!-- Ignorar records (SpotBugs ainda confunde getters/fields automáticos) -->
+        <Class name="~.*.*Record" />
+    </Match>
+
+    <Match>
+        <!-- Ignorar classes geradas (ex: MapStruct) -->
+        <Class name="~.*\.generated\..*" />
+    </Match>
+
+    <Match>
+        <!-- Ignorar classes de configuração do Spring -->
+        <Annotation name="org.springframework.context.annotation.Configuration" />
+    </Match>
+
+    <Match>
+        <!-- Ignorar classes de migração Liquibase -->
+        <Class name="~.*\.liquibase\..*" />
+    </Match>
+
+    <!-- Evita análise em pastas temporárias -->
+    <Match>
+        <Class name="~.*target.*" />
+    </Match>
+
+</FindBugsFilter>

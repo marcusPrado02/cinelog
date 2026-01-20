@@ -1,0 +1,12 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "editor.formatOnSave": true,
+    "[java]": {
+        "editor.defaultFormatter": "redhat.java"
+    },
+    "java.debug.settings.hotCodeReplace": "auto",
+    "java.debug.settings.console": "integratedTerminal",
+    "java.debug.settings.onBuildFailureProceed": true,
+    "java.debug.settings.forceBuildBeforeLaunch": true,
+    "java.debug.settings.vmArgs": "-Dspring.profiles.active=dev"
+}

@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Test (coverage) + Report",
+      "type": "shell",
+      "command": "mvn clean verify",
+      "problemMatcher": ["$maven"]
+    },
+    {
+      "label": "Open JaCoCo HTML (Simple Browser)",
+      "type": "shell",
+      "command": "code --command simpleBrowser.show \"${workspaceFolder}/target/site/jacoco/index.html\""
+    }
+  ]
+}

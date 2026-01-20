@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<ruleset name="CineLog PMD Rules"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+
+    <description>
+        PMD ruleset para o CineLog.
+        Inclui regras de boas práticas, legibilidade e erros comuns,
+        evitando falsos positivos em projetos Spring Boot / Clean Architecture.
+    </description>
+
+    <!-- ==========  ERROS E BUGS COMUNS ========== -->
+    <rule ref="category/java/errorprone.xml/NullAssignment" />
+    <rule ref="category/java/errorprone.xml/AvoidBranchingStatementAsLastInLoop" />
+    <rule ref="category/java/errorprone.xml/AvoidLiteralsInIfConditions" />
+    <rule ref="category/java/errorprone.xml/BrokenNullCheck" />
+    <rule ref="category/java/errorprone.xml/ConstructorCallsOverridableMethod" />
+    <rule ref="category/java/errorprone.xml/UseEqualsToCompareStrings" />
+
+    <!-- ==========  LEGIBILIDADE & CLEAN CODE  ========== -->
+    <rule ref="category/java/bestpractices.xml/UnusedImports" />
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField" />
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable" />
+    <rule ref="category/java/codestyle.xml/UnnecessaryFullyQualifiedName" />
+    <rule ref="category/java/codestyle.xml/CommentRequired" />
+    <rule ref="category/java/codestyle.xml/VariableNamingConventions" />
+
+    <!-- ==========  PERFORMANCE / BOAS PRÁTICAS ========== -->
+    <rule ref="category/java/performance.xml/InefficientEmptyStringCheck" />
+    <rule ref="category/java/performance.xml/UseStringBufferForStringAppends" />
+
+</ruleset>
