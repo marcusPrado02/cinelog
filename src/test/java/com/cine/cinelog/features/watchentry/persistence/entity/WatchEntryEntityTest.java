@@ -2,7 +2,8 @@ package com.cine.cinelog.features.watchentry.persistence.entity;
 
 import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 
 class WatchEntryEntityTest {
@@ -19,8 +20,8 @@ class WatchEntryEntityTest {
         e.setComment("Great!");
         e.setWatchedAt(LocalDate.of(2025, 1, 2));
 
-        OffsetDateTime created = OffsetDateTime.now().minusDays(1);
-        OffsetDateTime updated = OffsetDateTime.now();
+        LocalDateTime created = LocalDateTime.now().minusDays(1);
+        LocalDateTime updated = LocalDateTime.now();
         e.setCreatedAt(created);
         e.setUpdatedAt(updated);
 
@@ -42,10 +43,10 @@ class WatchEntryEntityTest {
         assertNull(e.getCreatedAt());
         assertNull(e.getUpdatedAt());
 
-        OffsetDateTime before = OffsetDateTime.now();
+        LocalDateTime before = LocalDateTime.now();
         e.prePersist();
-        OffsetDateTime created = e.getCreatedAt();
-        OffsetDateTime updated = e.getUpdatedAt();
+        LocalDateTime created = e.getCreatedAt();
+        LocalDateTime updated = e.getUpdatedAt();
 
         assertNotNull(created);
         assertNotNull(updated);
@@ -58,8 +59,8 @@ class WatchEntryEntityTest {
     void testPrePersistDoesNotOverwriteWhenPresent() {
         WatchEntryEntity e = new WatchEntryEntity();
 
-        OffsetDateTime existingCreated = OffsetDateTime.now().minusDays(2);
-        OffsetDateTime existingUpdated = OffsetDateTime.now().minusDays(1);
+        LocalDateTime existingCreated = LocalDateTime.now().minusDays(2);
+        LocalDateTime existingUpdated = LocalDateTime.now().minusDays(1);
         e.setCreatedAt(existingCreated);
         e.setUpdatedAt(existingUpdated);
 
@@ -73,12 +74,12 @@ class WatchEntryEntityTest {
     void testPreUpdateAlwaysUpdatesUpdatedAt() throws InterruptedException {
         WatchEntryEntity e = new WatchEntryEntity();
 
-        OffsetDateTime old = OffsetDateTime.now().minusHours(1);
+        LocalDateTime old = LocalDateTime.now().minusHours(1);
         e.setUpdatedAt(old);
 
-        OffsetDateTime before = OffsetDateTime.now();
+        LocalDateTime before = LocalDateTime.now();
         e.preUpdate();
-        OffsetDateTime updated = e.getUpdatedAt();
+        LocalDateTime updated = e.getUpdatedAt();
 
         assertNotNull(updated);
         assertFalse(updated.isBefore(before));

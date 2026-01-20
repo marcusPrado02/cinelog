@@ -1,15 +1,22 @@
 package com.cine.cinelog.features.people.persistence;
 
-import com.cine.cinelog.features.people.mapper.PersonMapper;
-import com.cine.cinelog.features.people.repository.PersonJpaRepository;
-import com.cine.cinelog.features.people.web.dto.PersonCreateRequest;
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Person;
-import org.junit.jupiter.api.BeforeEach;
+import com.cine.cinelog.features.people.mapper.PersonMapper;
+import com.cine.cinelog.features.people.persistence.entity.PersonEntity;
+import com.cine.cinelog.features.people.repository.PersonJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,82 +31,101 @@ class PersonRepositoryAdapterTest {
     @Mock
     private PersonMapper personMapper;
 
+    @InjectMocks
     private PersonRepositoryAdapter adapter;
 
-    @BeforeEach
-    void setUp() {
-        adapter = new PersonRepositoryAdapter(jpa, personMapper);
-    }
+    @Captor
+    private ArgumentCaptor<Pageable> pageableCaptor;
 
     @Test
-    void save_shouldMapToEntityCallSaveAndMapToDomain() {
-        Person input = mock(Person.class);
+    void save_shouldReturnMappedPerson() {
+        Person domain = mock(Person.class);
+        PersonEntity entity = mock(PersonEntity.class);
+        PersonEntity savedEntity = mock(PersonEntity.class);
         Person savedDomain = mock(Person.class);
 
-        when(personMapper.toEntity(input)).thenReturn(null);
-        when(jpa.save(ArgumentMatchers.isNull())).thenReturn(null);
-        when(personMapper.toDomain(ArgumentMatchers.<PersonCreateRequest>isNull())).thenReturn(savedDomain);
+        when(personMapper.toEntity(domain)).thenReturn(entity);
+        when(jpa.save(entity)).thenReturn(savedEntity);
+        when(personMapper.toDomain(savedEntity)).thenReturn(savedDomain);
 
-        Person result = adapter.save(input);
+        Person result = adapter.save(domain);
 
         assertSame(savedDomain, result);
-        verify(personMapper).toEntity(input);
-        verify(jpa).save(null);
-        verify(personMapper).toDomain((PersonCreateRequest) null);
+        verify(personMapper).toEntity(domain);
+        verify(jpa).save(entity);
+        verify(personMapper).toDomain(savedEntity);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    void findById_whenPresent_shouldReturnMappedDomain() {
-        Object entity = new Object();
-        Person expected = mock(Person.class);
+    void findById_whenPresent_shouldReturnDomain() {
+        Long id = 123L;
+        PersonEntity entity = mock(PersonEntity.class);
+        Person domain = mock(Person.class);
 
-        when((Optional) jpa.findById(1L)).thenReturn(Optional.of(entity));
-        when(personMapper.toDomain(ArgumentMatchers.<PersonCreateRequest>any())).thenReturn(expected);
+        when(jpa.findById(id)).thenReturn(Optional.of(entity));
+        when(personMapper.toDomain(entity)).thenReturn(domain);
 
-        Optional<Person> result = adapter.findById(1L);
+        Optional<Person> result = adapter.findById(id);
 
         assertTrue(result.isPresent());
-        assertSame(expected, result.get());
-        verify(jpa).findById(1L);
-        verify(personMapper).toDomain(ArgumentMatchers.<PersonCreateRequest>any());
+        assertSame(domain, result.get());
+        verify(jpa).findById(id);
+        verify(personMapper).toDomain(entity);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
     void findById_whenNotPresent_shouldReturnEmpty() {
-        when((Optional) jpa.findById(2L)).thenReturn(Optional.empty());
+        Long id = 456L;
+        when(jpa.findById(id)).thenReturn(Optional.empty());
 
-        Optional<Person> result = adapter.findById(2L);
+        Optional<Person> result = adapter.findById(id);
 
         assertFalse(result.isPresent());
-        verify(jpa).findById(2L);
+        verify(jpa).findById(id);
         verifyNoInteractions(personMapper);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Test
-    void findAll_shouldMapAllEntitiesToDomainList() {
-        Object e1 = new Object();
-        Object e2 = new Object();
+    void findAll_shouldUsePageQueryAndMapEntities() {
+        PageQuery query = mock(PageQuery.class);
+        when(query.page()).thenReturn(0);
+        when(query.size()).thenReturn(2);
+        when(query.sort()).thenReturn("name");
+        when(query.direction()).thenReturn("ASC");
+
+        PersonEntity e1 = mock(PersonEntity.class);
+        PersonEntity e2 = mock(PersonEntity.class);
         Person p1 = mock(Person.class);
         Person p2 = mock(Person.class);
 
-        when((List) jpa.findAll()).thenReturn(List.of(e1, e2));
-        when(personMapper.toDomain(ArgumentMatchers.<PersonCreateRequest>any())).thenReturn(p1, p2);
+        Page<PersonEntity> page = new PageImpl<>(List.of(e1, e2));
+        when(jpa.findAll(any(Pageable.class))).thenReturn(page);
+        when(personMapper.toDomain(e1)).thenReturn(p1);
+        when(personMapper.toDomain(e2)).thenReturn(p2);
 
-        List<Person> result = adapter.findAll();
+        PageResult<Person> result = adapter.findAll(query);
 
-        assertEquals(2, result.size());
-        assertSame(p1, result.get(0));
-        assertSame(p2, result.get(1));
-        verify(jpa).findAll();
-        verify(personMapper, times(2)).toDomain(ArgumentMatchers.<PersonCreateRequest>any());
+        assertNotNull(result);
+        verify(jpa).findAll(pageableCaptor.capture());
+        Pageable captured = pageableCaptor.getValue();
+        assertEquals(0, captured.getPageNumber());
+        assertEquals(2, captured.getPageSize());
+        Sort.Order order = captured.getSort().getOrderFor("name");
+        assertNotNull(order);
+        assertEquals(Sort.Direction.ASC, order.getDirection());
+
+        // ensure mapper was used for each entity
+        verify(personMapper).toDomain(e1);
+        verify(personMapper).toDomain(e2);
     }
 
     @Test
     void deleteById_shouldDelegateToJpa() {
-        adapter.deleteById(3L);
-        verify(jpa).deleteById(3L);
+        Long id = 999L;
+        doNothing().when(jpa).deleteById(id);
+
+        adapter.deleteById(id);
+
+        verify(jpa).deleteById(id);
     }
 }

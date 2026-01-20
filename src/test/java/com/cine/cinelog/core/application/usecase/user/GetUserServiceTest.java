@@ -2,6 +2,7 @@ package com.cine.cinelog.core.application.usecase.user;
 
 import com.cine.cinelog.core.application.ports.out.UserRepositoryPort;
 import com.cine.cinelog.core.domain.model.User;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +44,7 @@ class GetUserServiceTest {
         Long id = 2L;
         when(repo.findById(id)).thenReturn(Optional.empty());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
         assertEquals("User not found: " + id, ex.getMessage());
         verify(repo, times(1)).findById(id);
     }

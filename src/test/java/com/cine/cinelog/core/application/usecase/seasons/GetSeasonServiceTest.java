@@ -2,6 +2,7 @@ package com.cine.cinelog.core.application.usecase.seasons;
 
 import com.cine.cinelog.core.application.ports.out.SeasonRepositoryPort;
 import com.cine.cinelog.core.domain.model.Season;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +42,7 @@ class GetSeasonServiceTest {
         Long id = 2L;
         when(repo.findById(id)).thenReturn(Optional.empty());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
         assertEquals("Season not found: " + id, ex.getMessage());
         verify(repo).findById(id);
     }

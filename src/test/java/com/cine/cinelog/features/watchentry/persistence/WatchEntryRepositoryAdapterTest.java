@@ -1,5 +1,6 @@
 package com.cine.cinelog.features.watchentry.persistence;
 
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.WatchEntry;
 import com.cine.cinelog.features.watchentry.repository.WatchEntryJpaRepository;
 import com.cine.cinelog.features.watchentry.mapper.WatchEntryMapper;
@@ -114,7 +115,7 @@ class WatchEntryRepositoryAdapterTest {
         when(jpa.search(userId, mediaId, episodeId, minRating, from, to, pageable)).thenReturn(pageEntities);
         when(pageEntities.map(ArgumentMatchers.<Function<WatchEntryEntity, WatchEntry>>any())).thenReturn(pageDomains);
 
-        Page<WatchEntry> result = adapter.listByUser(userId, mediaId, episodeId, minRating, from, to, pageable);
+        PageResult<WatchEntry> result = adapter.listByUser(userId, mediaId, episodeId, minRating, from, to, pageable);
 
         assertSame(pageDomains, result);
         verify(jpa).search(userId, mediaId, episodeId, minRating, from, to, pageable);

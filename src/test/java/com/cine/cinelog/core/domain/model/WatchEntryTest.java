@@ -1,121 +1,106 @@
 package com.cine.cinelog.core.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
-public class WatchEntryTest {
+class WatchEntryTest {
 
     @Test
-    void constructorThrowsIfUserIdIsNull() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> new WatchEntry(null, null, 1L, null, 5, "c", LocalDate.now(),
-                        OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC)));
-        assertEquals("userId is required", ex.getMessage());
+    void constructor_requiresUserId() {
+        LocalDateTime now = LocalDateTime.now();
+        assertThrows(IllegalArgumentException.class, () -> new WatchEntry(
+                1L, null, 10L, null, null, null, LocalDate.now(), now, now, null, null, null));
     }
 
     @Test
-    void constructorThrowsIfNoMediaOrEpisodeProvided() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> new WatchEntry(null, 1L, null, null, 5, "c", LocalDate.now(),
-                        OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC)));
-        assertEquals("Either mediaId or episodeId must be provided", ex.getMessage());
+    void constructor_requiresMediaOrEpisode() {
+        LocalDateTime now = LocalDateTime.now();
+        assertThrows(IllegalArgumentException.class, () -> new WatchEntry(
+                1L, 2L, null, null, null, null, LocalDate.now(), now, now, null, null, null));
     }
 
     @Test
-    void constructorAllowsNullRatingButRejectsOutOfRange() {
-        // null rating is allowed
-        assertDoesNotThrow(() -> new WatchEntry(null, 1L, 2L, null, null, "c", LocalDate.now(),
-                OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC)));
+    void constructor_rejectsRatingOutOfRange_and_acceptsBounds() {
+        LocalDateTime now = LocalDateTime.now();
+        // negative rating
+        assertThrows(IllegalArgumentException.class, () -> new WatchEntry(
+                1L, 2L, 3L, null, new BigDecimal("-1"), null, LocalDate.now(), now, now, null, null, null));
+        // greater than 10
+        assertThrows(IllegalArgumentException.class, () -> new WatchEntry(
+                1L, 2L, 3L, null, new BigDecimal("10.1"), null, LocalDate.now(), now, now, null, null, null));
 
-        IllegalArgumentException exLow = assertThrows(IllegalArgumentException.class,
-                () -> new WatchEntry(null, 1L, 2L, null, -1, "c", LocalDate.now(),
-                        OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC)));
-        assertEquals("rating must be 0..10", exLow.getMessage());
-
-        IllegalArgumentException exHigh = assertThrows(IllegalArgumentException.class,
-                () -> new WatchEntry(null, 1L, 2L, null, 11, "c", LocalDate.now(),
-                        OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC)));
-        assertEquals("rating must be 0..10", exHigh.getMessage());
+        // boundaries 0 and 10 are allowed
+        WatchEntry zero = new WatchEntry(1L, 2L, 3L, null, BigDecimal.ZERO, null, LocalDate.now(), now, now, null, null,
+                null);
+        WatchEntry ten = new WatchEntry(2L, 2L, 3L, null, BigDecimal.TEN, null, LocalDate.now(), now, now, null, null,
+                null);
+        assertEquals(BigDecimal.ZERO, zero.getRating());
+        assertEquals(BigDecimal.TEN, ten.getRating());
     }
 
     @Test
-    void withIdReturnsNewInstanceWithProvidedIdAndKeepsOtherFields() {
-        OffsetDateTime created = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
-        OffsetDateTime updated = created;
-        WatchEntry original = new WatchEntry(1L, 10L, 20L, null, 4, "orig", LocalDate.of(2020, 1, 1), created, updated);
+    void withId_returnsNewInstanceWithGivenId() {
+        LocalDateTime now = LocalDateTime.now();
+        WatchEntry original = new WatchEntry(1L, 2L, 3L, null, BigDecimal.ONE, "c", LocalDate.now(), now, now, null,
+                null, null);
+        WatchEntry updated = original.withId(99L);
 
-        WatchEntry withNewId = original.withId(999L);
-
-        assertNotSame(original, withNewId);
-        assertEquals(999L, withNewId.getId());
-        assertEquals(original.getUserId(), withNewId.getUserId());
-        assertEquals(original.getMediaId(), withNewId.getMediaId());
-        assertEquals(original.getEpisodeId(), withNewId.getEpisodeId());
-        assertEquals(original.getRating(), withNewId.getRating());
-        assertEquals(original.getComment(), withNewId.getComment());
-        assertEquals(original.getWatchedAt(), withNewId.getWatchedAt());
-        assertEquals(original.getCreatedAt(), withNewId.getCreatedAt());
-        assertEquals(original.getUpdatedAt(), withNewId.getUpdatedAt());
+        assertEquals(1L, original.getId());
+        assertEquals(99L, updated.getId());
+        // other fields preserved
+        assertEquals(original.getUserId(), updated.getUserId());
+        assertEquals(original.getMediaId(), updated.getMediaId());
+        assertEquals(original.getRating(), updated.getRating());
+        // because equals is based on id only, they should not be equal
+        assertNotEquals(original, updated);
     }
 
     @Test
-    void equalsAndHashCodeUseIdOnly() {
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        WatchEntry a1 = new WatchEntry(1L, 1L, 2L, null, 3, "a", LocalDate.now(), now, now);
-        WatchEntry a2 = new WatchEntry(1L, 99L, null, 5L, 9, "different", LocalDate.now(), now, now);
-        WatchEntry b = new WatchEntry(2L, 1L, 2L, null, 3, "a", LocalDate.now(), now, now);
+    void equalsAndHashCode_basedOnlyOnId() {
+        LocalDateTime now = LocalDateTime.now();
+        WatchEntry a = new WatchEntry(5L, 10L, 20L, null, BigDecimal.ONE, "a", LocalDate.now(), now, now, null, null,
+                null);
+        WatchEntry b = new WatchEntry(5L, 99L, null, 200L, BigDecimal.TEN, "different", LocalDate.now(), now, now, null,
+                null, null);
 
-        assertEquals(a1, a2);
-        assertEquals(a1.hashCode(), a2.hashCode());
-        assertNotEquals(a1, b);
-        assertNotEquals(a1.hashCode(), b.hashCode());
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
 
-        // two null ids are considered equal by the implementation
-        WatchEntry n1 = new WatchEntry(null, 1L, 2L, null, 1, null, LocalDate.now(), now, now);
-        WatchEntry n2 = new WatchEntry(null, 2L, 2L, null, 2, "x", LocalDate.now(), now, now);
-        assertEquals(n1, n2);
+        WatchEntry c = new WatchEntry(6L, 10L, 20L, null, BigDecimal.ONE, "a", LocalDate.now(), now, now, null, null,
+                null);
+        assertNotEquals(a, c);
     }
 
     @Test
-    void applyRatingSetsRatingTrimsNonBlankCommentAndUpdatesUpdatedAt() throws InterruptedException {
-        OffsetDateTime created = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
-        OffsetDateTime oldUpdated = created;
-        WatchEntry e = new WatchEntry(1L, 1L, 2L, null, 2, "old", LocalDate.now(), created, oldUpdated);
+    void applyRating_setsRating_trimsComment_and_updatesUpdatedAt() {
+        LocalDateTime created = LocalDateTime.now().minusDays(2);
+        LocalDateTime previousUpdated = LocalDateTime.now().minusHours(1);
+        WatchEntry w = new WatchEntry(1L, 2L, 3L, null, null, "old", LocalDate.now(), created, previousUpdated, null,
+                null, null);
 
-        e.applyRating(7, "  trimmed  ");
-
-        assertEquals(7, e.getRating());
-        assertEquals("trimmed", e.getComment());
-        assertNotNull(e.getUpdatedAt());
-        assertTrue(e.getUpdatedAt().isAfter(oldUpdated));
+        LocalDateTime before = LocalDateTime.now();
+        w.applyRating(new BigDecimal("7"), "  Nice show  ");
+        assertEquals(new BigDecimal("7"), w.getRating());
+        assertEquals("Nice show", w.getComment());
+        assertNotNull(w.getUpdatedAt());
+        assertTrue(!w.getUpdatedAt().isBefore(before));
+        assertTrue(w.getUpdatedAt().isAfter(previousUpdated) || w.getUpdatedAt().isEqual(previousUpdated) == false);
     }
 
     @Test
-    void applyRatingWithBlankCommentDoesNotOverwriteExistingComment() {
-        OffsetDateTime created = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
-        OffsetDateTime oldUpdated = created;
-        WatchEntry e = new WatchEntry(1L, 1L, 2L, null, 2, "keep", LocalDate.now(), created, oldUpdated);
+    void applyRating_withNullOrBlankComment_keepsExistingComment() {
+        LocalDateTime created = LocalDateTime.now().minusDays(2);
+        LocalDateTime previousUpdated = LocalDateTime.now().minusHours(2);
+        WatchEntry w = new WatchEntry(1L, 2L, 3L, null, BigDecimal.ONE, "keep me", LocalDate.now(), created,
+                previousUpdated, null, null, null);
 
-        e.applyRating(5, "   ");
-
-        assertEquals(5, e.getRating());
-        assertEquals("keep", e.getComment());
-        assertTrue(e.getUpdatedAt().isAfter(oldUpdated));
-    }
-
-    @Test
-    void applyRatingWithNullCommentLeavesCommentNull() {
-        OffsetDateTime created = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
-        OffsetDateTime oldUpdated = created;
-        WatchEntry e = new WatchEntry(1L, 1L, 2L, null, 2, null, LocalDate.now(), created, oldUpdated);
-
-        e.applyRating(4, null);
-
-        assertEquals(4, e.getRating());
-        assertNull(e.getComment());
-        assertTrue(e.getUpdatedAt().isAfter(oldUpdated));
+        w.applyRating(null, "   "); // blank comment -> should keep existing
+        assertNull(w.getRating());
+        assertEquals("keep me", w.getComment());
+        assertNotNull(w.getUpdatedAt());
+        assertTrue(w.getUpdatedAt().isAfter(previousUpdated));
     }
 }

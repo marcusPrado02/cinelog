@@ -1,22 +1,24 @@
 package com.cine.cinelog.features.media.persistence;
 
-import com.cine.cinelog.core.domain.enums.MediaType;
-import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.query.MediaSearchCriteria;
 import com.cine.cinelog.features.media.mapper.MediaMapper;
 import com.cine.cinelog.features.media.persistence.entity.MediaEntity;
 import com.cine.cinelog.features.media.repository.MediaJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+
 import java.util.List;
 import java.util.Optional;
-import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -29,155 +31,123 @@ class MediaRepositoryAdapterTest {
     @Mock
     private MediaMapper mapper;
 
-    @InjectMocks
-    private MediaRepositoryAdapter adapter;
+    @Mock
+    private com.cine.cinelog.core.domain.model.Media domainMedia;
+
+    @Mock
+    private com.cine.cinelog.core.domain.model.Media mappedDomain;
+
+    @Mock
+    private MediaEntity entity;
+
+    @Mock
+    private MediaEntity savedEntity;
 
     @Captor
     private ArgumentCaptor<Pageable> pageableCaptor;
 
+    private MediaRepositoryAdapter adapter;
+
+    @BeforeEach
+    void setUp() {
+        adapter = new MediaRepositoryAdapter(repository, mapper);
+    }
+
     @Test
-    void save_shouldMapEntityAndReturnDomain() {
-        Media domain = mock(Media.class);
-        MediaEntity entity = mock(MediaEntity.class);
+    void save_shouldMapToEntity_callRepository_andMapToDomain() {
+        when(mapper.toEntity(domainMedia)).thenReturn(entity);
+        when(repository.save(entity)).thenReturn(savedEntity);
+        when(mapper.toDomain(savedEntity)).thenReturn(mappedDomain);
 
-        when(mapper.toEntity(domain)).thenReturn(entity);
-        when(repository.save(entity)).thenReturn(entity);
-        when(mapper.toDomain(entity)).thenReturn(domain);
+        var result = adapter.save(domainMedia);
 
-        Media result = adapter.save(domain);
-
-        assertSame(domain, result);
-        verify(mapper).toEntity(domain);
+        assertSame(mappedDomain, result);
+        verify(mapper).toEntity(domainMedia);
         verify(repository).save(entity);
+        verify(mapper).toDomain(savedEntity);
+    }
+
+    @Test
+    void findById_whenPresent_shouldReturnMappedDomain() {
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(mapper.toDomain(entity)).thenReturn(mappedDomain);
+
+        var opt = adapter.findById(1L);
+
+        assertTrue(opt.isPresent());
+        assertSame(mappedDomain, opt.get());
+        verify(repository).findById(1L);
         verify(mapper).toDomain(entity);
     }
 
     @Test
-    void findById_whenPresent_shouldReturnDomain() {
-        Long id = 1L;
-        MediaEntity entity = mock(MediaEntity.class);
-        Media domain = mock(Media.class);
+    void findById_whenNotPresent_shouldReturnEmpty() {
+        when(repository.findById(2L)).thenReturn(Optional.empty());
 
-        when(repository.findById(id)).thenReturn(Optional.of(entity));
-        when(mapper.toDomain(entity)).thenReturn(domain);
+        var opt = adapter.findById(2L);
 
-        Optional<Media> result = adapter.findById(id);
-
-        assertTrue(result.isPresent());
-        assertSame(domain, result.get());
-        verify(repository).findById(id);
-        verify(mapper).toDomain(entity);
-    }
-
-    @Test
-    void findById_whenAbsent_shouldReturnEmpty() {
-        Long id = 2L;
-        when(repository.findById(id)).thenReturn(Optional.empty());
-
-        Optional<Media> result = adapter.findById(id);
-
-        assertTrue(result.isEmpty());
-        verify(repository).findById(id);
+        assertFalse(opt.isPresent());
+        verify(repository).findById(2L);
         verifyNoInteractions(mapper);
     }
 
     @Test
     void deleteById_shouldDelegateToRepository() {
-        Long id = 3L;
+        adapter.deleteById(5L);
 
-        adapter.deleteById(id);
-
-        verify(repository).deleteById(id);
+        verify(repository).deleteById(5L);
         verifyNoInteractions(mapper);
     }
 
     @Test
-    void find_withTypeAndQuery_shouldUseFindByTypeAndTitleContainingIgnoreCase() {
-        MediaType type = MediaType.MOVIE;
-        String q = "Star";
-        int page = 0;
-        int size = 5;
-
+    void listAll_shouldRequestPage_andMapEachEntity() {
         MediaEntity e1 = mock(MediaEntity.class);
         MediaEntity e2 = mock(MediaEntity.class);
-        Media m1 = mock(Media.class);
-        Media m2 = mock(Media.class);
+        var page = new PageImpl<>(List.of(e1, e2));
 
-        when(repository.findByTypeAndTitleContainingIgnoreCase(eq(type), eq(q), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(asList(e1, e2)));
-        when(mapper.toDomain(e1)).thenReturn(m1);
-        when(mapper.toDomain(e2)).thenReturn(m2);
+        when(repository.findAll(any(Pageable.class))).thenReturn(page);
+        when(mapper.toDomain(e1)).thenReturn(mock(com.cine.cinelog.core.domain.model.Media.class));
+        when(mapper.toDomain(e2)).thenReturn(mock(com.cine.cinelog.core.domain.model.Media.class));
 
-        List<Media> result = adapter.find(type, q, page, size);
+        PageQuery pageQuery = mock(PageQuery.class);
+        when(pageQuery.page()).thenReturn(1);
+        when(pageQuery.size()).thenReturn(5);
 
-        assertEquals(2, result.size());
-        assertSame(m1, result.get(0));
-        assertSame(m2, result.get(1));
-        verify(repository).findByTypeAndTitleContainingIgnoreCase(eq(type), eq(q), any(Pageable.class));
-        verify(mapper, times(2)).toDomain(any(MediaEntity.class));
-    }
+        var result = adapter.listAll(pageQuery);
 
-    @Test
-    void find_withOnlyType_shouldUseFindByType() {
-        MediaType type = MediaType.SERIES;
-        String q = null;
-        int page = 1;
-        int size = 3;
-
-        MediaEntity e = mock(MediaEntity.class);
-        Media m = mock(Media.class);
-
-        when(repository.findByType(eq(type), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(e)));
-        when(mapper.toDomain(e)).thenReturn(m);
-
-        List<Media> result = adapter.find(type, q, page, size);
-
-        assertEquals(1, result.size());
-        assertSame(m, result.get(0));
-        verify(repository).findByType(eq(type), any(Pageable.class));
-    }
-
-    @Test
-    void find_withOnlyQuery_shouldUseFindByTitleContainingIgnoreCase() {
-        MediaType type = null;
-        String q = "Hero";
-        int page = 2;
-        int size = 4;
-
-        MediaEntity e = mock(MediaEntity.class);
-        Media m = mock(Media.class);
-
-        when(repository.findByTitleContainingIgnoreCase(eq(q), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(e)));
-        when(mapper.toDomain(e)).thenReturn(m);
-
-        List<Media> result = adapter.find(type, q, page, size);
-
-        assertEquals(1, result.size());
-        assertSame(m, result.get(0));
-        verify(repository).findByTitleContainingIgnoreCase(eq(q), any(Pageable.class));
-    }
-
-    @Test
-    void find_withNoTypeAndNoQuery_shouldUseFindAll_and_adjustPageableBounds() {
-        MediaType type = null;
-        String q = null;
-        int page = -5;
-        int size = 0;
-
-        MediaEntity e = mock(MediaEntity.class);
-        Media m = mock(Media.class);
-
-        when(repository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(e)));
-        when(mapper.toDomain(e)).thenReturn(m);
-
-        List<Media> result = adapter.find(type, q, page, size);
-
-        assertEquals(1, result.size());
-        assertSame(m, result.get(0));
+        assertNotNull(result);
         verify(repository).findAll(pageableCaptor.capture());
         Pageable captured = pageableCaptor.getValue();
-        assertEquals(0, captured.getPageNumber()); // page should be max(page, 0)
-        assertEquals(1, captured.getPageSize()); // size should be max(size, 1)
+        assertEquals(1, captured.getPageNumber());
+        assertEquals(5, captured.getPageSize());
+
+        verify(mapper).toDomain(e1);
+        verify(mapper).toDomain(e2);
+    }
+
+    @Test
+    void search_shouldBuildSpec_usePageable_andMapResults() {
+        MediaEntity e1 = mock(MediaEntity.class);
+        var page = new PageImpl<>(List.of(e1));
+
+        when(repository.findAll((Specification<MediaEntity>) any(),
+                any(Pageable.class))).thenReturn(page);
+        when(mapper.toDomain(e1)).thenReturn(mock(com.cine.cinelog.core.domain.model.Media.class));
+
+        MediaSearchCriteria criteria = mock(MediaSearchCriteria.class);
+        PageQuery pageQuery = mock(PageQuery.class);
+        when(pageQuery.page()).thenReturn(0);
+        when(pageQuery.size()).thenReturn(10);
+
+        var result = adapter.search(criteria, pageQuery);
+
+        assertNotNull(result);
+        verify(repository).findAll((Specification<MediaEntity>) any(),
+                pageableCaptor.capture());
+        Pageable captured = pageableCaptor.getValue();
+        assertEquals(0, captured.getPageNumber());
+        assertEquals(10, captured.getPageSize());
+
+        verify(mapper).toDomain(e1);
     }
 }

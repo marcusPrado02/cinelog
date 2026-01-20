@@ -2,6 +2,8 @@ package com.cine.cinelog.core.application.usecase.seasons;
 
 import com.cine.cinelog.core.application.ports.out.SeasonRepositoryPort;
 import com.cine.cinelog.core.domain.model.Season;
+import com.cine.cinelog.core.domain.policy.SeasonPolicy;
+import com.cine.cinelog.core.domain.policy.SeasonUniquenessPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,6 +18,12 @@ class CreateSeasonServiceTest {
 
     @Mock
     private SeasonRepositoryPort repo;
+
+    @Mock
+    private SeasonPolicy policy;
+
+    @Mock
+    private SeasonUniquenessPolicy uniquenessPolicy;
 
     @Mock
     private Season season;

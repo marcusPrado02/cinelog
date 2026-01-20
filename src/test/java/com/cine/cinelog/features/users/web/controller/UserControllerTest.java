@@ -1,15 +1,13 @@
 package com.cine.cinelog.features.users.web.controller;
 
-import com.cine.cinelog.core.application.ports.in.user.CreateUserUseCase;
-import com.cine.cinelog.core.application.ports.in.user.DeleteUserUseCase;
-import com.cine.cinelog.core.application.ports.in.user.GetUserUseCase;
-import com.cine.cinelog.core.application.ports.in.user.ListUsersUseCase;
-import com.cine.cinelog.core.application.ports.in.user.UpdateUserUseCase;
+import com.cine.cinelog.core.application.ports.in.user.*;
 import com.cine.cinelog.core.domain.model.User;
+import com.cine.cinelog.core.domain.model.UserStats;
 import com.cine.cinelog.features.users.mapper.UserMapper;
 import com.cine.cinelog.features.users.web.dto.UserCreateRequest;
 import com.cine.cinelog.features.users.web.dto.UserResponse;
 import com.cine.cinelog.features.users.web.dto.UserUpdateRequest;
+import com.cine.cinelog.features.users.web.dto.UserStatsResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,8 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
+import java.time.LocalDate;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -36,7 +34,12 @@ class UserControllerTest {
     @Mock
     private DeleteUserUseCase deleteUC;
     @Mock
+    private GetMyStatsUseCase getMyStatsUseCase;
+    @Mock
     private UserMapper mapper;
+
+    @Mock
+    private com.cine.cinelog.shared.observability.metrics.BusinessMetricsService metricsService;
 
     @InjectMocks
     private UserController controller;
@@ -44,85 +47,101 @@ class UserControllerTest {
     @Test
     void create_shouldReturnCreatedResponseWithLocationAndBody() {
         UserCreateRequest req = mock(UserCreateRequest.class);
+        when(req.name()).thenReturn("Test User");
+        when(req.email()).thenReturn("test@example.com");
+
         User domainFromReq = mock(User.class);
         User created = mock(User.class);
+        UserResponse resp = mock(UserResponse.class);
+
         when(mapper.toDomain(req)).thenReturn(domainFromReq);
         when(createUC.execute(domainFromReq)).thenReturn(created);
         when(created.getId()).thenReturn(42L);
+        when(mapper.toResponse(created)).thenReturn(resp);
 
-        UserResponse expectedResponse = mock(UserResponse.class);
-        when(mapper.toResponse(created)).thenReturn(expectedResponse);
+        ResponseEntity<UserResponse> result = controller.create(req);
 
-        ResponseEntity<UserResponse> resp = controller.create(req);
+        assertEquals(201, result.getStatusCodeValue());
+        assertEquals(URI.create("/api/users/42"), result.getHeaders().getLocation());
+        assertSame(resp, result.getBody());
 
-        assertEquals(201, resp.getStatusCodeValue());
-        assertEquals(URI.create("/api/users/42"), resp.getHeaders().getLocation());
-        assertSame(expectedResponse, resp.getBody());
+        verify(mapper).toDomain(req);
+        verify(createUC).execute(domainFromReq);
+        verify(mapper).toResponse(created);
     }
 
     @Test
-    void update_shouldReturnOkWithUpdatedBody() {
+    void update_shouldReturnOkWithMappedResponse() {
         Long id = 7L;
         UserUpdateRequest req = mock(UserUpdateRequest.class);
+        when(req.name()).thenReturn("Updated Name");
+
         User domainFromReq = mock(User.class);
         User updated = mock(User.class);
+        UserResponse resp = mock(UserResponse.class);
 
         when(mapper.toDomain(req)).thenReturn(domainFromReq);
         when(updateUC.execute(id, domainFromReq)).thenReturn(updated);
+        when(mapper.toResponse(updated)).thenReturn(resp);
 
-        UserResponse expectedResponse = mock(UserResponse.class);
-        when(mapper.toResponse(updated)).thenReturn(expectedResponse);
+        ResponseEntity<UserResponse> result = controller.update(id, req);
 
-        ResponseEntity<UserResponse> resp = controller.update(id, req);
+        assertEquals(200, result.getStatusCodeValue());
+        assertSame(resp, result.getBody());
 
-        assertEquals(200, resp.getStatusCodeValue());
-        assertSame(expectedResponse, resp.getBody());
+        verify(mapper).toDomain(req);
+        verify(updateUC).execute(id, domainFromReq);
+        verify(mapper).toResponse(updated);
     }
 
     @Test
-    void getById_shouldReturnOkWithBody() {
+    void getById_shouldReturnOkWithMappedResponse() {
         Long id = 13L;
-        User found = mock(User.class);
-        when(getUC.execute(id)).thenReturn(found);
+        User user = mock(User.class);
+        UserResponse resp = mock(UserResponse.class);
 
-        UserResponse expectedResponse = mock(UserResponse.class);
-        when(mapper.toResponse(found)).thenReturn(expectedResponse);
+        when(getUC.execute(id)).thenReturn(user);
+        when(mapper.toResponse(user)).thenReturn(resp);
 
-        ResponseEntity<UserResponse> resp = controller.getById(id);
+        ResponseEntity<UserResponse> result = controller.getById(id);
 
-        assertEquals(200, resp.getStatusCodeValue());
-        assertSame(expectedResponse, resp.getBody());
-    }
+        assertEquals(200, result.getStatusCodeValue());
+        assertSame(resp, result.getBody());
 
-    @Test
-    void list_shouldReturnAllUsersMappedToResponses() {
-        User u1 = mock(User.class);
-        User u2 = mock(User.class);
-        List<User> users = Arrays.asList(u1, u2);
-        when(listUC.execute()).thenReturn(users);
-
-        UserResponse r1 = mock(UserResponse.class);
-        UserResponse r2 = mock(UserResponse.class);
-        when(mapper.toResponse(u1)).thenReturn(r1);
-        when(mapper.toResponse(u2)).thenReturn(r2);
-
-        ResponseEntity<List<UserResponse>> resp = controller.list();
-
-        assertEquals(200, resp.getStatusCodeValue());
-        assertNotNull(resp.getBody());
-        assertEquals(2, resp.getBody().size());
-        assertEquals(r1, resp.getBody().get(0));
-        assertEquals(r2, resp.getBody().get(1));
+        verify(getUC).execute(id);
+        verify(mapper).toResponse(user);
     }
 
     @Test
     void delete_shouldCallUseCaseAndReturnNoContent() {
         Long id = 99L;
 
-        ResponseEntity<Void> resp = controller.delete(id);
+        ResponseEntity<Void> result = controller.delete(id);
 
+        assertEquals(204, result.getStatusCodeValue());
         verify(deleteUC).execute(id);
-        assertEquals(204, resp.getStatusCodeValue());
-        assertNull(resp.getBody());
+    }
+
+    @Test
+    void getMyStats_shouldReturnMappedStatsResponse() {
+        UserStats stats = mock(UserStats.class);
+
+        when(getMyStatsUseCase.execute()).thenReturn(stats);
+        when(stats.getTotalEntries()).thenReturn(10L);
+        when(stats.getTotalRated()).thenReturn(8L);
+        when(stats.getAverageRating()).thenReturn(4.25);
+        when(stats.getFirstWatchDate()).thenReturn(LocalDate.parse("2020-01-01"));
+        when(stats.getLastWatchDate()).thenReturn(LocalDate.parse("2021-12-31"));
+
+        UserStatsResponse resp = controller.getMyStats();
+
+        assertNotNull(resp);
+        assertEquals(10L, resp.totalEntries());
+        assertEquals(8L, resp.totalRated());
+        assertEquals(4.25, resp.averageRating());
+        assertEquals(LocalDate.parse("2020-01-01"), resp.firstWatchDate());
+        assertEquals(LocalDate.parse("2021-12-31"), resp.lastWatchDate());
+
+        verify(getMyStatsUseCase).execute();
     }
 }

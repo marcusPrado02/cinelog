@@ -1,143 +1,222 @@
 package com.cine.cinelog.features.media.web.controller;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import java.util.List;
+import java.net.URI;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.application.ports.in.media.CreateMediaUseCase;
 import com.cine.cinelog.core.application.ports.in.media.DeleteMediaUseCase;
 import com.cine.cinelog.core.application.ports.in.media.GetMediaUseCase;
 import com.cine.cinelog.core.application.ports.in.media.ListMediaUseCase;
+import com.cine.cinelog.core.application.ports.in.media.RecommendMediaUseCase;
+import com.cine.cinelog.core.application.ports.in.media.SearchMediaUseCase;
 import com.cine.cinelog.core.application.ports.in.media.UpdateMediaUseCase;
-import com.cine.cinelog.core.domain.enums.MediaType;
+import com.cine.cinelog.core.application.query.MediaSearchCriteria;
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.features.media.mapper.MediaMapper;
 import com.cine.cinelog.features.media.web.dto.MediaCreateRequest;
 import com.cine.cinelog.features.media.web.dto.MediaResponse;
+import com.cine.cinelog.features.media.web.dto.MediaSearchRequest;
 import com.cine.cinelog.features.media.web.dto.MediaUpdateRequest;
+import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
+import com.cine.cinelog.shared.web.dto.PageResponse;
+import com.cine.cinelog.shared.web.dto.PageResponseMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import com.cine.cinelog.core.application.pagination.PageQuery;
 
 @ExtendWith(MockitoExtension.class)
 class MediaControllerTest {
 
     @Mock
-    private CreateMediaUseCase createUseCase;
+    private CreateMediaUseCase createUC;
     @Mock
-    private UpdateMediaUseCase updateUseCase;
+    private UpdateMediaUseCase updateUC;
     @Mock
-    private GetMediaUseCase getUseCase;
+    private GetMediaUseCase getUC;
     @Mock
-    private ListMediaUseCase listUseCase;
+    private SearchMediaUseCase searchUC;
     @Mock
-    private DeleteMediaUseCase deleteUseCase;
+    private ListMediaUseCase listUC;
+    @Mock
+    private DeleteMediaUseCase deleteUC;
+    @Mock
+    private RecommendMediaUseCase recommendUC;
     @Mock
     private MediaMapper mapper;
 
-    @InjectMocks
     private MediaController controller;
 
-    @Captor
-    private ArgumentCaptor<Long> longCaptor;
+    @Mock
+    private BusinessMetricsService metricsService;
 
     @BeforeEach
     void setUp() {
-        // controller is injected by Mockito @InjectMocks
+        controller = new MediaController(createUC, updateUC, getUC, listUC, deleteUC, searchUC, recommendUC, mapper,
+                metricsService);
     }
 
     @Test
-    void create_should_return_created_with_location_and_body() {
+    void createUC_shouldReturnCreatedWithLocationAndBody() {
         MediaCreateRequest req = mock(MediaCreateRequest.class);
-        Media domain = mock(Media.class);
-        when(domain.getId()).thenReturn(123L);
-        MediaResponse resp = mock(MediaResponse.class);
+        when(req.getTitle()).thenReturn("Test Movie");
+        when(req.getType()).thenReturn(com.cine.cinelog.core.domain.enums.MediaType.MOVIE);
 
-        when(mapper.toDomain(req)).thenReturn(domain);
-        when(createUseCase.execute(domain)).thenReturn(domain);
-        when(mapper.toResponse(domain)).thenReturn(resp);
+        Media saved = mock(Media.class);
+        when(saved.getId()).thenReturn(42L);
+        when(saved.getTitle()).thenReturn("Test Movie");
+        when(saved.getType()).thenReturn(com.cine.cinelog.core.domain.enums.MediaType.MOVIE);
+        MediaResponse respDto = mock(MediaResponse.class);
 
-        ResponseEntity<MediaResponse> result = controller.create(req);
+        when(mapper.toDomain(req)).thenReturn(saved);
+        when(createUC.execute(saved)).thenReturn(saved);
+        when(mapper.toResponse(saved)).thenReturn(respDto);
 
-        assertEquals(HttpStatus.CREATED, result.getStatusCode());
-        assertEquals(resp, result.getBody());
-        assertTrue(result.getHeaders().getLocation().toString().endsWith("/api/media/123"));
+        ResponseEntity<MediaResponse> response = controller.createUC(req);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertEquals(URI.create("/api/media/42"), response.getHeaders().getLocation());
+        assertSame(respDto, response.getBody());
+
+        verify(mapper).toDomain(req);
+        verify(createUC).execute(saved);
+        verify(mapper).toResponse(saved);
     }
 
     @Test
-    void get_should_return_ok_with_mapped_response() {
-        long id = 1L;
+    void getUC_shouldReturnOkWithBody() {
+        long id = 7L;
         Media domain = mock(Media.class);
-        MediaResponse resp = mock(MediaResponse.class);
+        MediaResponse dto = mock(MediaResponse.class);
 
-        when(getUseCase.execute(id)).thenReturn(domain);
-        when(mapper.toResponse(domain)).thenReturn(resp);
+        when(getUC.execute(id)).thenReturn(domain);
+        when(mapper.toResponse(domain)).thenReturn(dto);
 
-        ResponseEntity<MediaResponse> result = controller.get(id);
+        ResponseEntity<MediaResponse> response = controller.getUC(id);
 
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals(resp, result.getBody());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertSame(dto, response.getBody());
+        verify(getUC).execute(id);
+        verify(mapper).toResponse(domain);
     }
 
     @Test
-    void list_should_return_ok_with_mapped_list() {
-        Media domain = mock(Media.class);
-        MediaResponse resp = mock(MediaResponse.class);
-
-        when(listUseCase.execute(MediaType.MOVIE, "query", 0, 10)).thenReturn(List.of(domain));
-        when(mapper.toResponse(domain)).thenReturn(resp);
-
-        ResponseEntity<List<MediaResponse>> result = controller.list(MediaType.MOVIE, "query", 0, 10);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertNotNull(result.getBody());
-        assertEquals(1, result.getBody().size());
-        assertEquals(resp, result.getBody().get(0));
-    }
-
-    @Test
-    void update_should_return_ok_with_mapped_response() {
-        long id = 5L;
-        MediaUpdateRequest req = mock(MediaUpdateRequest.class);
-        Media domain = mock(Media.class);
-        MediaResponse resp = mock(MediaResponse.class);
-
-        when(mapper.toDomain(req)).thenReturn(domain);
-        when(updateUseCase.execute(id, domain)).thenReturn(domain);
-        when(mapper.toResponse(domain)).thenReturn(resp);
-
-        ResponseEntity<MediaResponse> result = controller.update(id, req);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals(resp, result.getBody());
-    }
-
-    @Test
-    void delete_should_invoke_usecase() {
+    void updateUC_shouldReturnOkWithUpdatedBody() {
         long id = 9L;
+        MediaUpdateRequest req = mock(MediaUpdateRequest.class);
+        when(req.title()).thenReturn("Updated Title");
+        when(req.type()).thenReturn(com.cine.cinelog.core.domain.enums.MediaType.MOVIE);
 
-        // no stubbing needed for void method
-        controller.delete(id);
+        Media domainFromReq = mock(Media.class);
+        Media updatedDomain = mock(Media.class);
+        MediaResponse dto = mock(MediaResponse.class);
 
-        verify(deleteUseCase).execute(longCaptor.capture());
-        assertEquals(id, longCaptor.getValue());
+        when(mapper.toDomain(req)).thenReturn(domainFromReq);
+        when(updateUC.execute(id, domainFromReq)).thenReturn(updatedDomain);
+        when(mapper.toResponse(updatedDomain)).thenReturn(dto);
+
+        ResponseEntity<MediaResponse> response = controller.updateUC(id, req);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertSame(dto, response.getBody());
+
+        verify(mapper).toDomain(req);
+        verify(updateUC).execute(id, domainFromReq);
+        verify(mapper).toResponse(updatedDomain);
     }
 
     @Test
-    void notFound_handler_should_return_problem_detail_with_message_and_404() {
+    void deleteUC_shouldCallUseCase() {
+        long id = 11L;
+        doNothing().when(deleteUC).execute(id);
+
+        controller.deleteUC(id);
+
+        verify(deleteUC).execute(id);
+    }
+
+    @Test
+    void listUC_shouldReturnPageResponseFromMapper() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        PageResult<Media> mockedResult = mock(PageResult.class);
+        @SuppressWarnings("unchecked")
+        PageResponse<MediaResponse> mockedPageResponse = mock(PageResponse.class);
+
+        when(listUC.execute(any(PageQuery.class))).thenReturn(mockedResult);
+
+        try (MockedStatic<PageResponseMapper> utilities = mockStatic(PageResponseMapper.class)) {
+            utilities.when(() -> PageResponseMapper.from(any(), any())).thenReturn(mockedPageResponse);
+
+            ResponseEntity<PageResponse<MediaResponse>> response = controller.listUC(pageable);
+
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertSame(mockedPageResponse, response.getBody());
+            utilities.verify(() -> PageResponseMapper.from(mockedResult, mapper::toResponse));
+            verify(listUC).execute(any(PageQuery.class));
+        }
+    }
+
+    @Test
+    void searchUC_shouldBuildCriteriaAndCallUseCase() {
+        MediaSearchRequest req = mock(MediaSearchRequest.class);
+        when(req.getText()).thenReturn("abc");
+        when(req.getType()).thenReturn(com.cine.cinelog.core.domain.enums.MediaType.MOVIE);
+        when(req.getYearMin()).thenReturn(2000);
+        when(req.getYearMax()).thenReturn(2020);
+        when(req.getRatingMin()).thenReturn(1.5);
+        when(req.getRatingMax()).thenReturn(9.5);
+        when(req.getGenreIds()).thenReturn(java.util.List.of());
+        when(req.getPage()).thenReturn(2);
+        when(req.getSize()).thenReturn(10);
+
+        PageResult<Media> mockedResult = mock(PageResult.class);
+        @SuppressWarnings("unchecked")
+        PageResponse<MediaResponse> mockedPageResponse = mock(PageResponse.class);
+
+        when(searchUC.execute(any(MediaSearchCriteria.class), any(PageQuery.class))).thenReturn(mockedResult);
+
+        try (MockedStatic<PageResponseMapper> utilities = mockStatic(PageResponseMapper.class)) {
+            utilities.when(() -> PageResponseMapper.from(any(), any())).thenReturn(mockedPageResponse);
+
+            ResponseEntity<PageResponse<MediaResponse>> response = controller.searchUC(req);
+
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertSame(mockedPageResponse, response.getBody());
+
+            ArgumentCaptor<MediaSearchCriteria> criteriaCaptor = ArgumentCaptor.forClass(MediaSearchCriteria.class);
+            ArgumentCaptor<PageQuery> pageQueryCaptor = ArgumentCaptor.forClass(PageQuery.class);
+            verify(searchUC).execute(criteriaCaptor.capture(), pageQueryCaptor.capture());
+
+            MediaSearchCriteria criteria = criteriaCaptor.getValue();
+            assertEquals("abc", criteria.getText());
+            assertEquals(Integer.valueOf(2000), criteria.getYearMin());
+            assertEquals(Integer.valueOf(2020), criteria.getYearMax());
+            assertEquals(Double.valueOf(1.5), criteria.getRatingMin());
+            assertEquals(Double.valueOf(9.5), criteria.getRatingMax());
+
+            PageQuery pq = pageQueryCaptor.getValue();
+            assertEquals(2, pq.page());
+            assertEquals(10, pq.size());
+        }
+    }
+
+    @Test
+    void notFound_shouldReturnProblemDetailWithMessageAnd404() {
         IllegalArgumentException ex = new IllegalArgumentException("not found");
         ProblemDetail pd = controller.notFound(ex);
 
         assertNotNull(pd);
-        assertEquals(HttpStatus.NOT_FOUND.value(), pd.getStatus());
+        assertEquals(HttpStatus.NOT_FOUND, pd.getStatus());
         assertEquals("not found", pd.getDetail());
     }
 }

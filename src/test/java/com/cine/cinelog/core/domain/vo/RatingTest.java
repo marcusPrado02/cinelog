@@ -4,43 +4,45 @@ import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.math.BigDecimal;
+
 class RatingTest {
 
     @Test
     void shouldCreateRatingWhenValueIsValid() {
-        Rating r = new Rating(7.5);
-        assertEquals(7.5, r.value(), 0.0);
+        Rating r = Rating.of(BigDecimal.valueOf(7.5));
+        assertEquals(BigDecimal.valueOf(7.5), r.value());
     }
 
     @Test
     void shouldAllowBoundaryValuesZeroAndTen() {
-        Rating r0 = new Rating(0.0);
-        Rating r10 = new Rating(10.0);
-        assertEquals(0.0, r0.value(), 0.0);
-        assertEquals(10.0, r10.value(), 0.0);
+        Rating r0 = Rating.of(BigDecimal.valueOf(0.0));
+        Rating r10 = Rating.of(BigDecimal.valueOf(10.0));
+        assertEquals(BigDecimal.valueOf(0.0), r0.value());
+        assertEquals(BigDecimal.valueOf(10.0), r10.value());
     }
 
     @Test
     void ofShouldReturnZeroWhenNull() {
         Rating r = Rating.of(null);
-        assertEquals(0.0, r.value(), 0.0);
+        assertEquals(BigDecimal.valueOf(0.0), r.value());
     }
 
     @Test
     void shouldThrowWhenValueIsNaN() {
-        DomainException ex = assertThrows(DomainException.class, () -> new Rating(Double.NaN));
+        DomainException ex = assertThrows(DomainException.class, () -> Rating.of(BigDecimal.valueOf(Double.NaN)));
         assertEquals("Rating deve estar entre 0 e 10", ex.getMessage());
     }
 
     @Test
     void shouldThrowWhenValueIsNegative() {
-        DomainException ex = assertThrows(DomainException.class, () -> new Rating(-0.1));
+        DomainException ex = assertThrows(DomainException.class, () -> Rating.of(BigDecimal.valueOf(-0.1)));
         assertEquals("Rating deve estar entre 0 e 10", ex.getMessage());
     }
 
     @Test
     void shouldThrowWhenValueGreaterThanTen() {
-        DomainException ex = assertThrows(DomainException.class, () -> new Rating(10.1));
+        DomainException ex = assertThrows(DomainException.class, () -> Rating.of(BigDecimal.valueOf(10.1)));
         assertEquals("Rating deve estar entre 0 e 10", ex.getMessage());
     }
 }

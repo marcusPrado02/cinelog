@@ -10,138 +10,111 @@ import com.cine.cinelog.features.credits.mapper.CreditMapper;
 import com.cine.cinelog.features.credits.web.dto.CreditCreateRequest;
 import com.cine.cinelog.features.credits.web.dto.CreditResponse;
 import com.cine.cinelog.features.credits.web.dto.CreditUpdateRequest;
+import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
-import java.net.URI;
-import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class CreditControllerTest {
 
-    @Mock
     private CreateCreditUseCase createUC;
-
-    @Mock
     private UpdateCreditUseCase updateUC;
-
-    @Mock
     private GetCreditUseCase getUC;
-
-    @Mock
     private ListCreditsUseCase listUC;
-
-    @Mock
     private DeleteCreditUseCase deleteUC;
-
-    @Mock
     private CreditMapper mapper;
 
-    @InjectMocks
     private CreditController controller;
+    private BusinessMetricsService metricsService;
 
-    @Captor
-    private ArgumentCaptor<Long> longCaptor;
+    @BeforeEach
+    void setUp() {
+        createUC = mock(CreateCreditUseCase.class);
+        updateUC = mock(UpdateCreditUseCase.class);
+        getUC = mock(GetCreditUseCase.class);
+        listUC = mock(ListCreditsUseCase.class);
+        deleteUC = mock(DeleteCreditUseCase.class);
+        mapper = mock(CreditMapper.class);
+        metricsService = mock(BusinessMetricsService.class);
+
+        controller = new CreditController(createUC, updateUC, getUC, listUC, deleteUC, mapper, metricsService);
+    }
 
     @Test
-    void create_shouldReturnCreatedResponseWithLocationAndBody() {
+    void create_shouldReturnCreatedResponse() {
         CreditCreateRequest req = mock(CreditCreateRequest.class);
-        Credit domainFromReq = mock(Credit.class);
-        Credit createdDomain = mock(Credit.class);
-        CreditResponse expectedResponse = mock(CreditResponse.class);
-
-        when(mapper.toDomain(req)).thenReturn(domainFromReq);
-        when(createUC.execute(domainFromReq)).thenReturn(createdDomain);
-        when(createdDomain.getId()).thenReturn(123L);
-        when(mapper.toResponse(createdDomain)).thenReturn(expectedResponse);
-
-        ResponseEntity<CreditResponse> resp = controller.create(req);
-
-        assertEquals(201, resp.getStatusCodeValue());
-        assertEquals(URI.create("/api/credits/123"), resp.getHeaders().getLocation());
-        assertSame(expectedResponse, resp.getBody());
-
-        verify(mapper).toDomain(req);
-        verify(createUC).execute(domainFromReq);
-        verify(mapper).toResponse(createdDomain);
-    }
-
-    @Test
-    void update_shouldReturnOkWithUpdatedBody() {
-        Long id = 5L;
-        CreditUpdateRequest req = mock(CreditUpdateRequest.class);
-        Credit domainFromReq = mock(Credit.class);
-        Credit updatedDomain = mock(Credit.class);
-        CreditResponse expectedResponse = mock(CreditResponse.class);
-
-        when(mapper.toDomain(req)).thenReturn(domainFromReq);
-        when(updateUC.execute(id, domainFromReq)).thenReturn(updatedDomain);
-        when(mapper.toResponse(updatedDomain)).thenReturn(expectedResponse);
-
-        ResponseEntity<CreditResponse> resp = controller.update(id, req);
-
-        assertEquals(200, resp.getStatusCodeValue());
-        assertSame(expectedResponse, resp.getBody());
-
-        verify(mapper).toDomain(req);
-        verify(updateUC).execute(id, domainFromReq);
-        verify(mapper).toResponse(updatedDomain);
-    }
-
-    @Test
-    void getById_shouldReturnOkWithMappedBody() {
-        Long id = 7L;
         Credit domain = mock(Credit.class);
-        CreditResponse expectedResponse = mock(CreditResponse.class);
+        CreditResponse resp = mock(CreditResponse.class);
+
+        when(mapper.toDomain(req)).thenReturn(domain);
+        when(createUC.execute(domain)).thenReturn(domain);
+        when(domain.getId()).thenReturn(1L);
+        when(mapper.toResponse(domain)).thenReturn(resp);
+
+        ResponseEntity<CreditResponse> result = controller.create(req);
+
+        assertEquals(201, result.getStatusCodeValue());
+        assertEquals(resp, result.getBody());
+        assertNotNull(result.getHeaders().getLocation());
+        assertTrue(result.getHeaders().getLocation().toString().endsWith("/api/credits/1"));
+
+        verify(mapper).toDomain(req);
+        verify(createUC).execute(domain);
+        verify(mapper).toResponse(domain);
+    }
+
+    @Test
+    void update_shouldReturnOkResponse() {
+        Long id = 1L;
+        CreditUpdateRequest req = mock(CreditUpdateRequest.class);
+        Credit domain = mock(Credit.class);
+        CreditResponse resp = mock(CreditResponse.class);
+
+        when(mapper.toDomain(req)).thenReturn(domain);
+        when(updateUC.execute(id, domain)).thenReturn(domain);
+        when(mapper.toResponse(domain)).thenReturn(resp);
+
+        ResponseEntity<CreditResponse> result = controller.update(id, req);
+
+        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(resp, result.getBody());
+
+        verify(mapper).toDomain(req);
+        verify(updateUC).execute(id, domain);
+        verify(mapper).toResponse(domain);
+    }
+
+    @Test
+    void getById_shouldReturnOkResponse() {
+        Long id = 1L;
+        Credit domain = mock(Credit.class);
+        CreditResponse resp = mock(CreditResponse.class);
 
         when(getUC.execute(id)).thenReturn(domain);
-        when(mapper.toResponse(domain)).thenReturn(expectedResponse);
+        when(mapper.toResponse(domain)).thenReturn(resp);
 
-        ResponseEntity<CreditResponse> resp = controller.getById(id);
+        ResponseEntity<CreditResponse> result = controller.getById(id);
 
-        assertEquals(200, resp.getStatusCodeValue());
-        assertSame(expectedResponse, resp.getBody());
+        assertEquals(200, result.getStatusCodeValue());
+        assertEquals(resp, result.getBody());
 
         verify(getUC).execute(id);
         verify(mapper).toResponse(domain);
     }
 
     @Test
-    void list_shouldReturnOkWithMappedList() {
-        Credit domain = mock(Credit.class);
-        CreditResponse expectedResponse = mock(CreditResponse.class);
+    void delete_shouldReturnNoContent() {
+        Long id = 1L;
+        doNothing().when(deleteUC).execute(id);
 
-        when(listUC.execute()).thenReturn(List.of(domain));
-        when(mapper.toResponse(domain)).thenReturn(expectedResponse);
+        ResponseEntity<Void> result = controller.delete(id);
 
-        ResponseEntity<java.util.List<CreditResponse>> resp = controller.list();
+        assertEquals(204, result.getStatusCodeValue());
+        assertNull(result.getBody());
 
-        assertEquals(200, resp.getStatusCodeValue());
-        assertNotNull(resp.getBody());
-        assertEquals(1, resp.getBody().size());
-        assertSame(expectedResponse, resp.getBody().get(0));
-
-        verify(listUC).execute();
-        verify(mapper).toResponse(domain);
-    }
-
-    @Test
-    void delete_shouldInvokeUseCaseAndReturnNoContent() {
-        Long id = 9L;
-
-        ResponseEntity<Void> resp = controller.delete(id);
-
-        assertEquals(204, resp.getStatusCodeValue());
-        assertNull(resp.getBody());
-
-        verify(deleteUC).execute(longCaptor.capture());
-        assertEquals(id, longCaptor.getValue());
+        verify(deleteUC).execute(id);
     }
 }

@@ -2,85 +2,84 @@ package com.cine.cinelog.core.domain.policy.impl;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import org.junit.jupiter.api.BeforeEach;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.model.WatchEntry;
 
 public class DefaultRatingPolicyTest {
 
-    private DefaultRatingPolicy policy;
-
-    @BeforeEach
-    void setup() {
-        // min = 1, max = 5, maxDaysSkew = 2
-        policy = new DefaultRatingPolicy(1, 5, 2);
-    }
-
     @Test
-    void shouldThrowWhenRatingIsNull() {
+    void nullRatingShouldThrowInvalidArgument() {
+        DefaultRatingPolicy policy = new DefaultRatingPolicy(0, 10, 2);
         WatchEntry entry = mock(WatchEntry.class);
         when(entry.getWatchedAt()).thenReturn(LocalDate.now());
 
-        assertThrows(DomainException.class, () -> policy.validateCanRate(entry, null, Instant.now()));
+        DomainException ex = assertThrows(DomainException.class,
+                () -> policy.validateCanRate(entry, null, Instant.now()));
+        assertTrue(ex.getMessage().contains("rating must not be null"));
     }
 
     @Test
-    void shouldThrowWhenRatingBelowMin() {
+    void ratingBelowMinShouldThrowRatingNotAllowed() {
+        DefaultRatingPolicy policy = new DefaultRatingPolicy(0, 10, 2);
         WatchEntry entry = mock(WatchEntry.class);
         when(entry.getWatchedAt()).thenReturn(LocalDate.now());
 
-        assertThrows(DomainException.class, () -> policy.validateCanRate(entry, 0, Instant.now()));
+        DomainException ex = assertThrows(DomainException.class,
+                () -> policy.validateCanRate(entry, BigDecimal.valueOf(-1), Instant.now()));
+        assertTrue(ex.getMessage().contains("rating out of bounds"));
     }
 
     @Test
-    void shouldThrowWhenRatingAboveMax() {
+    void ratingAboveMaxShouldThrowRatingNotAllowed() {
+        DefaultRatingPolicy policy = new DefaultRatingPolicy(0, 10, 2);
         WatchEntry entry = mock(WatchEntry.class);
         when(entry.getWatchedAt()).thenReturn(LocalDate.now());
 
-        assertThrows(DomainException.class, () -> policy.validateCanRate(entry, 6, Instant.now()));
+        DomainException ex = assertThrows(DomainException.class,
+                () -> policy.validateCanRate(entry, BigDecimal.valueOf(11), Instant.now()));
+        assertTrue(ex.getMessage().contains("rating out of bounds"));
     }
 
     @Test
-    void shouldThrowWhenNotWatched() {
+    void cannotRateWhenNotWatchedShouldThrowRatingNotAllowed() {
+        DefaultRatingPolicy policy = new DefaultRatingPolicy(0, 10, 2);
         WatchEntry entry = mock(WatchEntry.class);
         when(entry.getWatchedAt()).thenReturn(null);
 
-        assertThrows(DomainException.class, () -> policy.validateCanRate(entry, 3, Instant.now()));
+        DomainException ex = assertThrows(DomainException.class,
+                () -> policy.validateCanRate(entry, BigDecimal.valueOf(5), Instant.now()));
+        assertTrue(ex.getMessage().contains("cannot rate before marking as watched"));
     }
 
     @Test
-    void shouldAllowWhenWhenIsNullAndWithinSkew() {
+    void ratingWithinAllowedDaysSkewShouldNotThrow() {
+        DefaultRatingPolicy policy = new DefaultRatingPolicy(0, 10, 2);
         WatchEntry entry = mock(WatchEntry.class);
-        when(entry.getWatchedAt()).thenReturn(LocalDate.now());
-
-        // when parameter null -> method should use Instant.now() internally and not
-        // throw
-        assertDoesNotThrow(() -> policy.validateCanRate(entry, 3, null));
-    }
-
-    @Test
-    void shouldAllowWhenWithinMaxDaysSkew() {
-        WatchEntry entry = mock(WatchEntry.class);
-        LocalDate watched = LocalDate.now();
+        LocalDate watched = LocalDate.of(2025, 1, 10);
         when(entry.getWatchedAt()).thenReturn(watched);
 
-        Instant whenInstant = Instant.now().plus(2, ChronoUnit.DAYS); // exactly at allowed skew
-        assertDoesNotThrow(() -> policy.validateCanRate(entry, 4, whenInstant));
+        Instant when = watched.plusDays(2).atStartOfDay().toInstant(ZoneOffset.UTC);
+        assertDoesNotThrow(() -> policy.validateCanRate(entry, BigDecimal.valueOf(5), when));
     }
 
     @Test
-    void shouldThrowWhenBeyondMaxDaysSkew() {
+    void ratingBeyondAllowedDaysSkewShouldThrowRatingNotAllowed() {
+        DefaultRatingPolicy policy = new DefaultRatingPolicy(0, 10, 2);
         WatchEntry entry = mock(WatchEntry.class);
-        LocalDate watched = LocalDate.now();
+        LocalDate watched = LocalDate.of(2025, 1, 10);
         when(entry.getWatchedAt()).thenReturn(watched);
 
-        Instant whenInstant = Instant.now().plus(3, ChronoUnit.DAYS); // beyond allowed skew
-        assertThrows(DomainException.class, () -> policy.validateCanRate(entry, 4, whenInstant));
+        Instant when = watched.plusDays(3).atStartOfDay().toInstant(ZoneOffset.UTC);
+        DomainException ex = assertThrows(DomainException.class,
+                () -> policy.validateCanRate(entry, BigDecimal.valueOf(5), when));
+        assertTrue(ex.getMessage().contains("rating time too far from watchedAt"));
     }
 }

@@ -7,6 +7,7 @@ import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
 import com.cine.cinelog.core.application.usecase.media.CreateMediaService;
 import com.cine.cinelog.core.domain.enums.MediaType;
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.policy.MediaPolicy;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,7 +22,7 @@ class CreateMediaServiceTest {
         var usecase = new CreateMediaService(repo, policy);
 
         var input = new Media(null, "The Matrix", MediaType.MOVIE, 1999,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
 
         when(repo.save(any())).then(invocation -> {
             Media m = invocation.getArgument(0);
@@ -44,7 +45,7 @@ class CreateMediaServiceTest {
 
         // título inválido -> construtor já valida invariantes
         try {
-            new Media(null, "   ", MediaType.MOVIE, 1999, null, null, null, null, null);
+            new Media(null, "   ", MediaType.MOVIE, 1999, null, null, null, null, null, null);
         } catch (IllegalArgumentException e) {
             assertThat(e).hasMessageContaining("title is required");
             return;

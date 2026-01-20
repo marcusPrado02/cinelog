@@ -52,12 +52,22 @@ import com.cine.cinelog.core.application.ports.out.PersonRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.SeasonRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.UserRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
+import com.cine.cinelog.core.domain.policy.MediaDeletionPolicy;
 import com.cine.cinelog.core.domain.policy.MediaPolicy;
 import com.cine.cinelog.core.domain.policy.RatingPolicy;
+import com.cine.cinelog.core.domain.policy.UserDeletionPolicy;
+import com.cine.cinelog.core.domain.policy.UserEmailUniquenessPolicy;
+import com.cine.cinelog.core.domain.policy.UserPolicy;
+import com.cine.cinelog.core.domain.policy.UserUpdatePolicy;
 import com.cine.cinelog.core.domain.policy.WatchEntryPolicy;
+import com.cine.cinelog.core.domain.policy.WatchEntryReferencePolicy;
+import com.cine.cinelog.core.domain.policy.WatchEntryUniquenessPolicy;
 import com.cine.cinelog.core.domain.policy.impl.DefaultMediaPolicy;
 import com.cine.cinelog.core.domain.policy.impl.DefaultRatingPolicy;
 import com.cine.cinelog.core.domain.policy.impl.DefaultWatchEntryPolicy;
+import com.cine.cinelog.core.domain.policy.SeasonDeletionPolicy;
+import com.cine.cinelog.core.domain.policy.SeasonPolicy;
+import com.cine.cinelog.core.domain.policy.SeasonUniquenessPolicy;
 
 class UseCaseConfigTest {
 
@@ -83,12 +93,13 @@ class UseCaseConfigTest {
     void mediaUseCases_shouldBeCreated() {
         UseCaseConfig cfg = new UseCaseConfig();
         MediaRepositoryPort repo = Mockito.mock(MediaRepositoryPort.class);
+        MediaDeletionPolicy deletionPolicy = Mockito.mock(MediaDeletionPolicy.class);
 
         CreateMediaUseCase create = cfg.createMediaUseCase(repo, cfg.mediaPolicy());
         UpdateMediaUseCase update = cfg.updateMediaUseCase(repo, cfg.mediaPolicy());
         GetMediaUseCase get = cfg.getMediaUseCase(repo);
         ListMediaUseCase list = cfg.listMediaUseCase(repo);
-        DeleteMediaUseCase delete = cfg.deleteMediaUseCase(repo);
+        DeleteMediaUseCase delete = cfg.deleteMediaUseCase(repo, deletionPolicy);
 
         assertNotNull(create);
         assertTrue(create instanceof CreateMediaUseCase);
@@ -110,12 +121,16 @@ class UseCaseConfigTest {
     void userUseCases_shouldBeCreated() {
         UseCaseConfig cfg = new UseCaseConfig();
         UserRepositoryPort repo = Mockito.mock(UserRepositoryPort.class);
+        UserPolicy userPolicy = Mockito.mock(UserPolicy.class);
+        UserEmailUniquenessPolicy uniqueness = Mockito.mock(UserEmailUniquenessPolicy.class);
+        UserUpdatePolicy updatePolicy = Mockito.mock(UserUpdatePolicy.class);
+        UserDeletionPolicy deletionPolicy = Mockito.mock(UserDeletionPolicy.class);
 
-        CreateUserUseCase create = cfg.createUserUseCase(repo);
-        UpdateUserUseCase update = cfg.updateUserUseCase(repo);
+        CreateUserUseCase create = cfg.createUserUseCase(repo, userPolicy, uniqueness);
+        UpdateUserUseCase update = cfg.updateUserUseCase(repo, userPolicy, updatePolicy, uniqueness);
         GetUserUseCase get = cfg.getUserUseCase(repo);
         ListUsersUseCase list = cfg.listUsersUseCase(repo);
-        DeleteUserUseCase delete = cfg.deleteUserUseCase(repo);
+        DeleteUserUseCase delete = cfg.deleteUserUseCase(repo, deletionPolicy);
 
         assertNotNull(create);
         assertTrue(create instanceof CreateUserUseCase);
@@ -218,12 +233,15 @@ class UseCaseConfigTest {
     void seasonUseCases_shouldBeCreated() {
         UseCaseConfig cfg = new UseCaseConfig();
         SeasonRepositoryPort repo = Mockito.mock(SeasonRepositoryPort.class);
+        SeasonPolicy policy = Mockito.mock(SeasonPolicy.class);
+        SeasonUniquenessPolicy uniquenessPolicy = Mockito.mock(SeasonUniquenessPolicy.class);
+        SeasonDeletionPolicy deletionPolicy = Mockito.mock(SeasonDeletionPolicy.class);
 
-        CreateSeasonUseCase create = cfg.createSeasonUseCase(repo);
-        UpdateSeasonUseCase update = cfg.updateSeasonUseCase(repo);
+        CreateSeasonUseCase create = cfg.createSeasonUseCase(repo, policy, uniquenessPolicy);
+        UpdateSeasonUseCase update = cfg.updateSeasonUseCase(repo, policy);
         GetSeasonUseCase get = cfg.getSeasonUseCase(repo);
         ListSeasonsUseCase list = cfg.listSeasonsUseCase(repo);
-        DeleteSeasonUseCase delete = cfg.deleteSeasonUseCase(repo);
+        DeleteSeasonUseCase delete = cfg.deleteSeasonUseCase(repo, deletionPolicy);
 
         assertNotNull(create);
         assertTrue(create instanceof CreateSeasonUseCase);
@@ -272,9 +290,15 @@ class UseCaseConfigTest {
     void watchEntryUseCases_shouldBeCreated() {
         UseCaseConfig cfg = new UseCaseConfig();
         WatchEntryRepositoryPort repo = Mockito.mock(WatchEntryRepositoryPort.class);
+        WatchEntryPolicy policy = Mockito.mock(WatchEntryPolicy.class);
+        WatchEntryUniquenessPolicy uniquenessPolicy = Mockito.mock(WatchEntryUniquenessPolicy.class);
+        WatchEntryReferencePolicy referencePolicy = Mockito.mock(WatchEntryReferencePolicy.class);
+        com.cine.cinelog.core.application.ports.events.DomainEventPublisherPort eventPublisher = Mockito
+                .mock(com.cine.cinelog.core.application.ports.events.DomainEventPublisherPort.class);
 
-        CreateWatchEntryUseCase create = cfg.createWatchEntryUseCase(repo);
-        UpdateWatchEntryUseCase update = cfg.updateWatchEntryUseCase(repo, cfg.watchEntryPolicy(), cfg.ratingPolicy());
+        CreateWatchEntryUseCase create = cfg.createWatchEntryUseCase(repo, policy, uniquenessPolicy, eventPublisher);
+        UpdateWatchEntryUseCase update = cfg.updateWatchEntryUseCase(repo, cfg.watchEntryPolicy(), cfg.ratingPolicy(),
+                referencePolicy);
         GetWatchEntryUseCase get = cfg.getWatchEntryUseCase(repo);
         ListWatchEntriesUseCase list = cfg.listWatchEntriesUseCase(repo);
         DeleteWatchEntryUseCase delete = cfg.deleteWatchEntryUseCase(repo);

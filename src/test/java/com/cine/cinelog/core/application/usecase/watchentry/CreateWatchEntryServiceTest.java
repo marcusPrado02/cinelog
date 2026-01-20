@@ -1,7 +1,11 @@
 package com.cine.cinelog.core.application.usecase.watchentry;
 
+import com.cine.cinelog.core.application.ports.events.DomainEventPublisherPort;
 import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
 import com.cine.cinelog.core.domain.model.WatchEntry;
+import com.cine.cinelog.core.domain.policy.WatchEntryPolicy;
+import com.cine.cinelog.core.domain.policy.WatchEntryUniquenessPolicy;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -14,10 +18,16 @@ class CreateWatchEntryServiceTest {
 
     @Mock
     private WatchEntryRepositoryPort repo;
+    @Mock
+    private WatchEntryPolicy policy;
+    @Mock
+    private WatchEntryUniquenessPolicy uniquenessPolicy;
+    @Mock
+    private DomainEventPublisherPort eventPublisher;
 
     @Test
     void execute_shouldDelegateToRepositoryAndReturnSavedEntry() {
-        CreateWatchEntryService service = new CreateWatchEntryService(repo);
+        CreateWatchEntryService service = new CreateWatchEntryService(repo, policy, uniquenessPolicy, eventPublisher);
 
         WatchEntry input = mock(WatchEntry.class);
         WatchEntry saved = mock(WatchEntry.class);
@@ -33,7 +43,7 @@ class CreateWatchEntryServiceTest {
 
     @Test
     void execute_withNull_shouldCallRepositoryAndReturnRepositoryResult() {
-        CreateWatchEntryService service = new CreateWatchEntryService(repo);
+        CreateWatchEntryService service = new CreateWatchEntryService(repo, policy, uniquenessPolicy, eventPublisher);
 
         when(repo.save(null)).thenReturn(null);
 

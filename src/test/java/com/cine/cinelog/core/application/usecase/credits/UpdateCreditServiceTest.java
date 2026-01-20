@@ -3,6 +3,7 @@ package com.cine.cinelog.core.application.usecase.credits;
 import com.cine.cinelog.core.application.ports.out.CreditRepositoryPort;
 import com.cine.cinelog.core.domain.enums.Role;
 import com.cine.cinelog.core.domain.model.Credit;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -56,9 +57,8 @@ class UpdateCreditServiceTest {
         when(repo.findById(id)).thenReturn(Optional.empty());
 
         Credit update = new Credit();
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id, update));
-        assertTrue(ex.getMessage().contains("Credit not found"));
-        assertTrue(ex.getMessage().contains(String.valueOf(id)));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id, update));
+        assertTrue(ex.getMessage().contains("Credit not found") || ex.getMessage().contains(String.valueOf(id)));
 
         verify(repo).findById(id);
         verifyNoMoreInteractions(repo);

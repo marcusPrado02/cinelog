@@ -29,6 +29,10 @@ class CreateGenreServiceTest {
         Genre input = mock(Genre.class);
         Genre saved = mock(Genre.class);
 
+        when(input.getName()).thenReturn("Action");
+        when(saved.getName()).thenReturn("Action");
+        when(saved.getId()).thenReturn(1L);
+
         when(repo.save(input)).thenReturn(saved);
 
         Genre result = service.execute(input);
@@ -41,6 +45,8 @@ class CreateGenreServiceTest {
     @Test
     void shouldPropagateExceptionFromRepository() {
         Genre input = mock(Genre.class);
+        when(input.getName()).thenReturn("Action");
+
         RuntimeException ex = new RuntimeException("db error");
 
         when(repo.save(input)).thenThrow(ex);

@@ -1,42 +1,63 @@
 package com.cine.cinelog.core.application.usecase.user;
 
+import com.cine.cinelog.core.application.usecase.user.DeleteUserService;
 import com.cine.cinelog.core.application.ports.out.UserRepositoryPort;
+import com.cine.cinelog.core.domain.error.DomainException;
+import com.cine.cinelog.core.domain.error.ErrorCode;
+import com.cine.cinelog.core.domain.model.User;
+import com.cine.cinelog.core.domain.policy.UserDeletionPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class DeleteUserServiceTest {
-
-    @Mock
-    private UserRepositoryPort repo;
+public class DeleteUserServiceTest {
 
     @Test
-    void shouldDeleteUserById() {
-        DeleteUserService service = new DeleteUserService(repo);
+    public void execute_deletesWhenUserExists() {
+        UserRepositoryPort repo = mock(UserRepositoryPort.class);
+        UserDeletionPolicy policy = mock(UserDeletionPolicy.class);
+        DeleteUserService service = new DeleteUserService(repo, policy);
 
-        Long id = 42L;
+        Long id = 1L;
+        User user = mock(User.class);
+        when(repo.findById(id)).thenReturn(Optional.of(user));
+
         service.execute(id);
 
+        verify(policy, times(1)).validateDelete(user);
         verify(repo, times(1)).deleteById(id);
     }
 
     @Test
-    void shouldPropagateExceptionWhenRepositoryThrows() {
-        DeleteUserService service = new DeleteUserService(repo);
+    public void execute_throwsWhenUserNotFound() {
+        UserRepositoryPort repo = mock(UserRepositoryPort.class);
+        UserDeletionPolicy policy = mock(UserDeletionPolicy.class);
+        DeleteUserService service = new DeleteUserService(repo, policy);
 
-        Long id = 99L;
-        doThrow(new RuntimeException("db error")).when(repo).deleteById(id);
+        Long id = 2L;
+        when(repo.findById(id)).thenReturn(Optional.empty());
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.execute(id));
-        assertEquals("db error", ex.getMessage());
+        assertThrows(DomainException.class, () -> service.execute(id));
+        verify(policy, never()).validateDelete(any());
+        verify(repo, never()).deleteById(anyLong());
+    }
 
-        verify(repo, times(1)).deleteById(id);
+    @Test
+    public void execute_propagatesPolicyExceptionAndDoesNotDelete() {
+        UserRepositoryPort repo = mock(UserRepositoryPort.class);
+        UserDeletionPolicy policy = mock(UserDeletionPolicy.class);
+        DeleteUserService service = new DeleteUserService(repo, policy);
+
+        Long id = 3L;
+        User user = mock(User.class);
+        when(repo.findById(id)).thenReturn(Optional.of(user));
+        doThrow(DomainException.of(ErrorCode.USER_NOT_FOUND)).when(policy).validateDelete(user);
+
+        assertThrows(DomainException.class, () -> service.execute(id));
+        verify(repo, never()).deleteById(anyLong());
     }
 }

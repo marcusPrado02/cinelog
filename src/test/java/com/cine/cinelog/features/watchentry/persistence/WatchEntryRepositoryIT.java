@@ -16,6 +16,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,7 +49,7 @@ class WatchEntryRepositoryIT {
     @Test
     void shouldSaveAndQueryByUserWithFilters() {
         // given
-        var now = OffsetDateTime.now();
+        var now = LocalDateTime.now();
         var e = new WatchEntryEntity();
         e.setUserId(1L);
         e.setMediaId(10L);

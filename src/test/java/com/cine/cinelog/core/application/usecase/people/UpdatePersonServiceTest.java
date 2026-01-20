@@ -2,6 +2,7 @@ package com.cine.cinelog.core.application.usecase.people;
 
 import com.cine.cinelog.core.application.ports.out.PersonRepositoryPort;
 import com.cine.cinelog.core.domain.model.Person;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -52,7 +53,7 @@ class UpdatePersonServiceTest {
 
         when(repo.findById(id)).thenReturn(Optional.empty());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id, update));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id, update));
         assertTrue(ex.getMessage().contains("Person not found: " + id));
 
         verify(repo).findById(id);

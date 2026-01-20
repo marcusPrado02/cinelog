@@ -1,20 +1,24 @@
 package com.cine.cinelog.features.credits.persistence;
 
-import com.cine.cinelog.core.domain.model.Credit;
+import com.cine.cinelog.core.application.pagination.PageQuery;
 import com.cine.cinelog.features.credits.mapper.CreditMapper;
 import com.cine.cinelog.features.credits.persistence.entity.CreditEntity;
 import com.cine.cinelog.features.credits.repository.CreditJpaRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class CreditRepositoryAdapterTest {
 
     @Mock
@@ -26,38 +30,38 @@ class CreditRepositoryAdapterTest {
     @InjectMocks
     private CreditRepositoryAdapter adapter;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
+    @Mock
+    private PageQuery pageQuery;
 
     @Test
-    void shouldSaveCredit() {
-        Credit domain = mock(Credit.class);
-        CreditEntity entity = mock(CreditEntity.class);
+    void save_should_map_entity_and_return_domain() {
+        var domain = mock(com.cine.cinelog.core.domain.model.Credit.class);
+        var entity = mock(CreditEntity.class);
+        var savedEntity = mock(CreditEntity.class);
+        var savedDomain = mock(com.cine.cinelog.core.domain.model.Credit.class);
 
         when(creditMapper.toEntity(domain)).thenReturn(entity);
-        when(jpa.save(entity)).thenReturn(entity);
-        when(creditMapper.toDomain(entity)).thenReturn(domain);
+        when(jpa.save(entity)).thenReturn(savedEntity);
+        when(creditMapper.toDomain(savedEntity)).thenReturn(savedDomain);
 
-        Credit result = adapter.save(domain);
+        var result = adapter.save(domain);
 
-        assertSame(domain, result);
+        assertSame(savedDomain, result);
         verify(creditMapper).toEntity(domain);
         verify(jpa).save(entity);
-        verify(creditMapper).toDomain(entity);
+        verify(creditMapper).toDomain(savedEntity);
     }
 
     @Test
-    void shouldFindByIdWhenPresent() {
-        long id = 1L;
-        CreditEntity entity = mock(CreditEntity.class);
-        Credit domain = mock(Credit.class);
+    void findById_when_present_should_map_to_domain() {
+        var id = 1L;
+        var entity = mock(CreditEntity.class);
+        var domain = mock(com.cine.cinelog.core.domain.model.Credit.class);
 
         when(jpa.findById(id)).thenReturn(Optional.of(entity));
         when(creditMapper.toDomain(entity)).thenReturn(domain);
 
-        Optional<Credit> result = adapter.findById(id);
+        var result = adapter.findById(id);
 
         assertTrue(result.isPresent());
         assertSame(domain, result.get());
@@ -66,42 +70,50 @@ class CreditRepositoryAdapterTest {
     }
 
     @Test
-    void shouldReturnEmptyWhenFindByIdNotFound() {
-        long id = 2L;
+    void findById_when_not_present_should_return_empty() {
+        var id = 2L;
         when(jpa.findById(id)).thenReturn(Optional.empty());
 
-        Optional<Credit> result = adapter.findById(id);
+        var result = adapter.findById(id);
 
-        assertTrue(result.isEmpty());
+        assertFalse(result.isPresent());
         verify(jpa).findById(id);
         verifyNoInteractions(creditMapper);
     }
 
     @Test
-    void shouldFindAllAndMapToDomain() {
-        CreditEntity e1 = mock(CreditEntity.class);
-        CreditEntity e2 = mock(CreditEntity.class);
-        Credit d1 = mock(Credit.class);
-        Credit d2 = mock(Credit.class);
+    void findAll_should_build_pageable_and_map_entities() {
+        when(pageQuery.page()).thenReturn(2);
+        when(pageQuery.size()).thenReturn(5);
+        when(pageQuery.direction()).thenReturn("ASC");
+        when(pageQuery.sort()).thenReturn("name");
 
-        when(jpa.findAll()).thenReturn(List.of(e1, e2));
-        when(creditMapper.toDomain(e1)).thenReturn(d1);
-        when(creditMapper.toDomain(e2)).thenReturn(d2);
+        var entity = mock(CreditEntity.class);
+        var domain = mock(com.cine.cinelog.core.domain.model.Credit.class);
 
-        List<Credit> result = adapter.findAll();
+        when(jpa.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(entity)));
+        when(creditMapper.toDomain(entity)).thenReturn(domain);
 
-        assertEquals(2, result.size());
-        assertSame(d1, result.get(0));
-        assertSame(d2, result.get(1));
-        verify(jpa).findAll();
-        verify(creditMapper).toDomain(e1);
-        verify(creditMapper).toDomain(e2);
+        var result = adapter.findAll(pageQuery);
+
+        // verify pageable passed to jpa
+        var pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(jpa).findAll(pageableCaptor.capture());
+        Pageable captured = pageableCaptor.getValue();
+        assertEquals(2, captured.getPageNumber());
+        assertEquals(5, captured.getPageSize());
+        assertNotNull(captured.getSort());
+        assertEquals(Sort.Direction.ASC, captured.getSort().getOrderFor("name").getDirection());
+
+        // verify mapper used for each entity
+        verify(creditMapper).toDomain(entity);
+
+        assertNotNull(result);
     }
 
     @Test
-    void shouldDeleteById() {
-        long id = 3L;
-
+    void deleteById_should_delegate_to_jpa() {
+        var id = 33L;
         doNothing().when(jpa).deleteById(id);
 
         adapter.deleteById(id);

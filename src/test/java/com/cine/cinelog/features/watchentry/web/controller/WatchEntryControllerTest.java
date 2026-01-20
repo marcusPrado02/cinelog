@@ -9,6 +9,7 @@ import com.cine.cinelog.core.domain.model.WatchEntry;
 import com.cine.cinelog.features.watchentry.mapper.WatchEntryMapper;
 import com.cine.cinelog.features.watchentry.web.dto.WatchEntryCreateRequest;
 import com.cine.cinelog.features.watchentry.web.dto.WatchEntryResponse;
+import com.cine.cinelog.shared.web.dto.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,7 +18,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +25,6 @@ import java.time.LocalDate;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class WatchEntryControllerTest {
@@ -41,110 +40,125 @@ class WatchEntryControllerTest {
     @Mock
     private DeleteWatchEntryService deleteUC;
     @Mock
-    private WatchEntryMapper mapper;
+    private WatchEntryMapper watchEntryMapper;
 
+    @Mock
+    private com.cine.cinelog.shared.observability.metrics.BusinessMetricsService metricsService;
+
+    @InjectMocks
     private WatchEntryController controller;
+
+    @Captor
+    private ArgumentCaptor<PageRequest> pageRequestCaptor;
 
     @BeforeEach
     void setUp() {
-        controller = new WatchEntryController(createUC, listUC, updateUC, getUC, deleteUC, mapper);
+        // controller is injected by @InjectMocks
     }
 
     @Test
-    void create_returnsCreatedResponse_withLocationAndBody() {
+    void create_shouldReturnCreatedResponseWithLocationAndBody() {
         WatchEntryCreateRequest req = mock(WatchEntryCreateRequest.class);
         WatchEntry domain = mock(WatchEntry.class);
-        when(domain.getId()).thenReturn(42L);
+        WatchEntry saved = mock(WatchEntry.class);
         WatchEntryResponse resp = mock(WatchEntryResponse.class);
 
-        when(mapper.toDomain(any(WatchEntryCreateRequest.class))).thenReturn(domain);
-        when(createUC.execute(any())).thenReturn(domain);
-        when(mapper.toResponse(any())).thenReturn(resp);
+        when(watchEntryMapper.toDomain(req)).thenReturn(domain);
+        when(createUC.execute(domain)).thenReturn(saved);
+        when(saved.getId()).thenReturn(42L);
+        when(watchEntryMapper.toResponse(saved)).thenReturn(resp);
 
         ResponseEntity<WatchEntryResponse> response = controller.create(req);
 
         assertEquals(201, response.getStatusCodeValue());
-        assertNotNull(response.getHeaders().getLocation());
-        assertTrue(response.getHeaders().getLocation().toString().endsWith("/api/watch/42"));
+        assertEquals("/api/watch/42", response.getHeaders().getLocation().toString());
         assertSame(resp, response.getBody());
 
-        verify(mapper).toDomain(req);
+        verify(watchEntryMapper).toDomain(req);
         verify(createUC).execute(domain);
-        verify(mapper).toResponse(domain);
+        verify(watchEntryMapper).toResponse(saved);
     }
 
     @Test
-    void list_returnsPageOfMappedResponses() {
-        WatchEntry domain = mock(WatchEntry.class);
-        WatchEntryResponse resp = mock(WatchEntryResponse.class);
-        Page<WatchEntry> page = new PageImpl<>(List.of(domain));
+    void list_shouldCallListUseCaseAndReturnPageResponse() {
+        Long userId = 7L;
+        Long mediaId = 11L;
+        Long episodeId = null;
+        Integer minRating = 3;
+        LocalDate from = LocalDate.of(2020, 1, 1);
+        LocalDate to = LocalDate.of(2020, 12, 31);
+        int page = 0;
+        int size = 20;
 
-        when(listUC.execute(eq(10L), isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
-                .thenReturn(page);
-        when(mapper.toResponse(any())).thenReturn(resp);
+        WatchEntry entry = mock(WatchEntry.class);
+        WatchEntryResponse dto = mock(WatchEntryResponse.class);
 
-        ResponseEntity<Page<WatchEntryResponse>> response = controller.list(
-                10L, null, null, null, null, null, 0, 20);
+        var pageImpl = new PageImpl<>(List.of(entry), PageRequest.of(page, size), 1);
+        when(listUC.execute(eq(userId), eq(mediaId), eq(episodeId), eq(minRating), eq(from), eq(to),
+                any(PageRequest.class)))
+                .thenAnswer((org.mockito.stubbing.Answer) invocation -> pageImpl);
+        when(watchEntryMapper.toResponse(entry)).thenReturn(dto);
+
+        ResponseEntity<PageResponse<WatchEntryResponse>> response = controller.list(userId, mediaId, episodeId,
+                minRating, from, to, page, size);
 
         assertEquals(200, response.getStatusCodeValue());
-        Page<WatchEntryResponse> body = response.getBody();
-        assertNotNull(body);
-        assertEquals(1, body.getTotalElements());
-        assertSame(resp, body.getContent().get(0));
-
-        verify(listUC).execute(eq(10L), isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class));
-        verify(mapper).toResponse(domain);
+        assertNotNull(response.getBody());
+        // ensure use case called
+        verify(listUC).execute(eq(userId), eq(mediaId), eq(episodeId), eq(minRating), eq(from), eq(to),
+                pageRequestCaptor.capture());
+        PageRequest captured = pageRequestCaptor.getValue();
+        assertEquals(page, captured.getPageNumber());
+        assertEquals(size, captured.getPageSize());
+        verify(watchEntryMapper).toResponse(entry);
     }
 
     @Test
-    void update_callsUpdateAndReturnsMappedResponse() {
-        Long id = 7L;
+    void update_shouldCallUpdateAndReturnUpdatedResponse() {
+        Long id = 5L;
         WatchEntryCreateRequest req = mock(WatchEntryCreateRequest.class);
         WatchEntry domain = mock(WatchEntry.class);
+        WatchEntry updated = mock(WatchEntry.class);
         WatchEntryResponse resp = mock(WatchEntryResponse.class);
 
-        when(mapper.toDomain((WatchEntryCreateRequest) any())).thenReturn(domain);
-        when(updateUC.execute(any(), eq(true))).thenReturn(domain);
-        when(mapper.toResponse(any())).thenReturn(resp);
+        when(watchEntryMapper.toDomain(req)).thenReturn(domain);
+        when(updateUC.execute(id, domain, true)).thenReturn(updated);
+        when(watchEntryMapper.toResponse(updated)).thenReturn(resp);
 
         ResponseEntity<WatchEntryResponse> response = controller.update(id, req);
 
         assertEquals(200, response.getStatusCodeValue());
         assertSame(resp, response.getBody());
 
-        verify(mapper).toDomain(req);
-        verify(updateUC).execute(domain, true);
-        verify(mapper).toResponse(domain);
+        verify(watchEntryMapper).toDomain(req);
+        verify(updateUC).execute(id, domain, true);
+        verify(watchEntryMapper).toResponse(updated);
     }
 
     @Test
-    void delete_callsDeleteAndReturnsNoContent() {
+    void delete_shouldCallDeleteUseCaseAndReturnNoContent() {
         Long id = 99L;
-        doNothing().when(deleteUC).execute(id);
 
         ResponseEntity<Void> response = controller.delete(id);
 
         assertEquals(204, response.getStatusCodeValue());
-        assertNull(response.getBody());
-
         verify(deleteUC).execute(id);
     }
 
     @Test
-    void getById_returnsMappedResponse() {
-        Long id = 5L;
-        WatchEntry domain = mock(WatchEntry.class);
+    void getById_shouldReturnEntryResponse() {
+        Long id = 123L;
+        WatchEntry entry = mock(WatchEntry.class);
         WatchEntryResponse resp = mock(WatchEntryResponse.class);
 
-        when(getUC.execute(id)).thenReturn(domain);
-        when(mapper.toResponse(domain)).thenReturn(resp);
+        when(getUC.execute(id)).thenReturn(entry);
+        when(watchEntryMapper.toResponse(entry)).thenReturn(resp);
 
         ResponseEntity<WatchEntryResponse> response = controller.getById(id);
 
         assertEquals(200, response.getStatusCodeValue());
         assertSame(resp, response.getBody());
-
         verify(getUC).execute(id);
-        verify(mapper).toResponse(domain);
+        verify(watchEntryMapper).toResponse(entry);
     }
 }

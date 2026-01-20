@@ -4,6 +4,7 @@ import com.cine.cinelog.core.application.ports.out.PersonRepositoryPort;
 import com.cine.cinelog.core.domain.model.Person;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class CreatePersonServiceTest {
@@ -16,6 +17,9 @@ class CreatePersonServiceTest {
 
         Person input = mock(Person.class);
         Person saved = mock(Person.class);
+
+        when(input.getName()).thenReturn("Test Person");
+        when(saved.getName()).thenReturn("Test Person");
         when(repo.save(input)).thenReturn(saved);
 
         // act
@@ -32,13 +36,15 @@ class CreatePersonServiceTest {
         PersonRepositoryPort repo = mock(PersonRepositoryPort.class);
         CreatePersonService service = new CreatePersonService(repo);
 
-        when(repo.save(null)).thenReturn(null);
+        Person input = mock(Person.class);
+        when(input.getName()).thenReturn("Test Person");
+        when(repo.save(input)).thenReturn(null);
 
-        // act
-        Person result = service.execute(null);
+        // act/assert - Service will throw NullPointerException when trying to access
+        // saved.getId()
+        assertThrows(NullPointerException.class, () -> service.execute(input));
 
-        // assert
-        verify(repo, times(1)).save(null);
-        assertSame(null, result);
+        // verify
+        verify(repo, times(1)).save(input);
     }
 }

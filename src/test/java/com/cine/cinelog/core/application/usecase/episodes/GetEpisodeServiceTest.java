@@ -2,6 +2,7 @@ package com.cine.cinelog.core.application.usecase.episodes;
 
 import com.cine.cinelog.core.application.ports.out.EpisodeRepositoryPort;
 import com.cine.cinelog.core.domain.model.Episode;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -35,7 +36,7 @@ class GetEpisodeServiceTest {
         when(repo.findById(id)).thenReturn(Optional.empty());
 
         GetEpisodeService service = new GetEpisodeService(repo);
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
         assertEquals("Episode not found: " + id, ex.getMessage());
         verify(repo, times(1)).findById(id);
     }

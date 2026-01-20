@@ -1,5 +1,7 @@
 package com.cine.cinelog.features.genres.web.controller;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.application.ports.in.genre.CreateGenreUseCase;
 import com.cine.cinelog.core.application.ports.in.genre.DeleteGenreUseCase;
 import com.cine.cinelog.core.application.ports.in.genre.GetGenreUseCase;
@@ -10,6 +12,11 @@ import com.cine.cinelog.features.genres.mapper.GenreMapper;
 import com.cine.cinelog.features.genres.web.dto.GenreCreateRequest;
 import com.cine.cinelog.features.genres.web.dto.GenreResponse;
 import com.cine.cinelog.features.genres.web.dto.GenreUpdateRequest;
+import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
+import com.cine.cinelog.shared.web.dto.PageResponse;
+
+import org.springframework.data.domain.Pageable;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -32,6 +39,8 @@ class GenreControllerTest {
 
     private GenreController controller;
 
+    private BusinessMetricsService metricsService;
+
     @BeforeEach
     void setUp() {
         createUC = mock(CreateGenreUseCase.class);
@@ -40,8 +49,9 @@ class GenreControllerTest {
         listUC = mock(ListGenresUseCase.class);
         deleteUC = mock(DeleteGenreUseCase.class);
         mapper = mock(GenreMapper.class);
+        metricsService = mock(BusinessMetricsService.class);
 
-        controller = new GenreController(createUC, updateUC, getUC, listUC, deleteUC, mapper);
+        controller = new GenreController(createUC, updateUC, getUC, listUC, deleteUC, mapper, metricsService);
     }
 
     @Test
@@ -113,19 +123,22 @@ class GenreControllerTest {
         GenreResponse resp2 = mock(GenreResponse.class);
 
         List<Genre> domains = Arrays.asList(domain1, domain2);
-        when(listUC.execute()).thenReturn(domains);
+        PageResult<Genre> pageResult = mock(PageResult.class);
+        Pageable pageable = mock(Pageable.class);
+        when(pageResult.content()).thenReturn(domains);
+        when(listUC.execute(any(PageQuery.class))).thenReturn(pageResult);
         when(mapper.toResponse(eq(domain1))).thenReturn(resp1);
         when(mapper.toResponse(eq(domain2))).thenReturn(resp2);
 
-        ResponseEntity<List<GenreResponse>> response = controller.list();
+        ResponseEntity<PageResponse<GenreResponse>> response = controller.list(pageable);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        List<GenreResponse> body = response.getBody();
+        PageResponse<GenreResponse> body = response.getBody();
         assertNotNull(body);
-        assertEquals(2, body.size());
-        assertEquals(Arrays.asList(resp1, resp2), body);
+        assertEquals(2, body.content().size());
+        assertEquals(Arrays.asList(resp1, resp2), body.content());
 
-        verify(listUC).execute();
+        verify(listUC).execute(any(PageQuery.class));
         verify(mapper).toResponse(eq(domain1));
         verify(mapper).toResponse(eq(domain2));
     }

@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.usecase.episodes;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.application.ports.out.EpisodeRepositoryPort;
 import com.cine.cinelog.core.domain.model.Episode;
 import org.junit.jupiter.api.Test;
@@ -7,14 +9,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ListEpisodesServiceTest {
+public class ListEpisodesServiceTest {
 
     @Mock
     private EpisodeRepositoryPort repo;
@@ -22,27 +22,30 @@ class ListEpisodesServiceTest {
     @InjectMocks
     private ListEpisodesService service;
 
+    @Mock
+    private PageQuery pageQuery;
+
+    @SuppressWarnings("unchecked")
+    @Mock
+    private PageResult<Episode> pageResult;
+
     @Test
-    void execute_shouldReturnAllEpisodesFromRepository() {
-        Episode e1 = mock(Episode.class);
-        Episode e2 = mock(Episode.class);
-        List<Episode> expected = Arrays.asList(e1, e2);
-        when(repo.findAll()).thenReturn(expected);
+    void execute_shouldReturnPageResultFromRepository() {
+        when(repo.findAll(pageQuery)).thenReturn(pageResult);
 
-        List<Episode> result = service.execute();
+        PageResult<Episode> result = service.execute(pageQuery);
 
-        assertEquals(expected, result);
-        verify(repo, times(1)).findAll();
+        assertSame(pageResult, result);
+        verify(repo).findAll(pageQuery);
     }
 
     @Test
-    void execute_shouldReturnEmptyListWhenRepositoryIsEmpty() {
-        when(repo.findAll()).thenReturn(Collections.emptyList());
+    void execute_shouldDelegateTheSamePageQueryInstanceToRepository() {
+        when(repo.findAll(pageQuery)).thenReturn(pageResult);
 
-        List<Episode> result = service.execute();
+        service.execute(pageQuery);
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-        verify(repo, times(1)).findAll();
+        // verify that the exact instance passed to service is forwarded to repository
+        verify(repo).findAll(pageQuery);
     }
 }

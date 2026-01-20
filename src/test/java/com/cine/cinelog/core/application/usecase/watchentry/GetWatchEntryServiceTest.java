@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import java.util.Optional;
 import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
 import com.cine.cinelog.core.domain.model.WatchEntry;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -38,7 +39,7 @@ class GetWatchEntryServiceTest {
         when(repo.findById(id)).thenReturn(Optional.empty());
 
         GetWatchEntryService service = new GetWatchEntryService(repo);
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
         assertEquals("WatchEntry não encontrado: " + id, ex.getMessage());
         verify(repo).findById(id);
     }

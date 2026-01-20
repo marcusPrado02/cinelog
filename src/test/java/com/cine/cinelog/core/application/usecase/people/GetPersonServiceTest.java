@@ -2,6 +2,7 @@ package com.cine.cinelog.core.application.usecase.people;
 
 import com.cine.cinelog.core.application.ports.out.PersonRepositoryPort;
 import com.cine.cinelog.core.domain.model.Person;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import java.util.Optional;
@@ -34,8 +35,8 @@ class GetPersonServiceTest {
 
         GetPersonService service = new GetPersonService(repo);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id));
-        assertEquals("Person not found: " + id, ex.getMessage());
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
+        assertTrue(ex.getMessage().contains("Person not found") && ex.getMessage().contains(String.valueOf(id)));
         Mockito.verify(repo).findById(id);
     }
 }

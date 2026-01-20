@@ -1,31 +1,64 @@
 package com.cine.cinelog.core.application.usecase.media;
 
-import org.junit.jupiter.api.Test;
-
-import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
-import com.cine.cinelog.core.application.usecase.media.ListMediaService;
-import com.cine.cinelog.core.domain.enums.MediaType;
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Media;
-
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(MockitoExtension.class)
 class ListMediaServiceTest {
 
+    @Mock
+    private MediaRepositoryPort repo;
+
+    @InjectMocks
+    private ListMediaService service;
+
     @Test
-    void should_list_from_repo() {
-        var repo = mock(MediaRepositoryPort.class);
-        var usecase = new ListMediaService(repo);
+    void execute_delegatesToRepository_andReturnsResult() {
+        PageQuery pageQuery = mock(PageQuery.class);
+        PageResult<Media> expected = mock(PageResult.class);
 
-        var item = new Media(1L, "Matrix", MediaType.MOVIE, 1999, null, null, null, null, null);
-        when(repo.find(MediaType.MOVIE, "mat", 0, 10)).thenReturn(List.of(item));
+        when(repo.listAll(pageQuery)).thenReturn(expected);
 
-        var result = usecase.execute(MediaType.MOVIE, "mat", 0, 10);
+        PageResult<Media> actual = service.execute(pageQuery);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getTitle()).isEqualTo("Matrix");
-        verify(repo).find(MediaType.MOVIE, "mat", 0, 10);
+        assertSame(expected, actual);
+        verify(repo, times(1)).listAll(pageQuery);
+    }
+
+    @Test
+    void execute_forwardsNullPageQueryToRepository() {
+        PageQuery pageQuery = new PageQuery(0, 10);
+        PageResult<Media> expected = mock(PageResult.class);
+
+        when(repo.listAll(pageQuery)).thenReturn(expected);
+
+        PageResult<Media> actual = service.execute(pageQuery);
+
+        assertSame(expected, actual);
+        verify(repo).listAll(pageQuery);
+    }
+
+    @Test
+    void execute_passesExactPageQueryInstanceToRepository() {
+        PageQuery pageQuery = mock(PageQuery.class);
+        PageResult<Media> expected = mock(PageResult.class);
+
+        when(repo.listAll(any())).thenReturn(expected);
+
+        service.execute(pageQuery);
+
+        ArgumentCaptor<PageQuery> captor = ArgumentCaptor.forClass(PageQuery.class);
+        verify(repo).listAll(captor.capture());
+        assertSame(pageQuery, captor.getValue());
     }
 }

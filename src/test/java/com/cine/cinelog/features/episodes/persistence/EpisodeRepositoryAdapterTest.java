@@ -1,17 +1,21 @@
 package com.cine.cinelog.features.episodes.persistence;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.application.pagination.PageResultMapper;
 import com.cine.cinelog.core.domain.model.Episode;
 import com.cine.cinelog.features.episodes.mapper.EpisodeMapper;
 import com.cine.cinelog.features.episodes.persistence.entity.EpisodeEntity;
 import com.cine.cinelog.features.episodes.repository.EpisodeJpaRepository;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.Mock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,97 +24,117 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class EpisodeRepositoryAdapterTest {
 
-    @Mock
-    private EpisodeJpaRepository jpa;
+    @Test
+    void save_should_map_entity_and_return_domain() {
+        EpisodeJpaRepository jpa = mock(EpisodeJpaRepository.class);
+        EpisodeMapper mapper = mock(EpisodeMapper.class);
+        EpisodeRepositoryAdapter adapter = new EpisodeRepositoryAdapter(jpa, mapper);
 
-    @Mock
-    private EpisodeMapper episodeMapper;
+        Episode domain = mock(Episode.class);
+        EpisodeEntity entity = mock(EpisodeEntity.class);
+        EpisodeEntity savedEntity = mock(EpisodeEntity.class);
+        Episode returnedDomain = mock(Episode.class);
 
-    private EpisodeRepositoryAdapter adapter;
+        when(mapper.toEntity(domain)).thenReturn(entity);
+        when(jpa.save(entity)).thenReturn(savedEntity);
+        when(mapper.toDomain(savedEntity)).thenReturn(returnedDomain);
 
-    @BeforeEach
-    void setUp() {
-        adapter = new EpisodeRepositoryAdapter(jpa, episodeMapper);
+        Episode result = adapter.save(domain);
+
+        assertSame(returnedDomain, result);
+        verify(mapper).toEntity(domain);
+        verify(jpa).save(entity);
+        verify(mapper).toDomain(savedEntity);
     }
 
     @Test
-    void save_shouldMapToEntitySaveAndMapToDomain() {
-        Episode domainInput = mock(Episode.class);
-        Episode domainSaved = mock(Episode.class);
+    void findById_should_return_domain_when_found() {
+        EpisodeJpaRepository jpa = mock(EpisodeJpaRepository.class);
+        EpisodeMapper mapper = mock(EpisodeMapper.class);
+        EpisodeRepositoryAdapter adapter = new EpisodeRepositoryAdapter(jpa, mapper);
 
-        EpisodeEntity entityInput = new EpisodeEntity();
-        EpisodeEntity entitySaved = new EpisodeEntity();
-
-        when(episodeMapper.toEntity(domainInput)).thenReturn(entityInput);
-        when(jpa.save(entityInput)).thenReturn(entitySaved);
-        when(episodeMapper.toDomain(entitySaved)).thenReturn(domainSaved);
-
-        Episode result = adapter.save(domainInput);
-
-        assertSame(domainSaved, result);
-        verify(episodeMapper).toEntity(domainInput);
-        verify(jpa).save(entityInput);
-        verify(episodeMapper).toDomain(entitySaved);
-    }
-
-    @Test
-    void findById_whenPresent_shouldReturnMappedDomain() {
-        Long id = 1L;
-        EpisodeEntity entity = new EpisodeEntity();
+        Long id = 42L;
+        EpisodeEntity entity = mock(EpisodeEntity.class);
         Episode domain = mock(Episode.class);
 
         when(jpa.findById(id)).thenReturn(Optional.of(entity));
-        when(episodeMapper.toDomain(entity)).thenReturn(domain);
+        when(mapper.toDomain(entity)).thenReturn(domain);
 
         Optional<Episode> result = adapter.findById(id);
 
         assertTrue(result.isPresent());
         assertSame(domain, result.get());
         verify(jpa).findById(id);
-        verify(episodeMapper).toDomain(entity);
+        verify(mapper).toDomain(entity);
     }
 
     @Test
-    void findById_whenNotPresent_shouldReturnEmpty() {
-        Long id = 2L;
+    void findById_should_return_empty_when_not_found() {
+        EpisodeJpaRepository jpa = mock(EpisodeJpaRepository.class);
+        EpisodeMapper mapper = mock(EpisodeMapper.class);
+        EpisodeRepositoryAdapter adapter = new EpisodeRepositoryAdapter(jpa, mapper);
+
+        Long id = 100L;
         when(jpa.findById(id)).thenReturn(Optional.empty());
 
         Optional<Episode> result = adapter.findById(id);
 
         assertFalse(result.isPresent());
         verify(jpa).findById(id);
-        verifyNoInteractions(episodeMapper);
+        verifyNoInteractions(mapper);
     }
 
     @Test
-    void findAll_shouldMapAllEntitiesToDomainList() {
-        EpisodeEntity e1 = new EpisodeEntity();
-        EpisodeEntity e2 = new EpisodeEntity();
-        Episode d1 = mock(Episode.class);
-        Episode d2 = mock(Episode.class);
+    void findAll_should_build_pageable_and_delegate_and_return_mapped_page_result() {
+        EpisodeJpaRepository jpa = mock(EpisodeJpaRepository.class);
+        EpisodeMapper mapper = mock(EpisodeMapper.class);
+        EpisodeRepositoryAdapter adapter = new EpisodeRepositoryAdapter(jpa, mapper);
 
-        when(jpa.findAll()).thenReturn(List.of(e1, e2));
-        when(episodeMapper.toDomain(e1)).thenReturn(d1);
-        when(episodeMapper.toDomain(e2)).thenReturn(d2);
+        PageQuery query = mock(PageQuery.class);
+        when(query.page()).thenReturn(0);
+        when(query.size()).thenReturn(10);
+        when(query.direction()).thenReturn("ASC");
+        when(query.sort()).thenReturn("id");
 
-        List<Episode> result = adapter.findAll();
+        EpisodeEntity entity = mock(EpisodeEntity.class);
+        Page<EpisodeEntity> page = new PageImpl<>(List.of(entity));
 
-        assertEquals(2, result.size());
-        assertSame(d1, result.get(0));
-        assertSame(d2, result.get(1));
-        verify(jpa).findAll();
-        verify(episodeMapper).toDomain(e1);
-        verify(episodeMapper).toDomain(e2);
+        when(jpa.findAll(any(Pageable.class))).thenReturn(page);
+
+        @SuppressWarnings("unchecked")
+        PageResult<Episode> expected = (PageResult<Episode>) mock(PageResult.class);
+
+        try (MockedStatic<PageResultMapper> mocked = mockStatic(PageResultMapper.class)) {
+            mocked.when(() -> PageResultMapper.from(page, mapper::toDomain)).thenReturn(expected);
+
+            PageResult<Episode> result = adapter.findAll(query);
+
+            assertSame(expected, result);
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+            verify(jpa).findAll(pageableCaptor.capture());
+            Pageable captured = pageableCaptor.getValue();
+            assertEquals(0, captured.getPageNumber());
+            assertEquals(10, captured.getPageSize());
+            Sort.Order order = captured.getSort().getOrderFor("id");
+            assertNotNull(order);
+            assertEquals(Sort.Direction.ASC, order.getDirection());
+
+            mocked.verify(() -> PageResultMapper.from(page, mapper::toDomain));
+        }
     }
 
     @Test
-    void deleteById_shouldDelegateToJpa() {
-        Long id = 3L;
+    void deleteById_should_delegate_to_jpa() {
+        EpisodeJpaRepository jpa = mock(EpisodeJpaRepository.class);
+        EpisodeMapper mapper = mock(EpisodeMapper.class);
+        EpisodeRepositoryAdapter adapter = new EpisodeRepositoryAdapter(jpa, mapper);
 
+        Long id = 7L;
         adapter.deleteById(id);
 
         verify(jpa).deleteById(id);
         verifyNoMoreInteractions(jpa);
-        verifyNoInteractions(episodeMapper);
+        verifyNoInteractions(mapper);
     }
 }

@@ -1,48 +1,75 @@
 package com.cine.cinelog.core.application.usecase.media;
 
-import org.junit.jupiter.api.Test;
-
-import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
-import com.cine.cinelog.core.application.usecase.media.UpdateMediaService;
-import com.cine.cinelog.core.domain.enums.MediaType;
-import com.cine.cinelog.core.domain.model.Media;
-
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
+import com.cine.cinelog.core.domain.error.DomainException;
+import com.cine.cinelog.core.domain.error.ErrorCode;
+import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.policy.MediaPolicy;
 
+@ExtendWith(MockitoExtension.class)
 class UpdateMediaServiceTest {
 
+    @Mock
+    private MediaRepositoryPort repo;
+
+    @Mock
+    private MediaPolicy mediaPolicy;
+
+    @InjectMocks
+    private UpdateMediaService service;
+
     @Test
-    void should_update_existing_media() {
-        var repo = mock(MediaRepositoryPort.class);
-        var usecase = new UpdateMediaService(repo);
+    void execute_whenMediaExists_updatesAndSaves() {
+        Long id = 1L;
+        Media current = mock(Media.class);
+        Media data = mock(Media.class);
+        Media updated = mock(Media.class);
 
-        var existing = new Media(1L, "Old", MediaType.MOVIE, 2000, null, null, null, null, null);
-        when(repo.findById(1L)).thenReturn(Optional.of(existing));
-        when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repo.findById(id)).thenReturn(Optional.of(current));
+        when(current.updateFrom(data)).thenReturn(updated);
+        when(repo.save(updated)).thenReturn(updated);
 
-        var patch = new Media(null, "New", MediaType.MOVIE, 2000, null, null, null, null, null);
+        Media result = service.execute(id, data);
 
-        var updated = usecase.execute(1L, patch);
-
-        assertThat(updated.getId()).isEqualTo(1L);
-        assertThat(updated.getTitle()).isEqualTo("New");
+        assertSame(updated, result);
+        verify(mediaPolicy).validateInvariants(updated);
+        verify(repo).save(updated);
     }
 
     @Test
-    void should_fail_when_not_found() {
-        var repo = mock(MediaRepositoryPort.class);
-        var usecase = new UpdateMediaService(repo);
+    void execute_whenMediaNotFound_throwsDomainException() {
+        Long id = 2L;
+        Media data = mock(Media.class);
 
-        when(repo.findById(99L)).thenReturn(Optional.empty());
+        when(repo.findById(id)).thenReturn(Optional.empty());
 
-        var patch = new Media(null, "X", MediaType.MOVIE, 2000, null, null, null, null, null);
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id, data));
+        assertTrue(ex.getMessage().contains("Media not found: " + id));
+    }
 
-        assertThatThrownBy(() -> usecase.execute(99L, patch))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Media not found");
+    @Test
+    void execute_whenValidationFails_propagatesAndDoesNotSave() {
+        Long id = 3L;
+        Media current = mock(Media.class);
+        Media data = mock(Media.class);
+        Media updated = mock(Media.class);
+
+        when(repo.findById(id)).thenReturn(Optional.of(current));
+        when(current.updateFrom(data)).thenReturn(updated);
+
+        DomainException validationEx = DomainException.of(ErrorCode.MEDIA_NOT_FOUND, "validation failed");
+        doThrow(validationEx).when(mediaPolicy).validateInvariants(updated);
+
+        DomainException thrown = assertThrows(DomainException.class, () -> service.execute(id, data));
+        assertSame(validationEx, thrown);
+        verify(repo, never()).save(any());
     }
 }

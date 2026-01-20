@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.error.DomainException;
 
 class GetMediaServiceTest {
 
@@ -40,7 +41,7 @@ class GetMediaServiceTest {
 
         Mockito.when(repo.findById(id)).thenReturn(Optional.empty());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
         assertEquals("Mídia não encontrada: " + id, ex.getMessage());
         Mockito.verify(repo).findById(id);
     }

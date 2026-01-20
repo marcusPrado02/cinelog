@@ -6,16 +6,18 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.math.BigDecimal;
+
 class IsPopularMediaSpecificationTest {
 
-    private final IsPopularMediaSpecification spec = new IsPopularMediaSpecification();
+    private final IsPopularMediaSpecification spec = new IsPopularMediaSpecification(BigDecimal.valueOf(7.0));
     private final int currentYear = java.time.Year.now().getValue();
 
     @Test
     void returnsTrueWhenMediaIsRecentAndRatingIsAtLeastSeven() {
         Media media = Mockito.mock(Media.class);
         Mockito.when(media.getReleaseYear()).thenReturn(currentYear); // recent
-        boolean result = spec.isSatisfiedBy(media, 7.0);
+        boolean result = spec.isSatisfiedBy(media, BigDecimal.valueOf(7.0));
         assertTrue(result);
     }
 
@@ -23,7 +25,7 @@ class IsPopularMediaSpecificationTest {
     void returnsTrueWhenMediaIsExactlyTenYearsOldAndRatingIsSeven() {
         Media media = Mockito.mock(Media.class);
         Mockito.when(media.getReleaseYear()).thenReturn(currentYear - 10); // boundary recent
-        boolean result = spec.isSatisfiedBy(media, 7.0);
+        boolean result = spec.isSatisfiedBy(media, BigDecimal.valueOf(7.0));
         assertTrue(result);
     }
 
@@ -31,7 +33,7 @@ class IsPopularMediaSpecificationTest {
     void returnsFalseWhenMediaIsRecentButRatingIsBelowSeven() {
         Media media = Mockito.mock(Media.class);
         Mockito.when(media.getReleaseYear()).thenReturn(currentYear - 1); // recent
-        boolean result = spec.isSatisfiedBy(media, 6.9);
+        boolean result = spec.isSatisfiedBy(media, BigDecimal.valueOf(6.9));
         assertFalse(result);
     }
 
@@ -39,7 +41,7 @@ class IsPopularMediaSpecificationTest {
     void returnsFalseWhenMediaIsOlderThanTenYearsEvenIfRatingIsHigh() {
         Media media = Mockito.mock(Media.class);
         Mockito.when(media.getReleaseYear()).thenReturn(currentYear - 11); // not recent
-        boolean result = spec.isSatisfiedBy(media, 9.5);
+        boolean result = spec.isSatisfiedBy(media, BigDecimal.valueOf(9.5));
         assertFalse(result);
     }
 
@@ -48,7 +50,7 @@ class IsPopularMediaSpecificationTest {
         Media media = Mockito.mock(Media.class);
         Rating rating = Mockito.mock(Rating.class);
         Mockito.when(media.getReleaseYear()).thenReturn(currentYear); // recent
-        Mockito.when(rating.value()).thenReturn(8.2);
+        Mockito.when(rating.value()).thenReturn(BigDecimal.valueOf(8.2));
         boolean result = spec.isSatisfiedBy(media, rating);
         assertTrue(result);
     }

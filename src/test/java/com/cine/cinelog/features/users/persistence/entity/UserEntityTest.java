@@ -5,7 +5,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,7 +18,7 @@ public class UserEntityTest {
         Long id = 42L;
         String name = "John Doe";
         String email = "john.doe@example.com";
-        OffsetDateTime now = OffsetDateTime.parse("2023-01-02T03:04:05Z");
+        LocalDateTime now = LocalDateTime.parse("2023-01-02T03:04:05");
 
         u.setId(id);
         u.setName(name);
@@ -43,7 +44,7 @@ public class UserEntityTest {
     @Test
     void prePersistShouldNotOverrideExistingCreatedAt() {
         UserEntity u = new UserEntity();
-        OffsetDateTime fixed = OffsetDateTime.parse("2020-01-01T10:00:00Z");
+        LocalDateTime fixed = LocalDateTime.parse("2020-01-01T10:00:00Z");
         u.setCreatedAt(fixed);
 
         u.pre();

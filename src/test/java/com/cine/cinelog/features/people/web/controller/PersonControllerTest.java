@@ -10,14 +10,15 @@ import com.cine.cinelog.features.people.mapper.PersonMapper;
 import com.cine.cinelog.features.people.web.dto.PersonCreateRequest;
 import com.cine.cinelog.features.people.web.dto.PersonResponse;
 import com.cine.cinelog.features.people.web.dto.PersonUpdateRequest;
+import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
-import java.net.URI;
-import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -37,81 +38,82 @@ class PersonControllerTest {
     @Mock
     private PersonMapper mapper;
 
-    @InjectMocks
     private PersonController controller;
+    private BusinessMetricsService metricsService;
 
-    @Test
-    void create_shouldReturnCreatedWithLocationAndBody() {
-        PersonCreateRequest req = mock(PersonCreateRequest.class);
-        Person domain = mock(Person.class);
-        PersonResponse resp = mock(PersonResponse.class);
-
-        when(mapper.toDomain(req)).thenReturn(domain);
-        when(createUC.execute(domain)).thenReturn(domain);
-        when(domain.getId()).thenReturn(1L);
-        when(mapper.toResponse(domain)).thenReturn(resp);
-
-        ResponseEntity<PersonResponse> result = controller.create(req);
-
-        assertEquals(201, result.getStatusCodeValue());
-        assertEquals(resp, result.getBody());
-        assertEquals(URI.create("/api/people/1"), result.getHeaders().getLocation());
+    @BeforeEach
+    void setUp() {
+        controller = new PersonController(createUC, updateUC, getUC, listUC, deleteUC, mapper, metricsService);
     }
 
     @Test
-    void update_shouldReturnOkWithBody() {
+    void create_shouldReturnCreatedResponse_withLocationAndBody() {
+        PersonCreateRequest req = mock(PersonCreateRequest.class);
+        Person domain = mock(Person.class);
+        Person created = mock(Person.class);
+        PersonResponse response = mock(PersonResponse.class);
+
+        when(mapper.toDomain(req)).thenReturn(domain);
+        when(createUC.execute(domain)).thenReturn(created);
+        when(created.getId()).thenReturn(42L);
+        when(mapper.toResponse(created)).thenReturn(response);
+
+        ResponseEntity<PersonResponse> resp = controller.create(req);
+
+        assertEquals(201, resp.getStatusCodeValue());
+        assertEquals("/api/people/42", resp.getHeaders().getLocation().getPath());
+        assertSame(response, resp.getBody());
+        verify(mapper).toDomain(req);
+        verify(createUC).execute(domain);
+        verify(mapper).toResponse(created);
+    }
+
+    @Test
+    void update_shouldReturnOk_withUpdatedBody() {
+        Long id = 7L;
         PersonUpdateRequest req = mock(PersonUpdateRequest.class);
         Person domain = mock(Person.class);
         Person updated = mock(Person.class);
-        PersonResponse resp = mock(PersonResponse.class);
+        PersonResponse response = mock(PersonResponse.class);
 
         when(mapper.toDomain(req)).thenReturn(domain);
-        when(updateUC.execute(2L, domain)).thenReturn(updated);
-        when(mapper.toResponse(updated)).thenReturn(resp);
+        when(updateUC.execute(id, domain)).thenReturn(updated);
+        when(mapper.toResponse(updated)).thenReturn(response);
 
-        ResponseEntity<PersonResponse> result = controller.update(2L, req);
+        ResponseEntity<PersonResponse> resp = controller.update(id, req);
 
-        assertEquals(200, result.getStatusCodeValue());
-        assertEquals(resp, result.getBody());
+        assertEquals(200, resp.getStatusCodeValue());
+        assertSame(response, resp.getBody());
+        verify(mapper).toDomain(req);
+        verify(updateUC).execute(id, domain);
+        verify(mapper).toResponse(updated);
     }
 
     @Test
-    void getById_shouldReturnOkWithBody() {
-        Person domain = mock(Person.class);
-        PersonResponse resp = mock(PersonResponse.class);
+    void getById_shouldReturnOk_withMappedBody() {
+        Long id = 11L;
+        Person person = mock(Person.class);
+        PersonResponse response = mock(PersonResponse.class);
 
-        when(getUC.execute(3L)).thenReturn(domain);
-        when(mapper.toResponse(domain)).thenReturn(resp);
+        when(getUC.execute(id)).thenReturn(person);
+        when(mapper.toResponse(person)).thenReturn(response);
 
-        ResponseEntity<PersonResponse> result = controller.getById(3L);
+        ResponseEntity<PersonResponse> resp = controller.getById(id);
 
-        assertEquals(200, result.getStatusCodeValue());
-        assertEquals(resp, result.getBody());
+        assertEquals(200, resp.getStatusCodeValue());
+        assertSame(response, resp.getBody());
+        verify(getUC).execute(id);
+        verify(mapper).toResponse(person);
     }
 
     @Test
-    void list_shouldReturnOkWithMappedList() {
-        Person p1 = mock(Person.class);
-        Person p2 = mock(Person.class);
-        PersonResponse r1 = mock(PersonResponse.class);
-        PersonResponse r2 = mock(PersonResponse.class);
+    void delete_shouldCallUseCase_andReturnNoContent() {
+        Long id = 99L;
 
-        when(listUC.execute()).thenReturn(List.of(p1, p2));
-        when(mapper.toResponse(p1)).thenReturn(r1);
-        when(mapper.toResponse(p2)).thenReturn(r2);
+        ResponseEntity<Void> resp = controller.delete(id);
 
-        ResponseEntity<List<PersonResponse>> result = controller.list();
-
-        assertEquals(200, result.getStatusCodeValue());
-        assertNotNull(result.getBody());
-        assertEquals(List.of(r1, r2), result.getBody());
-    }
-
-    @Test
-    void delete_shouldInvokeUseCaseAndReturnNoContent() {
-        ResponseEntity<Void> result = controller.delete(4L);
-
-        assertEquals(204, result.getStatusCodeValue());
-        verify(deleteUC).execute(4L);
+        assertEquals(204, resp.getStatusCodeValue());
+        assertNull(resp.getBody());
+        verify(deleteUC).execute(id);
     }
 }

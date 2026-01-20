@@ -1,6 +1,7 @@
 package com.cine.cinelog.core.application.usecase.episodes;
 
 import com.cine.cinelog.core.application.ports.out.EpisodeRepositoryPort;
+import com.cine.cinelog.core.domain.policy.EpisodePolicy;
 import com.cine.cinelog.core.domain.model.Episode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,9 +36,11 @@ class CreateEpisodeServiceTest {
     @Test
     void shouldPropagateExceptionFromRepository() {
         Episode toSave = mock(Episode.class);
-        when(repo.save(toSave)).thenThrow(new RuntimeException("db error"));
+        RuntimeException dbError = new RuntimeException("db error");
+        when(repo.save(toSave)).thenThrow(dbError);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.execute(toSave));
+        assertNotNull(ex);
         assertEquals("db error", ex.getMessage());
         verify(repo, times(1)).save(toSave);
     }

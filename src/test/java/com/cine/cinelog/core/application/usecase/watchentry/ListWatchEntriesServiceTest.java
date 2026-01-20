@@ -1,47 +1,54 @@
 package com.cine.cinelog.core.application.usecase.watchentry;
 
-import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
-import com.cine.cinelog.core.domain.model.WatchEntry;
-import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
+import com.cine.cinelog.core.domain.model.WatchEntry;
+import com.cine.cinelog.core.domain.error.DomainException;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDate;
 
+@ExtendWith(MockitoExtension.class)
 class ListWatchEntriesServiceTest {
 
+    @Mock
+    private WatchEntryRepositoryPort repo;
+
     @Test
-    void execute_whenUserIdIsNull_shouldThrowIllegalArgumentException() {
-        WatchEntryRepositoryPort repo = mock(WatchEntryRepositoryPort.class);
+    void execute_shouldThrowWhenUserIdIsNull() {
         ListWatchEntriesService service = new ListWatchEntriesService(repo);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.execute(null, 1L, 1L, 5, LocalDate.now(), LocalDate.now(), Pageable.unpaged()));
-
-        assertEquals("userId is required", ex.getMessage());
+                () -> service.execute(null, null, null, null, null, null, Pageable.unpaged()));
+        assertTrue(ex.getMessage().contains("userId is required"));
         verifyNoInteractions(repo);
     }
 
     @Test
-    void execute_whenValidArguments_shouldDelegateToRepositoryAndReturnPage() {
-        WatchEntryRepositoryPort repo = mock(WatchEntryRepositoryPort.class);
+    void execute_shouldDelegateToRepositoryAndReturnResult() {
         ListWatchEntriesService service = new ListWatchEntriesService(repo);
 
-        Long userId = 10L;
-        Long mediaId = 20L;
-        Long episodeId = 30L;
-        Integer minRating = 7;
+        Long userId = 1L;
+        Long mediaId = 2L;
+        Long episodeId = 3L;
+        Integer minRating = 4;
         LocalDate from = LocalDate.of(2020, 1, 1);
         LocalDate to = LocalDate.of(2020, 12, 31);
         Pageable pageable = Pageable.unpaged();
 
-        Page<WatchEntry> expectedPage = mock(Page.class);
-        when(repo.listByUser(userId, mediaId, episodeId, minRating, from, to, pageable)).thenReturn(expectedPage);
+        @SuppressWarnings("unchecked")
+        PageResult<WatchEntry> expected = mock(PageResult.class);
 
-        Page<WatchEntry> result = service.execute(userId, mediaId, episodeId, minRating, from, to, pageable);
+        when(repo.listByUser(userId, mediaId, episodeId, minRating, from, to, pageable)).thenReturn(expected);
 
-        assertSame(expectedPage, result);
+        PageResult<WatchEntry> actual = service.execute(userId, mediaId, episodeId, minRating, from, to, pageable);
+
+        assertSame(expected, actual);
         verify(repo, times(1)).listByUser(userId, mediaId, episodeId, minRating, from, to, pageable);
         verifyNoMoreInteractions(repo);
     }

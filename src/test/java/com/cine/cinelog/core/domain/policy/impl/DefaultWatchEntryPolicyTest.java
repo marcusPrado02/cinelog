@@ -2,69 +2,85 @@ package com.cine.cinelog.core.domain.policy.impl;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.model.WatchEntry;
 
 class DefaultWatchEntryPolicyTest {
 
-    @Test
-    void shouldThrowWhenEntryIsNull() {
-        DefaultWatchEntryPolicy policy = new DefaultWatchEntryPolicy(10, true);
+    private final DefaultWatchEntryPolicy policy = new DefaultWatchEntryPolicy();
 
-        DomainException ex = assertThrows(DomainException.class, () -> policy.validateCreate(null));
-        assertTrue(ex.getMessage().contains("watchEntry must not be null"));
+    @Test
+    void validateCreate_nullEntry_throwsDomainException() {
+        assertThrows(DomainException.class, () -> policy.validateCreate(null));
     }
 
     @Test
-    void shouldThrowWhenCommentTooLong() {
-        DefaultWatchEntryPolicy policy = new DefaultWatchEntryPolicy(5, false);
+    void validateUpdate_nullEntry_throwsDomainException() {
+        assertThrows(DomainException.class, () -> policy.validateUpdate(null));
+    }
 
+    @Test
+    void validateCreate_trimsCommentAndSetsNullForBlank() {
+        WatchEntry entry1 = mock(WatchEntry.class);
+        when(entry1.getRating()).thenReturn(null);
+        when(entry1.getComment()).thenReturn("  hello world  ");
+        when(entry1.getWatchedAt()).thenReturn(LocalDate.now());
+        policy.validateCreate(entry1);
+        verify(entry1).setComment("hello world");
+
+        WatchEntry entry2 = mock(WatchEntry.class);
+        when(entry2.getRating()).thenReturn(null);
+        when(entry2.getComment()).thenReturn("     ");
+        when(entry2.getWatchedAt()).thenReturn(LocalDate.now());
+        policy.validateCreate(entry2);
+        verify(entry2).setComment(null);
+    }
+
+    @Test
+    void validateCreate_commentTooLong_throwsDomainException() {
         WatchEntry entry = mock(WatchEntry.class);
-        when(entry.getComment()).thenReturn("this comment is definitely too long");
+        when(entry.getRating()).thenReturn(null);
+        // build a string longer than 2000 chars
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 2005; i++) {
+            sb.append('a');
+        }
+        when(entry.getComment()).thenReturn(sb.toString());
+        when(entry.getWatchedAt()).thenReturn(LocalDate.now());
+        assertThrows(DomainException.class, () -> policy.validateCreate(entry));
+    }
+
+    @Test
+    void validateCreate_futureWatchedAt_throwsDomainException() {
+        WatchEntry entry = mock(WatchEntry.class);
+        when(entry.getRating()).thenReturn(null);
+        when(entry.getComment()).thenReturn(null);
+        when(entry.getWatchedAt()).thenReturn(LocalDate.now().plusDays(1));
+        assertThrows(DomainException.class, () -> policy.validateCreate(entry));
+    }
+
+    @Test
+    void validateCreate_ratingWithoutWatchedAt_throwsDomainException() {
+        WatchEntry entry = mock(WatchEntry.class);
+        when(entry.getRating()).thenReturn(BigDecimal.valueOf(7));
         when(entry.getWatchedAt()).thenReturn(null);
-
-        DomainException ex = assertThrows(DomainException.class, () -> policy.validateCreate(entry));
-        assertTrue(ex.getMessage().contains("comment too long"));
+        // Rating.of(7) should be valid, but absence of watchedAt must cause exception
+        assertThrows(DomainException.class, () -> policy.validateCreate(entry));
     }
 
     @Test
-    void shouldThrowWhenWatchedAtInFutureAndForbidden() {
-        DefaultWatchEntryPolicy policy = new DefaultWatchEntryPolicy(100, true);
-
+    void validateCreate_validRating_setsNormalizedValue() {
         WatchEntry entry = mock(WatchEntry.class);
+        when(entry.getRating()).thenReturn(BigDecimal.valueOf(8));
         when(entry.getComment()).thenReturn(null);
-        when(entry.getWatchedAt()).thenReturn(LocalDate.now(ZoneOffset.UTC).plusDays(1));
-
-        DomainException ex = assertThrows(DomainException.class, () -> policy.validateCreate(entry));
-        assertTrue(ex.getMessage().contains("watchedAt cannot be in the future"));
-    }
-
-    @Test
-    void shouldAllowValidEntry() {
-        DefaultWatchEntryPolicy policy = new DefaultWatchEntryPolicy(10, true);
-
-        WatchEntry entry = mock(WatchEntry.class);
-        when(entry.getComment()).thenReturn("ok");
-        when(entry.getWatchedAt()).thenReturn(LocalDate.now(ZoneOffset.UTC)); // not after now
-
+        when(entry.getWatchedAt()).thenReturn(LocalDate.now());
+        // Should not throw and should call setRating with normalized value (expected 8)
         assertDoesNotThrow(() -> policy.validateCreate(entry));
-        assertDoesNotThrow(() -> policy.validateUpdate(entry));
-    }
-
-    @Test
-    void shouldAllowFutureWhenNotForbidden() {
-        DefaultWatchEntryPolicy policy = new DefaultWatchEntryPolicy(10, false);
-
-        WatchEntry entry = mock(WatchEntry.class);
-        when(entry.getComment()).thenReturn(null);
-        when(entry.getWatchedAt()).thenReturn(LocalDate.now(ZoneOffset.UTC).plusDays(5));
-
-        assertDoesNotThrow(() -> policy.validateCreate(entry));
+        verify(entry).setRating(BigDecimal.valueOf(8));
     }
 }

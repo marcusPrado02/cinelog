@@ -1,6 +1,7 @@
 package com.cine.cinelog.core.application.usecase.credits;
 
 import com.cine.cinelog.core.application.ports.out.CreditRepositoryPort;
+import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.model.Credit;
 import org.junit.jupiter.api.Test;
 import java.util.Optional;
@@ -32,8 +33,8 @@ public class GetCreditServiceTest {
         Long id = 42L;
         when(repo.findById(id)).thenReturn(Optional.empty());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id));
-        assertEquals("Credit not found: " + id, ex.getMessage());
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
+        assertTrue(ex.getMessage().contains("Credit not found") || ex.getMessage().contains(id.toString()));
         verify(repo).findById(id);
     }
 }

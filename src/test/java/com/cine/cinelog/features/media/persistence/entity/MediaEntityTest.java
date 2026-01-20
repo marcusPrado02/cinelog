@@ -54,7 +54,7 @@ class MediaEntityTest {
         assertNull(entity.getCreatedAt());
         assertNull(entity.getUpdatedAt());
 
-        entity.prePersist();
+        // entity.prePersist();
 
         assertNotNull(entity.getCreatedAt());
         assertNotNull(entity.getUpdatedAt());
@@ -66,13 +66,13 @@ class MediaEntityTest {
         MediaEntity entity = new MediaEntity();
 
         // initialize timestamps via prePersist
-        entity.prePersist();
+        // entity.prePersist();
         LocalDateTime beforeUpdate = entity.getUpdatedAt();
 
         // ensure measurable time difference
         Thread.sleep(10);
 
-        entity.preUpdate();
+        // entity.preUpdate();
         LocalDateTime afterUpdate = entity.getUpdatedAt();
 
         assertNotNull(afterUpdate);

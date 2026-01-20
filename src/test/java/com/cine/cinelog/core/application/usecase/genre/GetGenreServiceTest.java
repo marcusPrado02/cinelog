@@ -2,6 +2,7 @@ package com.cine.cinelog.core.application.usecase.genre;
 
 import com.cine.cinelog.core.application.ports.out.GenreRepositoryPort;
 import com.cine.cinelog.core.domain.model.Genre;
+import com.cine.cinelog.core.domain.error.DomainException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -32,8 +33,8 @@ class GetGenreServiceTest {
         when(repo.findById(2L)).thenReturn(Optional.empty());
 
         GetGenreService service = new GetGenreService(repo);
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(2L));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(2L));
 
-        assertEquals("Genre not found: 2", ex.getMessage());
+        assertTrue(ex.getMessage().contains("Genre not found: 2"));
     }
 }

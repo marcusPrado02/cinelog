@@ -2,6 +2,10 @@ package com.cine.cinelog.core.application.usecase.user;
 
 import com.cine.cinelog.core.application.ports.out.UserRepositoryPort;
 import com.cine.cinelog.core.domain.model.User;
+import com.cine.cinelog.core.domain.error.DomainException;
+import com.cine.cinelog.core.domain.policy.UserPolicy;
+import com.cine.cinelog.core.domain.policy.UserUpdatePolicy;
+import com.cine.cinelog.core.domain.policy.UserEmailUniquenessPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,6 +20,15 @@ class UpdateUserServiceTest {
 
     @Mock
     private UserRepositoryPort repo;
+
+    @Mock
+    private UserPolicy userPolicy;
+
+    @Mock
+    private UserUpdatePolicy updatePolicy;
+
+    @Mock
+    private UserEmailUniquenessPolicy uniqueness;
 
     @InjectMocks
     private UpdateUserService service;
@@ -52,7 +65,7 @@ class UpdateUserServiceTest {
 
         when(repo.findById(id)).thenReturn(Optional.empty());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.execute(id, incoming));
+        DomainException ex = assertThrows(DomainException.class, () -> service.execute(id, incoming));
         assertTrue(ex.getMessage().contains("User not found: " + id));
         verify(repo).findById(id);
         verifyNoMoreInteractions(repo);
