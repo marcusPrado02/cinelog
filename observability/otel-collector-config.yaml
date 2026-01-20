@@ -1,0 +1,26 @@
+receivers:
+    otlp:
+        protocols:
+            grpc:
+            http:
+
+processors:
+    batch: {}
+
+exporters:
+    # Envia traces pro Tempo (backend de traces)
+    otlp/tempo:
+        endpoint: tempo:4317
+        tls:
+            insecure: true
+
+    # Loga um resumo no stdout (útil pra debug)
+    logging:
+        loglevel: warn
+
+service:
+    pipelines:
+        traces:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [otlp/tempo, logging]

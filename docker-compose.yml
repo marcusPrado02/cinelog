@@ -1,0 +1,171 @@
+services:
+    # ========= Banco de dados =========
+    db:
+        image: mysql:8.0
+        container_name: cinelog-mysql
+        command:
+            - --default-authentication-plugin=mysql_native_password
+            - --log-bin-trust-function-creators=1
+        environment:
+            MYSQL_DATABASE: cinelog
+            MYSQL_USER: cinelog
+            MYSQL_PASSWORD: cinelog
+            MYSQL_ROOT_PASSWORD: root
+        ports:
+            - 3306:3306
+        volumes:
+            - dbdata:/var/lib/mysql
+            - ./docker/mysql-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+        healthcheck:
+            test: [CMD, mysqladmin, ping, -h, 127.0.0.1, -u, cinelog, -pcinelog]
+            interval: 5s
+            timeout: 5s
+            retries: 20
+
+    # ========= Redis (cache) =========
+    redis:
+        image: redis:7-alpine
+        container_name: cinelog-redis
+        ports:
+            - 6379:6379
+        volumes:
+            - redis-data:/data
+        command: [redis-server, --appendonly, yes]
+        restart: unless-stopped
+
+    # ========= Aplicação CineLog =========
+    # app:
+    #     build: .
+    #     container_name: cinelog-app
+    #     depends_on:
+    #         db:
+    #             condition: service_healthy
+    #         redis:
+    #             condition: service_started
+    #         otel-collector:
+    #             condition: service_started
+    #         logstash:
+    #             condition: service_started
+    #     ports:
+    #         - 8080:8080
+    #     environment:
+    #         # DB (aqui estava errado no seu exemplo, apontando pra Postgres)
+    #         SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cinelog?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    #         SPRING_DATASOURCE_USERNAME: cinelog
+    #         SPRING_DATASOURCE_PASSWORD: cinelog
+
+    #         # Profile docker (pra você ter config separada se quiser)
+    #         SPRING_PROFILES_ACTIVE: docker
+
+    #         # Redis dentro do Docker (não usar localhost aqui)
+    #         SPRING_DATA_REDIS_HOST: redis
+    #         SPRING_DATA_REDIS_PORT: 6379
+
+    #         # OTEL Collector na mesma rede docker
+    #         MANAGEMENT_OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
+
+    # ========= k6 (load tests) =========
+    k6:
+        image: grafana/k6
+        container_name: cinelog-k6
+        profiles: [perf] # só sobe se você usar --profile perf
+        working_dir: /scripts
+        # depends_on:
+        #     - app
+        environment:
+            BASE_URL: http://app:8080
+        volumes:
+            - ./performance/k6:/scripts
+
+    # ========= Observabilidade: OTEL / Tempo / Jaeger =========
+    otel-collector:
+        image: otel/opentelemetry-collector-contrib:0.106.0
+        command: --config=/etc/otel-collector-config.yaml
+        volumes:
+            - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+        ports:
+            - 4317:4317 # OTLP gRPC
+            - 4318:4318 # OTLP HTTP
+        depends_on:
+            - tempo
+            - jaeger
+
+    jaeger:
+        image: jaegertracing/all-in-one:1.58
+        container_name: cinelog-jaeger
+        ports:
+            - 16686:16686 # UI
+
+    tempo:
+        image: grafana/tempo:2.6.0
+        command: -config.file=/etc/tempo.yaml
+        volumes:
+            - ./observability/tempo.yaml:/etc/tempo.yaml:ro
+            - tempo-data:/var/tempo
+        ports:
+            - 3200:3200
+
+    # ========= Observabilidade: Prometheus / Grafana =========
+    prometheus:
+        image: prom/prometheus:v2.55.1
+        command:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.retention.time=2d
+        volumes:
+            - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+        ports:
+            - 9090:9090
+        # depends_on:
+        #     - app
+
+    grafana:
+        image: grafana/grafana:11.3.0
+        container_name: cinelog-grafana
+        environment:
+            GF_SECURITY_ADMIN_PASSWORD: admin
+        ports:
+            - 3000:3000
+        depends_on:
+            - prometheus
+            - tempo
+
+    # ========= Observabilidade: ELK =========
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+        container_name: cinelog-elasticsearch
+        environment:
+            - discovery.type=single-node
+            - ES_JAVA_OPTS=-Xms1g -Xmx1g
+            - xpack.security.enabled=false
+        ports:
+            - 9200:9200
+        volumes:
+            - es-data:/usr/share/elasticsearch/data
+
+    kibana:
+        image: docker.elastic.co/kibana/kibana:8.15.0
+        container_name: cinelog-kibana
+        environment:
+            - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+        ports:
+            - 5601:5601
+        depends_on:
+            - elasticsearch
+
+    logstash:
+        image: docker.elastic.co/logstash/logstash:8.15.0
+        container_name: cinelog-logstash
+        environment:
+            - xpack.monitoring.enabled=false
+        ports:
+            - 5000:5000 # entrada TCP dos logs
+        volumes:
+            - /home/maps/Projetos/cinelog/cinelog/logstash/pipeline:/usr/share/logstash/pipeline
+        depends_on:
+            - elasticsearch
+
+volumes:
+    dbdata:
+    redis-data:
+    tempo-data:
+    es-data:
