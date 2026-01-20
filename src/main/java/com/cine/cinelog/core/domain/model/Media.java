@@ -3,21 +3,33 @@ package com.cine.cinelog.core.domain.model;
 import java.util.Objects;
 
 import com.cine.cinelog.core.domain.enums.MediaType;
+
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Representa a entidade de domínio 'Media' usada pela camada de domínio
- * e pelos casos de uso da aplicação.
- *
- * Comentários em português explicam os campos e o propósito desta classe
- * para facilitar a leitura e manutenção por desenvolvedores que preferem
- * documentação em português.
+ * Representa uma mídia (filme ou série) no domínio do sistema.
+ * 
+ * <p>
+ * Esta classe encapsula os conceitos e regras de negócio relacionados a mídias,
+ * incluindo informações como título, ano de lançamento, idioma, imagens e
+ * metadados.
+ * Contém a lógica de domínio pura, independente de frameworks e infraestrutura.
+ * </p>
+ * 
+ * <p>
+ * As mídias podem ser de dois tipos: MOVIE (filmes) ou TV_SHOW (séries).
+ * Para séries, é possível associar temporadas e episódios.
+ * </p>
+ * 
+ * @since 1.0
+ * @see MediaType
+ * @see Season
  */
-
 @Getter
 @Setter
-public class Media {
+public class Media extends Auditable {
     private Long id;
     private String title;
     private MediaType type;
@@ -28,19 +40,25 @@ public class Media {
     private String backdropUrl;
     private String overview;
 
+    private Long tmdbId;
+
     public Media(Long id, String title, MediaType type, Integer releaseYear,
             String originalTitle, String originalLanguage,
-            String posterUrl, String backdropUrl, String overview) {
+            String posterUrl, String backdropUrl, String overview, Long tmdbId) {
         this.id = id;
         this.title = title;
         this.type = type;
         this.releaseYear = releaseYear;
         this.originalTitle = originalTitle;
+        this.tmdbId = tmdbId;
         this.originalLanguage = originalLanguage;
         this.posterUrl = posterUrl;
         this.backdropUrl = backdropUrl;
         this.overview = overview;
         validateInvariants();
+    }
+
+    public Media() {
     }
 
     public void validateInvariants() {
@@ -54,7 +72,7 @@ public class Media {
 
     public Media withId(Long id) {
         return new Media(id, title, type, releaseYear, originalTitle, originalLanguage, posterUrl, backdropUrl,
-                overview);
+                overview, tmdbId);
     }
 
     public Media updateFrom(Media patch) {
@@ -69,6 +87,7 @@ public class Media {
         this.posterUrl = (patch.posterUrl != null) ? patch.posterUrl : this.posterUrl;
         this.backdropUrl = (patch.backdropUrl != null) ? patch.backdropUrl : this.backdropUrl;
         this.overview = (patch.overview != null) ? patch.overview : this.overview;
+        this.tmdbId = (patch.tmdbId != null) ? patch.tmdbId : this.tmdbId;
         return this;
     }
 
@@ -80,4 +99,17 @@ public class Media {
             this.originalTitle = this.originalTitle.trim();
         }
     }
+
+    public boolean hasTmdbId() {
+        return tmdbId != null;
+    }
+
+    public boolean isMovie() {
+        return MediaType.MOVIE.equals(this.type);
+    }
+
+    public boolean isSeries() {
+        return MediaType.SERIES.equals(this.type);
+    }
+
 }

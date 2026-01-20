@@ -1,16 +1,40 @@
 package com.cine.cinelog.core.domain.spec;
 
+import java.math.BigDecimal;
+
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.model.MediaWithRating;
 import com.cine.cinelog.core.domain.vo.Rating;
 
-// Exemplo: "popular" se média >= 7 e lançado nos últimos 10 anos 
-public final class IsPopularMediaSpecification {
+/**
+ * ST3: Recomendação só considera mídias com rating mínimo.
+ *
+ * Exemplo: média >= minAverageRating.
+ */
+public class IsPopularMediaSpecification {
 
-    public boolean isSatisfiedBy(Media media, double averageRating) {
+    private BigDecimal minAverageRating;
+
+    public IsPopularMediaSpecification(BigDecimal minAverageRating) {
+        this.minAverageRating = minAverageRating;
+    }
+
+    public boolean isSatisfiedBy(Media media, BigDecimal averageRating) {
         int year = media.getReleaseYear();
         int current = java.time.Year.now().getValue();
         boolean recent = (current - year) <= 10;
-        return recent && averageRating >= 7.0;
+        return recent && averageRating.compareTo(minAverageRating) >= 0;
+    }
+
+    public boolean isSatisfiedBy(MediaWithRating media) {
+        if (media == null) {
+            return false;
+        }
+        BigDecimal avg = media.getAverageRating();
+        if (avg == null) {
+            return false;
+        }
+        return avg.compareTo(minAverageRating) >= 0;
     }
 
     // Overload simples para VO Rating

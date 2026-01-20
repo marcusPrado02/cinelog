@@ -5,7 +5,21 @@ import java.util.Objects;
 import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.error.ErrorCode;
 
+/**
+ * Value Object para título de mídia.
+ *
+ * Regras:
+ * - Não pode ser nulo ou em branco (M1)
+ * - É normalizado com trim()
+ * - Tamanho máximo: 200 caracteres (M2)
+ *
+ * Qualquer violação lança DomainException com ErrorCode específico,
+ * e a mensagem final é resolvida via i18n.
+ */
 public final class Title {
+
+    private static final int MAX_LENGTH = 200;
+
     private final String value;
 
     private Title(String value) {
@@ -14,12 +28,18 @@ public final class Title {
 
     public static Title of(String raw) {
         String v = raw == null ? "" : raw.trim();
+
         if (v.isEmpty()) {
-            throw DomainException.of(ErrorCode.MEDIA_TITLE_REQUIRED, "Título é obrigatório");
+            // M1: título obrigatório
+            throw DomainException.of(ErrorCode.MEDIA_TITLE_REQUIRED);
         }
-        if (v.length() > 200) {
-            throw DomainException.of(ErrorCode.MEDIA_TITLE_TOO_LONG, "Título excede 200 caracteres");
+
+        if (v.length() > MAX_LENGTH) {
+            // M2: título muito longo (passamos MAX_LENGTH como argumento para i18n se
+            // quiser)
+            throw DomainException.of(ErrorCode.MEDIA_TITLE_TOO_LONG, MAX_LENGTH);
         }
+
         return new Title(v);
     }
 
@@ -34,7 +54,11 @@ public final class Title {
 
     @Override
     public boolean equals(Object o) {
-        return (o instanceof Title t) && t.value.equalsIgnoreCase(this.value);
+        if (this == o)
+            return true;
+        if (!(o instanceof Title t))
+            return false;
+        return value.equalsIgnoreCase(t.value);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.domain.policy.impl;
 
+
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -8,6 +10,16 @@ import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.error.ErrorCode;
 import com.cine.cinelog.core.domain.model.WatchEntry;
 import com.cine.cinelog.core.domain.policy.RatingPolicy;
+/**
+ * Política de domínio para gerenciamento de defaultrating.
+ * Define as regras e validações relacionadas a defaultrating.
+ * 
+ * <p>Esta política encapsula lógica de negócio específica
+ * e é aplicada durante operações em DefaultRating.</p>
+ * 
+ * @since 1.0
+ * @see DefaultRating
+ */
 
 public class DefaultRatingPolicy implements RatingPolicy {
 
@@ -22,11 +34,11 @@ public class DefaultRatingPolicy implements RatingPolicy {
     }
 
     @Override
-    public void validateCanRate(WatchEntry entry, Integer rating, Instant when) {
+    public void validateCanRate(WatchEntry entry, BigDecimal rating, Instant when) {
         if (rating == null) {
             throw DomainException.of(ErrorCode.INVALID_ARGUMENT, "rating must not be null");
         }
-        if (rating < min || rating > max) {
+        if (rating.compareTo(BigDecimal.valueOf(min)) < 0 || rating.compareTo(BigDecimal.valueOf(max)) > 0) {
             throw DomainException.of(ErrorCode.RATING_NOT_ALLOWED,
                     "rating out of bounds",
                     java.util.Map.of("min", min, "max", max, "value", rating));

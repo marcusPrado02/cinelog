@@ -2,6 +2,14 @@ package com.cine.cinelog.core.domain.common;
 
 import java.util.Objects;
 
+/**
+ * Classe de configuração Spring para gerenciamento de ok.
+ * 
+ * <p>Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.</p>
+ * 
+ * @since 1.0
+ */
 public sealed interface Result<T> permits Result.Ok, Result.Err {
     record Ok<T>(T value) implements Result<T> {
     }

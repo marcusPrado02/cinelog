@@ -1,7 +1,19 @@
 package com.cine.cinelog.core.domain.policy.impl;
 
+import org.springframework.stereotype.Component;
+
 import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.error.ErrorCode;
+/**
+ * Política de domínio para gerenciamento de maxseasons.
+ * Define as regras e validações relacionadas a maxseasons.
+ * 
+ * <p>Esta política encapsula lógica de negócio específica
+ * e é aplicada durante operações em MaxSeasons.</p>
+ * 
+ * @since 1.0
+ * @see MaxSeasons
+ */
 
 public final class MaxSeasonsPolicy {
     private final int max;
