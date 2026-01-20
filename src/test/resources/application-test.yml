@@ -1,0 +1,98 @@
+# ============================================
+# CineLog - Test Profile Configuration
+# ============================================
+# PR7 - Integration Tests with Testcontainers
+# ============================================
+
+spring:
+    application:
+        name: cinelog-test
+
+    # ========== JPA/Hibernate ==========
+    jpa:
+        hibernate:
+            ddl-auto: validate # Liquibase manages schema
+        show-sql: false # Reduce noise in test logs
+        properties:
+            hibernate:
+                format_sql: false
+                dialect: org.hibernate.dialect.MySQLDialect
+
+    # ========== Liquibase ==========
+    liquibase:
+        enabled: true
+        drop-first: false # Keep data between tests for performance
+        change-log: classpath:db/changelog/db.changelog-master.xml
+
+    # ========== Kafka ==========
+    kafka:
+        admin:
+            auto-create: true # Auto-create topics in tests
+        consumer:
+            auto-offset-reset: earliest # Read all messages
+            group-id: cinelog-test-consumer
+            enable-auto-commit: true
+            key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+            properties:
+                spring.json.trusted.packages: "*" # Trust all packages in tests
+        producer:
+            key-serializer: org.apache.kafka.common.serialization.StringSerializer
+            value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+            acks: all # Ensure all replicas acknowledge
+            retries: 3
+
+    # ========== Redis Cache ==========
+    cache:
+        type: redis
+        redis:
+            time-to-live: 300000 # 5 minutes (shorter for tests)
+    data:
+        redis:
+            repositories:
+                enabled: true
+            timeout: 2000ms
+
+    # ========== Security ==========
+    security:
+        user:
+            name: test
+            password: test
+
+# ========== Logging ==========
+logging:
+    level:
+        root: INFO
+        com.cine.cinelog: DEBUG # Enable debug for our code
+        org.springframework.kafka: WARN # Reduce Kafka noise
+        org.testcontainers: INFO
+        org.hibernate.SQL: WARN
+        org.liquibase: WARN
+
+# ========== Application Properties ==========
+app:
+    outbox:
+        polling-interval-ms: 1000 # Faster polling in tests
+        max-retry-attempts: 3
+        batch-size: 10
+
+    inbox:
+        cleanup-enabled: false # Disable cleanup in tests
+        retention-days: 1
+
+    cache:
+        recommendations:
+            ttl-minutes: 5 # Shorter TTL for tests
+        search:
+            ttl-minutes: 2
+
+# ========== Actuator ==========
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,metrics,prometheus
+    metrics:
+        export:
+            prometheus:
+                enabled: true
