@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.ports.in.season;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Season;
 import java.util.List;
 
@@ -15,5 +17,5 @@ public interface ListSeasonsUseCase {
      *
      * @return Uma lista de temporadas disponíveis.
      */
-    List<Season> execute();
+    PageResult<Season> execute(PageQuery pageQuery);
 }

@@ -1,7 +1,8 @@
 package com.cine.cinelog.core.application.ports.in.episodes;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Episode;
-import java.util.List;
 
 /**
  * Caso de uso para listagem de episódios.
@@ -15,5 +16,5 @@ public interface ListEpisodesUseCase {
      *
      * @return Uma lista de episódios disponíveis.
      */
-    List<Episode> execute();
+    PageResult<Episode> execute(PageQuery pageQuery);
 }

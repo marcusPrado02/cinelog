@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.ports.in.genre;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Genre;
 import java.util.List;
 
@@ -15,5 +17,5 @@ public interface ListGenresUseCase {
      *
      * @return Uma lista de gêneros disponíveis.
      */
-    List<Genre> execute();
+    PageResult<Genre> execute(PageQuery pageQuery);
 }

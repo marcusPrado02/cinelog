@@ -16,6 +16,6 @@ public interface UpdateWatchEntryUseCase {
      * @param isRatingOperation
      * @return
      */
-    WatchEntry execute(WatchEntry entry, boolean isRatingOperation);
+    WatchEntry execute(Long id, WatchEntry entry, boolean isRatingOperation);
 
 }

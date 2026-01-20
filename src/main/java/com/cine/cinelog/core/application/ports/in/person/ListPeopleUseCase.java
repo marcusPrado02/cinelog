@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.ports.in.person;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Person;
 import java.util.List;
 
@@ -15,5 +17,5 @@ public interface ListPeopleUseCase {
      *
      * @return Uma lista de pessoas que atendem aos critérios.
      */
-    List<Person> execute();
+    PageResult<Person> execute(PageQuery pageQuery);
 }

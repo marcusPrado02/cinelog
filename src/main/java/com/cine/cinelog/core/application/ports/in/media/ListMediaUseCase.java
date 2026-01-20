@@ -2,6 +2,8 @@ package com.cine.cinelog.core.application.ports.in.media;
 
 import java.util.List;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.enums.MediaType;
 import com.cine.cinelog.core.domain.model.Media;
 
@@ -19,11 +21,8 @@ public interface ListMediaUseCase {
     /**
      * Recupera uma lista de mídias existentes do sistema.
      *
-     * @param type O tipo de mídia a ser filtrado.
-     * @param q    O termo de busca para títulos ou descrições.
-     * @param page O índice da página (0-based).
-     * @param size O número de itens por página.
-     * @return Uma lista de mídias que atendem aos critérios.
+     * @param pageQuery parâmetros de paginação
+     * @return página de mídias encontradas
      */
-    List<Media> execute(MediaType type, String q, int page, int size);
+    PageResult<Media> execute(PageQuery pageQuery);
 }

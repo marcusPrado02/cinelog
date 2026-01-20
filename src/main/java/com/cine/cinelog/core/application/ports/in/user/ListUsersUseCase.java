@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.ports.in.user;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.User;
 import java.util.List;
 
@@ -15,5 +17,5 @@ public interface ListUsersUseCase {
      *
      * @return Uma lista de usuários disponíveis.
      */
-    List<User> execute();
+    PageResult<User> execute(PageQuery pageQuery);
 }

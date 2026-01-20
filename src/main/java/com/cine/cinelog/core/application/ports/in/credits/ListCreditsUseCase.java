@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.ports.in.credits;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Credit;
 import java.util.List;
 
@@ -14,5 +16,5 @@ public interface ListCreditsUseCase {
      *
      * @return Uma lista de créditos disponíveis.
      */
-    List<Credit> execute();
+    PageResult<Credit> execute(PageQuery pageQuery);
 }

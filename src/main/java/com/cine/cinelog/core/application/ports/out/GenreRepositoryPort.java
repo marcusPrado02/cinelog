@@ -1,5 +1,8 @@
 package com.cine.cinelog.core.application.ports.out;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.domain.model.Episode;
 import com.cine.cinelog.core.domain.model.Genre;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +34,7 @@ public interface GenreRepositoryPort {
      *
      * @return Uma lista de gêneros encontrados.
      */
-    List<Genre> findAll();
+    PageResult<Genre> findAll(PageQuery query);
 
     /**
      * Remove um gênero existente do repositório.
@@ -39,4 +42,12 @@ public interface GenreRepositoryPort {
      * @param id O ID do gênero a ser removido.
      */
     void deleteById(Long id);
+
+    /**
+     * Busca um gênero pelo nome.
+     *
+     * @param name O nome do gênero a ser buscado.
+     * @return Optional contendo o gênero se encontrado.
+     */
+    Optional<Genre> findByName(String name);
 }

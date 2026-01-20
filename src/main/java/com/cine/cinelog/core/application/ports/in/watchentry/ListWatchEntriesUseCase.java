@@ -1,11 +1,10 @@
 package com.cine.cinelog.core.application.ports.in.watchentry;
 
 import java.time.LocalDate;
-import java.util.List;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.WatchEntry;
 
 /**
@@ -20,7 +19,7 @@ public interface ListWatchEntriesUseCase {
      *
      * @return lista de WatchEntry
      */
-    Page<WatchEntry> execute(Long userId, Long mediaId, Long episodeId, Integer minRating,
+    PageResult<WatchEntry> execute(Long userId, Long mediaId, Long episodeId, Integer minRating,
             LocalDate from, LocalDate to, Pageable pageable);
 
 }

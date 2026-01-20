@@ -1,5 +1,8 @@
 package com.cine.cinelog.core.application.ports.out;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.domain.model.Genre;
 import com.cine.cinelog.core.domain.model.Person;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +34,7 @@ public interface PersonRepositoryPort {
      *
      * @return Uma lista de pessoas encontradas.
      */
-    List<Person> findAll();
+    PageResult<Person> findAll(PageQuery query);
 
     /**
      * Remove uma pessoa existente do repositório.

@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.ports.out;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.core.domain.model.Credit;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +34,7 @@ public interface CreditRepositoryPort {
      *
      * @return Uma lista de créditos encontrados.
      */
-    List<Credit> findAll();
+    PageResult<Credit> findAll(PageQuery query);
 
     /**
      * Remove um crédito existente do repositório.

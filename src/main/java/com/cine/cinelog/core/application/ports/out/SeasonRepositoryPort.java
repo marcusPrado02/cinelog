@@ -1,5 +1,8 @@
 package com.cine.cinelog.core.application.ports.out;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.domain.model.Person;
 import com.cine.cinelog.core.domain.model.Season;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +34,7 @@ public interface SeasonRepositoryPort {
      *
      * @return Uma lista de temporadas encontradas.
      */
-    List<Season> findAll();
+    PageResult<Season> findAll(PageQuery query);
 
     /**
      * Remove uma temporada existente do repositório.
@@ -39,4 +42,30 @@ public interface SeasonRepositoryPort {
      * @param id O ID da temporada a ser removida.
      */
     void deleteById(Long id);
+
+    /**
+     * Verifica se uma entrada de visualização existe para uma mídia específica.
+     *
+     * @param mediaId O ID da mídia.
+     * @return true se existir, false caso contrário.
+     */
+    boolean existsByMediaId(Long mediaId);
+
+    /**
+     * Verifica se uma temporada existe para uma mídia e número de temporada
+     * específicos.
+     * 
+     * @param mediaId
+     * @param seasonNumber
+     * @return
+     */
+    boolean existsByMediaIdAndSeasonNumber(Long mediaId, Integer seasonNumber);
+
+    /**
+     * Verifica se uma temporada existe pelo seu ID.
+     * 
+     * @param id
+     * @return
+     */
+    boolean existsById(Long id);
 }

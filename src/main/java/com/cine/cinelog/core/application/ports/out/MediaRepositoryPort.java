@@ -3,8 +3,12 @@ package com.cine.cinelog.core.application.ports.out;
 import java.util.List;
 import java.util.Optional;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.application.query.MediaSearchCriteria;
 import com.cine.cinelog.core.domain.enums.MediaType;
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.model.MediaWithRating;
 
 /**
  * Porta de saída para persistência de `Media`.
@@ -42,11 +46,32 @@ public interface MediaRepositoryPort {
     /**
      * Pesquisa mídias com base em critérios fornecidos.
      *
-     * @param type O tipo de mídia a ser pesquisado.
-     * @param q    A consulta de pesquisa.
-     * @param page O número da página para a pesquisa.
-     * @param size O tamanho da página (número de itens por página).
-     * @return Uma lista de mídias que correspondem aos critérios de pesquisa.
+     * @param query O objeto MediaQuery contendo os critérios de pesquisa.
+     * @return Um PageResult contendo as mídias encontradas e informações de
+     *         paginação.
      */
-    List<Media> find(MediaType type, String q, int page, int size);
+    PageResult<Media> search(MediaSearchCriteria criteria, PageQuery pageQuery);
+
+    /**
+     * Recupera todas as mídias existentes do repositório com paginação.
+     * 
+     * @param query O objeto PageQuery contendo os parâmetros de paginação.
+     * @return Um PageResult contendo as mídias encontradas e informações de
+     *         paginação.
+     */
+    PageResult<Media> listAll(PageQuery query);
+
+    /**
+     * Verifica se uma mídia existe pelo ID.
+     * 
+     * @param id O ID da mídia a ser verificada.
+     * @return true se existir, false caso contrário.
+     */
+    boolean existsById(Long id);
+
+    /**
+     * Retorna uma lista de mídias "candidatas" a recomendação
+     * (por exemplo, mais assistidas ou por gênero do usuário).
+     */
+    List<MediaWithRating> findCandidatesForUser(Long userId);
 }

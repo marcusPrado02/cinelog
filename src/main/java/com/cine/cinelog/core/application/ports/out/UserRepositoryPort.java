@@ -1,5 +1,8 @@
 package com.cine.cinelog.core.application.ports.out;
 
+import com.cine.cinelog.core.application.pagination.PageQuery;
+import com.cine.cinelog.core.application.pagination.PageResult;
+import com.cine.cinelog.core.domain.model.Season;
 import com.cine.cinelog.core.domain.model.User;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +34,7 @@ public interface UserRepositoryPort {
      *
      * @return Uma lista de usuários encontrados.
      */
-    List<User> findAll();
+    PageResult<User> findAll(PageQuery query);
 
     /**
      * Remove um usuário existente do repositório.
@@ -39,4 +42,21 @@ public interface UserRepositoryPort {
      * @param id O ID do usuário a ser removido.
      */
     void deleteById(Long id);
+
+    /**
+     * Verifica se um usuário com o email fornecido já existe no repositório.
+     *
+     * @param email O email a ser verificado.
+     * @return true se o usuário existir, false caso contrário.
+     */
+    boolean existsByEmail(String email);
+
+    /**
+     * Verifica se um usuário com o email fornecido já existe no repositório.
+     *
+     * @param email O email a ser verificado.
+     * @param id    O ID do usuário a ser ignorado na verificação.
+     * @return true se o usuário existir, false caso contrário.
+     */
+    boolean existsByEmailAndIdNot(String email, Long id);
 }
