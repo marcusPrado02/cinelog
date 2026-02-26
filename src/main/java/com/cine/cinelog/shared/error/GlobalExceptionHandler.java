@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Produz respostas no formato RFC 7807 (application/problem+json).
@@ -40,10 +39,12 @@ import java.util.stream.Collectors;
  */
 /**
  * Classe de configuração Spring para gerenciamento de globalexceptionhandler.
- * 
- * <p>Define beans e configurações necessárias para o funcionamento
- * adequado da aplicação.</p>
- * 
+ *
+ * <p>
+ * Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.
+ * </p>
+ *
  * @since 1.0
  */
 @ControllerAdvice
@@ -294,11 +295,13 @@ public class GlobalExceptionHandler {
         pd.setType(TYPE_CONFLICT);
         setCommon(pd, req, ErrorCode.GEN_CONSTRAINT.code);
 
+        // A02: não expor detalhes do banco (schema, constraint names) ao cliente.
+        // Log interno para troubleshooting.
         String constraint = Optional.ofNullable(ex.getCause())
                 .map(Throwable::getMessage)
                 .orElse(null);
-        if (constraint != null && !constraint.isBlank()) {
-            pd.setProperty("dbMessage", truncate(constraint, 400));
+        if (constraint != null && !constraint.isBlank() && log.isDebugEnabled()) {
+            log.debug("DataIntegrity detail (não exposto ao cliente): {}", truncate(constraint, 400));
         }
         return pd;
     }

@@ -1,0 +1,12 @@
+# Perfil DEV — sobrescreve defaults de produção para auxiliar no desenvolvimento local.
+
+server:
+    error:
+        include-message: always
+        include-binding-errors: always
+
+logging:
+    level:
+        root: INFO
+        org.springframework.security: DEBUG
+        com.cine.cinelog: DEBUG

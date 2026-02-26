@@ -138,52 +138,651 @@ public TokenResponse refresh(@RequestBody RefreshTokenRequest request) {
 
 ### A01 (OWASP) — Controle de Acesso Quebrado
 
-O projeto aplica autorização em duas camadas complementares:
+> **O que é?** Controle de acesso quebrado acontece quando um sistema permite que usuários realizem ações
+> ou acessem recursos para os quais **não têm permissão**. É o risco #1 do OWASP Top 10 porque
+> ocorre com altíssima frequência e tem impacto direto: vazamento de dados, manipulação indevida,
+> escalação de privilégios.
 
-1. **URL Authorization** em `HttpSecurity.authorizeHttpRequests`.
-2. **Method Security** com `@PreAuthorize` e `@SecureOperation`.
+> **Cenários reais de ataque que este tópico previne:**
+>
+> - Um usuário comum altera a URL de `/api/v1/users/me` para `/api/v1/admin/users` e acessa a lista de todos os usuários.
+> - Um atacante descobre `/actuator/env` aberto e extrai variáveis de ambiente (inclusive secrets).
+> - Um endpoint de delete não verifica a role e qualquer autenticado consegue apagar recursos.
 
-Modelo adotado: **deny-by-default** (`anyRequest().authenticated()`) com regras explícitas para superfícies administrativas.
+O CineLog aplica autorização em **duas camadas complementares** (defense in depth):
 
-### URL Authorization (estado atual)
+1. **Camada 1 — URL Authorization**: filtro HTTP que intercepta **toda request** antes de chegar ao controller.
+2. **Camada 2 — Method Security**: anotações no próprio método Java que validam permissões granulares.
+
+Se uma camada falhar (ex: alguém remove um `@PreAuthorize` por engano), a outra ainda bloqueia.
+
+---
+
+### Camada 1: URL Authorization (`HttpSecurity.authorizeHttpRequests`)
+
+> **O que é?** É a configuração central do Spring Security que define, **por padrão, para toda URL
+> da aplicação**, quem pode acessar o quê. Funciona como um "porteiro" na entrada: antes mesmo
+> do código do controller executar, o Spring verifica a request contra essas regras.
+
+> **Conceitos-chave:**
+>
+> - **`permitAll()`** — qualquer pessoa (mesmo sem login) pode acessar. Usado para endpoints públicos.
+> - **`authenticated()`** — exige um token JWT válido. Qualquer usuário logado acessa.
+> - **`hasRole("ADMIN")`** — exige que o JWT contenha a role `ROLE_ADMIN`.
+> - **`hasAnyRole("ADMIN", "OPS")`** — aceita qualquer uma das roles listadas.
+> - **`anyRequest().authenticated()`** — regra "pega-tudo" no final: tudo que não foi explicitamente
+>   liberado acima **requer autenticação**. Isso é o princípio **deny-by-default**.
+
+Configuração atual no projeto:
 
 ```java
 http.authorizeHttpRequests(auth -> auth
+    // Endpoints PÚBLICOS — sem token necessário
     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/auth/**").permitAll()
+
+    // Atuator — apenas health check e info (superfície mínima)
     .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
+    // ADMIN — somente role ADMIN
     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
+    // Admin DLQ — aceita ADMIN ou OPS (equipe de operações)
     .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OPS")
+
+    // TUDO MAIS — requer autenticação (deny-by-default)
     .anyRequest().authenticated());
 ```
 
-### Method Security e `@SecureOperation`
+**Por que o actuator é restrito?** Endpoints como `/actuator/env`, `/actuator/heapdump` e
+`/actuator/configprops` podem expor secrets, estrutura interna e dados de memória.
+Deixar apenas `/health` e `/info` públicos segue o princípio de **superfície mínima de ataque**.
 
-- `@EnableMethodSecurity` está ativo.
-- `@SecureOperation` usa `enforce=true` por padrão.
-- Com `enforce=true`, ausência de permissão configurada resulta em **negação** (fail-closed).
-- Recomendação: para operação sensível, declarar sempre `value` (permissão) e `module`.
+**Por que `/admin/**`tem regra separada?** O controller`DeadLetterAdminController`usa o path`/admin/dlq/**`(fora de`/api/v1/admin/**`). Sem essa regra explícita, a URL cairia no
+`anyRequest().authenticated()` e **qualquer usuário logado** acessaria funcionalidades de admin.
 
-Exemplo:
+---
+
+### Camada 2: Method Security (`@PreAuthorize` e `@SecureOperation`)
+
+> **O que é?** São anotações colocadas diretamente nos métodos Java. Mesmo que a URL passe pelo
+> filtro HTTP, o Spring valida **novamente** no nível do método se o usuário tem a permissão
+> necessária. É a segunda barreira (defense in depth).
+
+> **`@EnableMethodSecurity`** — ativa esse mecanismo no Spring. Sem essa anotação, `@PreAuthorize`
+> e `@SecureOperation` são **ignorados silenciosamente** (risco grave).
+
+#### `@SecureOperation` — anotação customizada do CineLog
+
+> **O que é `enforce`?** É um flag booleano que controla se a anotação **bloqueia** (`true`) ou
+> apenas **registra métrica** (`false`).
+>
+> - `enforce=true` (padrão): se o usuário não tiver a permission, lança `AccessDeniedException` → HTTP 403.
+> - `enforce=false`: permite a execução mas registra métrica `cinelog.security.access_total` com `outcome=DENIED`.
+>   Útil para observabilidade em migração gradual de permissões.
+>
+> **Por que `enforce=true` é o padrão?** Segue o princípio **fail-closed** (na dúvida, nega).
+> Se alguém adicionar `@SecureOperation` sem especificar `enforce`, o comportamento seguro é o default.
+
+> **O que é `value`?** É a **permission string** que o usuário precisa ter nas suas `GrantedAuthority`
+> do Spring Security. Ex: `"CONTENT_ADMIN"`, `"USER_ADMIN"`, `"MEDIA_ADMIN"`.
+> Se `value` estiver **vazio** e `enforce=true`, o acesso é **negado** (fail-closed — não existe
+> "permissão em branco").
+
+Exemplo real do projeto:
 
 ```java
+// Somente quem tem authority "USER_ADMIN" pode executar
 @SecureOperation(module = "USER", value = "USER_ADMIN")
-public User create(CreateUserCommand command) {
-    // ...
-}
+public User execute(User user) { ... }
+
+// Somente quem tem authority "CONTENT_ADMIN" pode deletar gêneros
+@SecureOperation(module = "GENRE", value = "CONTENT_ADMIN")
+public void execute(Long genreId) { ... }
 ```
 
-### Riscos tratados nesta revisão
+---
 
-- **Inconsistência de path admin**: `/admin/**` agora exige `ADMIN` ou `OPS` no filtro HTTP.
-- **Falsa sensação de segurança em AOP**: `@SecureOperation` segue comportamento fechado por padrão (`enforce=true`).
-- **Superfície de actuator**: somente `/actuator/health` e `/actuator/info` públicos.
+### Resumo: o que cada regra previne
+
+| Proteção                                    | Cenário de ataque prevenido                            |
+| ------------------------------------------- | ------------------------------------------------------ |
+| `anyRequest().authenticated()`              | Acesso anônimo a qualquer endpoint não público         |
+| `.hasRole("ADMIN")` em `/api/v1/admin/**`   | Usuário comum acessando painel admin                   |
+| `.hasAnyRole("ADMIN","OPS")` em `/admin/**` | Usuário comum acessando DLQ admin                      |
+| Actuator restrito a `/health` e `/info`     | Atacante extraindo secrets via `/actuator/env`         |
+| `@SecureOperation(enforce=true)`            | Método executado sem permission mesmo com URL liberada |
+| `@EnableMethodSecurity`                     | Anotações de segurança sendo silenciosamente ignoradas |
 
 ### Checklist rápido de validação (A01)
 
-1. Usuário sem token em endpoint protegido → `401`.
-2. Usuário autenticado sem role adequada em `/admin/**` → `403`.
+1. Usuário sem token em endpoint protegido → `401 Unauthorized`.
+2. Usuário autenticado sem role adequada em `/admin/**` → `403 Forbidden`.
 3. Usuário com `ROLE_ADMIN` ou `ROLE_OPS` em `/admin/**` → acesso permitido.
 4. Endpoint com `@SecureOperation` sem authority requerida → `403` quando `enforce=true`.
+5. `/actuator/env` ou `/actuator/heapdump` sem token → `401` (não está no `permitAll`).
+
+---
+
+## A02 (OWASP) — Falhas Criptográficas e Exposição de Dados Sensíveis
+
+> **O que é?** Esta categoria cobre situações em que dados sensíveis (senhas, tokens, dados
+> pessoais) são **expostos** porque não foram criptografados adequadamente — seja em trânsito
+> (rede), em repouso (banco de dados) ou em logs/respostas de erro.
+
+> **Cenários reais de ataque que este tópico previne:**
+>
+> - Atacante intercepta tráfego HTTP (man-in-the-middle) e captura tokens JWT e credenciais.
+> - Banco de dados é comprometido e senhas são lidas porque estavam em texto plano.
+> - Logs da aplicação são acessados e contêm tokens, senhas ou CPFs em claro.
+> - Resposta de erro 500 inclui stack trace com nomes de tabelas, queries e paths internos.
+> - JWT é forjado porque o secret é fraco demais (ex: "secret123").
+
+### Proteções implementadas
+
+---
+
+#### 1. Criptografia em trânsito (TLS/HTTPS)
+
+> **O que é TLS?** Transport Layer Security é o protocolo que criptografa a comunicação entre
+> o cliente (browser/app) e o servidor. Todas as requests HTTP passam por um "túnel" criptografado,
+> impedindo que intermediários leiam ou alterem os dados.
+>
+> **O que é HSTS?** HTTP Strict Transport Security é um header que instrui o browser a **sempre**
+> usar HTTPS, mesmo que o usuário digite `http://`. Previne ataques de downgrade onde o atacante
+> força a conexão para HTTP.
+
+**Cenário prevenido:** atacante em rede Wi-Fi pública captura requests HTTP e extrai Bearer tokens.
+
+Configuração de produção:
+
+```yaml
+server:
+    ssl:
+        enabled: true
+        key-store: ${SSL_KEYSTORE_PATH}
+        key-store-password: ${SSL_KEYSTORE_PASSWORD}
+        key-store-type: PKCS12
+        enabled-protocols: TLSv1.3,TLSv1.2 # Apenas versões seguras
+```
+
+HSTS no código:
+
+```java
+.httpStrictTransportSecurity(hsts -> hsts
+        .includeSubDomains(true)        // Aplica também a subdomínios
+        .maxAgeInSeconds(31536000))     // 1 ano — browser lembra por todo esse período
+```
+
+---
+
+#### 2. Hashing de senhas (BCrypt)
+
+> **O que é hashing?** É uma função matemática de **mão única**: transforma a senha "Abc@1234"
+> em algo como `$2a$12$LJ3m4ys...` que **não pode ser revertido** para a senha original.
+> Diferente de criptografia (que é reversível com uma chave), hashing é **irreversível por design**.
+>
+> **O que é BCrypt?** É um algoritmo de hashing especificamente projetado para senhas. Ele:
+>
+> 1. **Adiciona um salt aleatório** — duas senhas iguais geram hashes diferentes, impedindo ataques
+>    com rainbow tables (tabelas pré-computadas de hashes comuns).
+> 2. **É deliberadamente lento** — cada hash leva dezenas de milissegundos. Isso é irrelevante para
+>    um login legítimo, mas torna ataques de força bruta (testar milhões de senhas) inviáveis.
+>
+> **O que é o fator de trabalho (cost factor)?** É um número que controla **quantas vezes** o
+> algoritmo executa internamente. A fórmula é $2^{fator}$ iterações:
+>
+> | Fator | Iterações | Tempo aproximado por hash |
+> | ----- | --------- | ------------------------- |
+> | 10    | 1.024     | ~100ms                    |
+> | 12    | 4.096     | ~300ms                    |
+> | 14    | 16.384    | ~1s                       |
+>
+> **Por que fator 12?** É o equilíbrio recomendado pela OWASP entre segurança e UX:
+> lento o suficiente para inviabilizar brute force, rápido o suficiente para não impactar o login.
+
+**Cenário prevenido:** banco de dados é comprometido; atacante obtém a tabela `users` mas encontra
+apenas hashes BCrypt — reverter cada hash levaria **séculos** de computação.
+
+```java
+@Bean
+public PasswordEncoder passwordEncoder() {
+    // Fator 12 = 2^12 = 4.096 iterações internas
+    return new BCryptPasswordEncoder(12);
+}
+```
+
+---
+
+#### 3. JWT Secret — Validação automática
+
+> **O que é o JWT secret?** É a chave usada para **assinar** o token JWT (HMAC-SHA). Quem possui
+> essa chave pode:
+>
+> 1. **Gerar** tokens válidos (o servidor faz isso no login).
+> 2. **Verificar** se um token é legítimo (o servidor faz isso em cada request).
+> 3. **Forjar** tokens (isso é o que um atacante faria se descobrisse a chave).
+>
+> **Por que mínimo 32 caracteres?** HMAC-SHA256 opera com chaves de 256 bits (32 bytes).
+> Um secret menor que isso:
+>
+> - Reduz o espaço de chaves, facilitando brute force.
+> - Pode ser encontrado em wordlists comuns de secrets (ex: "secret", "changeme").
+>
+> **O que é fail-fast?** Significa que a aplicação **recusa iniciar** se detectar uma configuração
+> insegura. É melhor a aplicação **não subir** do que subir com um secret fraco e operar em risco.
+
+**Cenário prevenido:** desenvolvedor esquece de configurar `JWT_SECRET` em produção e a aplicação
+sobe com valor default fraco. Com fail-fast, isso **nunca acontece** — o boot falha imediatamente.
+
+```java
+private static void validateSecret(String secret) {
+    if (secret == null || secret.length() < MIN_SECRET_LENGTH) {
+        throw new IllegalStateException(
+            "JWT secret deve ter no mínimo 32 caracteres. "
+            + "Gere um com: openssl rand -base64 32");
+    }
+}
+```
+
+Geração recomendada:
+
+```bash
+# Gera 32 bytes aleatórios criptograficamente seguros, codificados em Base64
+openssl rand -base64 32
+```
+
+---
+
+#### 4. Mascaramento de dados sensíveis em logs
+
+> **O que é?** É a prática de substituir dados sensíveis por placeholders (`***MASKED***`) antes
+> de gravá-los em log. Logs são frequentemente armazenados em plain text, replicados para sistemas
+> de monitoramento (ELK, Grafana Loki) e acessados por múltiplas equipes.
+>
+> **Por que é necessário?** Mesmo que o banco esteja seguro, se alguém logar
+> `log.info("Login: user={}, password={}", user, password)`, a senha aparece em texto no arquivo
+> de log, no Kibana, no Grafana, potencialmente em backups não criptografados.
+
+**Cenários prevenidos:**
+
+- Desenvolvedor loga o payload completo de uma request que contém `password`.
+- Log de auditoria registra header `Authorization: Bearer eyJ...` — token completo exposto.
+- Dados de PII (email, CPF) aparecem em logs de debug e são rastreáveis.
+
+A classe `SensitiveDataMasker`:
+
+| O que mascara    | Exemplo antes        | Depois                     |
+| ---------------- | -------------------- | -------------------------- |
+| Campos de senha  | `password=Abc@1234`  | `password=***MASKED***`    |
+| Bearer tokens    | `Bearer eyJhbGci...` | `Bearer ***MASKED***`      |
+| JSON com secrets | `{"token":"abc123"}` | `{"token":"***MASKED***"}` |
+| Emails           | `user@example.com`   | `us***@example.com`        |
+
+```java
+@Autowired
+private SensitiveDataMasker masker;
+
+// Antes: log.info("Request: {}", payload);            ← PERIGOSO
+// Depois: log.info("Request: {}", masker.mask(payload)); ← SEGURO
+```
+
+---
+
+#### 5. Proteção contra exposição de informações internas
+
+> **O que é?** Quando uma aplicação retorna stack traces, nomes de classes, queries SQL ou
+> mensagens de exceção ao cliente, o atacante ganha **informação gratuita** sobre a arquitetura
+> interna. Isso facilita ataques subsequentes (information disclosure → exploit dirigido).
+>
+> **O que cada propriedade controla?**
+>
+> | Propriedade              | Valor seguro | O que expõe se habilitado                                                      |
+> | ------------------------ | ------------ | ------------------------------------------------------------------------------ |
+> | `include-message`        | `never`      | Mensagem da exceção Java (ex: "Column 'x' not found")                          |
+> | `include-binding-errors` | `never`      | Detalhes de campos inválidos com nomes internos                                |
+> | `include-exception`      | `false`      | Classe completa da exceção (ex: `org.hibernate.exception.SQLGrammarException`) |
+> | `include-stacktrace`     | `never`      | Stack trace completo com classes, linhas e queries                             |
+
+**Cenário prevenido:** endpoint retorna `500` com stack trace contendo
+`com.mysql.cj.jdbc.exceptions.CommunicationsException: Communications link failure` — atacante
+descobre que é MySQL e tenta explorar vulnerabilidades específicas desse DBMS.
+
+Configuração padrão (produção):
+
+```yaml
+server:
+    error:
+        include-message: never
+        include-binding-errors: never
+        include-exception: false
+        include-stacktrace: never
+```
+
+Perfil dev sobrescreve para manter usabilidade:
+
+```yaml
+# application-dev.yml
+server:
+    error:
+        include-message: always
+        include-binding-errors: always
+```
+
+No `GlobalExceptionHandler`: detalhes de constraint do banco (nomes de tabela, chaves únicas)
+**não aparecem na resposta HTTP** — são logados internamente em nível `DEBUG` apenas.
+
+---
+
+#### 6. Security Headers
+
+> **O que são?** São headers HTTP que o servidor envia nas respostas para instruir o browser
+> sobre como se comportar de forma segura. Não dependem do código da aplicação — são diretivas
+> para o browser do usuário.
+
+| Header                      | Valor                                 | O que significa                                            | Ataque prevenido                                                                                        |
+| --------------------------- | ------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `X-Frame-Options`           | `DENY`                                | Proíbe que a página seja carregada dentro de um `<iframe>` | **Clickjacking**: atacante coloca a aplicação em iframe invisível e engana o usuário a clicar em botões |
+| `X-Content-Type-Options`    | `nosniff`                             | Impede o browser de "adivinhar" o tipo MIME de um arquivo  | **MIME sniffing**: browser interpreta um arquivo texto como HTML/JS e executa código malicioso          |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Força HTTPS por 1 ano, incluindo subdomínios               | **SSL stripping**: atacante intercepta primeira request HTTP antes do redirect para HTTPS               |
+
+```java
+.headers(headers -> headers
+        .frameOptions(frame -> frame.deny())
+        .contentTypeOptions(cto -> {})
+        .httpStrictTransportSecurity(hsts -> hsts
+                .includeSubDomains(true)
+                .maxAgeInSeconds(31536000)))
+```
+
+---
+
+### Checklist A02
+
+- [x] HTTPS obrigatório em produção (TLS 1.2+)
+- [x] HSTS habilitado (1 ano, incluindo subdomínios)
+- [x] BCrypt fator ≥ 12 para senhas
+- [x] JWT secret ≥ 32 caracteres (validação fail-fast)
+- [x] Mascaramento de dados sensíveis em logs
+- [x] Stack traces/mensagens de erro suprimidos em produção
+- [x] Detalhes de constraint/schema do banco não expostos ao cliente
+- [x] Security headers (X-Frame-Options, X-Content-Type-Options, HSTS)
+- [ ] Criptografia em repouso para PII (email) — **pendente**
+- [ ] Rotação automática de JWT secret — **pendente**
+- [ ] Integração com HSM/KMS para chaves — **pendente**
+
+### Dados sensíveis identificados
+
+| Campo             | Armazenamento   | Proteção atual           | Status                     |
+| ----------------- | --------------- | ------------------------ | -------------------------- |
+| `User.password`   | DB              | BCrypt hash (fator 12)   | ✅                         |
+| `User.email`      | DB              | Texto plano              | ⚠️ Considerar criptografia |
+| `JWT_SECRET`      | Env var         | Validação ≥ 32 chars     | ⚠️ Migrar para Vault       |
+| Logs da aplicação | Arquivo/console | `SensitiveDataMasker`    | ✅                         |
+| Respostas de erro | HTTP response   | `include-message: never` | ✅                         |
+
+---
+
+## A03 (OWASP) — Injeção
+
+### O que é?
+
+**Injeção** ocorre quando dados não confiáveis (input do usuário) são enviados a um interpretador como parte de um comando ou consulta. O atacante "injeta" código malicioso que é **interpretado** pelo sistema como se fosse instruções legítimas.
+
+> **Analogia**: Imagine que você pede a um funcionário para buscar o arquivo "João". Se em vez de "João" alguém escrever "João. Depois apague todos os arquivos", o funcionário executaria ambos os comandos sem perceber a maldade.
+
+A injeção é **consistentemente uma das vulnerabilidades mais críticas** porque permite:
+
+- **Leitura** de dados que não deveria acessar (senhas, PII)
+- **Modificação** ou **destruição** de dados
+- **Execução de comandos** no servidor
+- **Bypass** completo de autenticação
+
+### Tipos de injeção e cenários de ataque
+
+#### 1. SQL Injection
+
+**O que é**: O atacante manipula consultas SQL através de inputs da aplicação.
+
+**Cenário de ataque — Tautologia (bypass de login):**
+
+```
+POST /api/auth/login
+{
+  "email": "' OR '1'='1' --",
+  "password": "qualquer"
+}
+```
+
+**O que aconteceria SEM proteção:**
+
+```sql
+-- A query montada por concatenação ficaria:
+SELECT * FROM users WHERE email = '' OR '1'='1' --' AND password = 'qualquer'
+
+-- Como '1'='1' é SEMPRE verdadeiro, retorna TODOS os usuários
+-- O "--" transforma o resto em comentário, ignorando a verificação de senha
+```
+
+**Resultado**: Login como o primeiro usuário do banco (geralmente admin).
+
+**Cenário de ataque — UNION-based (extração de dados):**
+
+```
+GET /api/movies?title=' UNION SELECT email, password, null, null FROM users --
+```
+
+**O que aconteceria SEM proteção:**
+
+```sql
+SELECT title, description, year, rating FROM movies WHERE title = ''
+UNION
+SELECT email, password, null, null FROM users --'
+
+-- Retorna senhas hasheadas junto com resultados de filmes!
+```
+
+**Cenário de ataque — Time-based Blind Injection:**
+
+```
+GET /api/movies?title=' OR SLEEP(5) --
+```
+
+**O que aconteceria**: Se a resposta demora 5 segundos, o atacante confirma que a injeção funciona. Pode então extrair dados um caractere por vez.
+
+#### 2. Log Injection (Log Forging)
+
+**O que é**: O atacante injeta caracteres de controle (`\n`, `\r`) em valores que serão gravados em logs, criando **linhas falsas** no arquivo de log.
+
+**Cenário de ataque:**
+
+```
+POST /api/auth/login
+{
+  "email": "hacker@evil.com\n2024-06-15 12:00:00 INFO  Acesso PERMITIDO para admin@cinelog.com",
+  "password": "123"
+}
+```
+
+**O que aconteceria SEM proteção:**
+
+```log
+2024-06-15 12:00:00 WARN  Login falhou para hacker@evil.com
+2024-06-15 12:00:00 INFO  Acesso PERMITIDO para admin@cinelog.com
+```
+
+A segunda linha é **completamente falsa**, mas parece legítima! Isso pode:
+
+- **Mascarar ataques** em análise forense
+- **Criar falsos positivos** confundindo a equipe de segurança
+- **Injetar ANSI escape codes** para manipular exibição em terminais
+
+#### 3. Header Injection / CRLF Injection
+
+**O que é**: O atacante injeta `\r\n` em valores que são usados em headers HTTP, podendo criar headers falsos ou até injetar corpo de resposta.
+
+**Cenário de ataque:**
+
+```
+GET /api/redirect?url=normal%0d%0aSet-Cookie:%20admin=true
+```
+
+**Resultado sem proteção**: O navegador recebe um cookie `admin=true` injetado pelo atacante.
+
+#### 4. Command Injection (OS Injection)
+
+**O que é**: O atacante injeta comandos do sistema operacional quando a aplicação executa processos externos.
+
+**Cenário de ataque:**
+
+```
+GET /api/report?filename=report.pdf;rm -rf /
+```
+
+**Nota**: O CineLog não executa processos externos, então este tipo não se aplica diretamente — mas documentamos para completude educacional.
+
+### Proteções implementadas no CineLog
+
+Adotamos **defesa em profundidade** — múltiplas camadas independentes:
+
+```
+           Requisição HTTP
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │   SqlInjectionFilter    │ ← Camada 1: bloqueia payloads antes
+    │   (OncePerRequestFilter)│    de chegar ao controller
+    └────────────┬────────────┘
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │   Bean Validation       │ ← Camada 2: @NotBlank, @Size, @Email
+    │   (DTOs tipados)        │    rejeita inputs malformados
+    └────────────┬────────────┘
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │   JPA + Prepared        │ ← Camada 3: parametrização de queries
+    │   Statements            │    IMPOSSÍVEL injetar SQL via bind vars
+    └────────────┬────────────┘
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │   InputSanitizer        │ ← Camada 4: sanitiza antes de gravar
+    │   (logs e telemetria)   │    em logs (anti Log Injection)
+    └─────────────────────────┘
+```
+
+#### Camada 1 — `SqlInjectionFilter` (defesa perimetral)
+
+| Aspecto                | Detalhe                                                      |
+| ---------------------- | ------------------------------------------------------------ |
+| **Classe**             | `com.cine.cinelog.shared.security.SqlInjectionFilter`        |
+| **Tipo**               | `OncePerRequestFilter` (executa uma vez por request)         |
+| **Posição no chain**   | Antes de `JwtAuthenticationFilter`                           |
+| **O que inspeciona**   | Todos os parâmetros da query string                          |
+| **O que ignora**       | Paths estáticos (/swagger-ui, /v3/api-docs, /actuator)       |
+| **Resposta ao ataque** | HTTP 400 com mensagem genérica (não revela padrão detectado) |
+
+**Padrões detectados:**
+
+| Padrão detectado          | Tipo de ataque               |
+| ------------------------- | ---------------------------- |
+| `UNION [ALL] SELECT`      | Extração de dados            |
+| `DROP TABLE`              | Destruição de dados          |
+| `INSERT INTO`             | Criação de registros         |
+| `DELETE FROM`             | Remoção de dados             |
+| `UPDATE <table> SET`      | Alteração de dados           |
+| `xp_cmdshell`             | Execução de comandos (MSSQL) |
+| `/* ... */`               | Bypass por comentário inline |
+| `' OR '1'='1`             | Tautologia (bypass de login) |
+| `'; --`                   | Terminação de query          |
+| `EXEC[UTE]`               | Execução de procedures       |
+| `information_schema`      | Enumeração de estrutura      |
+| `WAITFOR DELAY`           | Blind injection (MSSQL)      |
+| `BENCHMARK()` / `SLEEP()` | Blind injection (MySQL)      |
+
+**Exemplo de bloqueio:**
+
+```java
+// Requisição maliciosa:
+// GET /api/movies?title=' UNION SELECT email,password FROM users --
+//
+// SqlInjectionFilter detecta "UNION SELECT" no parâmetro "title"
+// → Log WARN com IP, URI, parâmetro (sanitizado)
+// → Retorna HTTP 400: {"detail": "A requisição contém caracteres inválidos."}
+// → Requisição NUNCA chega ao MovieController
+```
+
+#### Camada 2 — Bean Validation (tipagem forte)
+
+Os DTOs do Spring usam anotações de validação que rejeitam inputs malformados:
+
+```java
+public record CreateUserRequest(
+    @NotBlank @Size(max = 100) String name,
+    @NotBlank @Email @Size(max = 255) String email,
+    @NotBlank @Size(min = 8, max = 72) String password
+) {}
+```
+
+- `@Email` impede que `' OR '1'='1` passe como email
+- `@Size(max=72)` limita senhas, impedindo payloads longos
+- `@NotBlank` rejeita strings vazias ou só com espaços
+
+#### Camada 3 — JPA + Prepared Statements (proteção primária)
+
+```java
+// ✅ SEGURO — parâmetro é bind variable, NUNCA interpolado no SQL
+@Query("SELECT m FROM MediaEntity m WHERE m.title = :title")
+List<MediaEntity> findByTitle(@Param("title") String title);
+
+// O Hibernate gera:
+// PreparedStatement: SELECT * FROM media WHERE title = ?
+// Bind: ps.setString(1, "' UNION SELECT...")
+// O banco trata o valor como STRING LITERAL, não como SQL
+```
+
+**Por que Prepared Statements são eficazes:**
+
+| Sem Prepared Statement        | Com Prepared Statement                  |
+| ----------------------------- | --------------------------------------- |
+| `WHERE title = '' OR '1'='1'` | `WHERE title = ?` → bind `' OR '1'='1'` |
+| Banco **interpreta** como SQL | Banco trata como **texto literal**      |
+| Retorna todos os registros    | Retorna 0 registros (título não existe) |
+
+#### Camada 4 — `InputSanitizer` (proteção contra Log Injection)
+
+| Método                 | O que faz                                                   | Ataque prevenido            |
+| ---------------------- | ----------------------------------------------------------- | --------------------------- |
+| `sanitizeForLog()`     | Remove `\r`, `\n`, `\t` e ANSI escapes; trunca em 200 chars | Log Injection / Log Forging |
+| `containsSqlPattern()` | Detecta padrões SQL maliciosos via regex                    | SQL Injection               |
+| `sanitize()`           | Remove chars de controle (0x00-0x1F, 0x7F), limita tamanho  | Buffer overflow lógico      |
+
+**Uso no `SecurityBoundaryAspect`:**
+
+```java
+// Antes (vulnerável a log injection):
+log.warn("Acesso negado para usuário={}", username);
+
+// Depois (A03 — sanitizado):
+String safeUser = InputSanitizer.sanitizeForLog(username);
+log.warn("Acesso negado para usuário={}", safeUser);
+```
+
+### Checklist A03
+
+- [x] JPA com Prepared Statements em todas as queries
+- [x] `SqlInjectionFilter` como camada perimetral (query params)
+- [x] `InputSanitizer.sanitizeForLog()` em todos os logs com dados do usuário
+- [x] `InputSanitizer.containsSqlPattern()` com 14+ padrões de ataque
+- [x] Bean Validation com `@Email`, `@Size`, `@NotBlank` nos DTOs
+- [x] Resposta genérica no filtro (não revela padrão detectado)
+- [x] Paths estáticos excluídos do filtro (sem falsos positivos)
+- [x] IP do atacante registrado no log para análise forense
+- [x] Filtro posicionado antes da autenticação JWT
+- [x] Sem concatenação de strings em queries JPQL/SQL
+- [ ] Testar com payloads do OWASP SQLi Cheat Sheet — **pendente**
+- [ ] Adicionar rate limiting para IPs com tentativas de injeção — **pendente**
 
 ---
 

@@ -73,10 +73,12 @@ springdoc:
 
 server:
     error:
-        include-message: always
-        include-binding-errors: always
+        # A02: não expor detalhes internos ao cliente em produção.
+        # O perfil dev (application-dev.yml) pode sobrescrever para always.
+        include-message: never
+        include-binding-errors: never
         include-exception: false
-        include-stacktrace: never # stacktrace não vai pro cliente
+        include-stacktrace: never
 
 logging:
     level:

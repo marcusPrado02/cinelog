@@ -2,6 +2,7 @@ package com.cine.cinelog.shared.config;
 
 import com.cine.cinelog.shared.security.JwtAuthenticationFilter;
 import com.cine.cinelog.shared.security.JwtTokenService;
+import com.cine.cinelog.shared.security.SqlInjectionFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,7 +33,8 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // A02: BCrypt com fator de trabalho 12 (mínimo recomendado OWASP)
+        return new BCryptPasswordEncoder(12);
     }
 
     @Bean
@@ -59,15 +61,29 @@ public class SecurityConfig {
     }
 
     @Bean
+    public SqlInjectionFilter sqlInjectionFilter() {
+        return new SqlInjectionFilter();
+    }
+
+    @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             DaoAuthenticationProvider authProvider,
-            JwtAuthenticationFilter jwtFilter) throws Exception {
+            JwtAuthenticationFilter jwtFilter,
+            SqlInjectionFilter sqlInjectionFilter) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authProvider)
+                // A02: Security headers para prevenir clickjacking, MIME sniffing, XSS
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentTypeOptions(cto -> {
+                        })
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -84,6 +100,7 @@ public class SecurityConfig {
 
                         // Endpoints gerais (usuário logado)
                         .anyRequest().authenticated())
+                .addFilterBefore(sqlInjectionFilter, JwtAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

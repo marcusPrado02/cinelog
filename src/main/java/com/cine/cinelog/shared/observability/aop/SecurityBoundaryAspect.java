@@ -1,5 +1,6 @@
 package com.cine.cinelog.shared.observability.aop;
 
+import com.cine.cinelog.shared.security.InputSanitizer;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -66,18 +67,22 @@ public class SecurityBoundaryAspect {
 
         counter.increment();
 
+        // A03: sanitizar valores derivados do usuário antes de incluir em logs
+        String safeUser = InputSanitizer.sanitizeForLog(username);
+        String safePerm = InputSanitizer.sanitizeForLog(requiredPermission);
+
         if (!authorized && enforce) {
             log.warn("Acesso negado em {}.{} para usuário={} permissão={}",
-                    className, methodName, username, requiredPermission);
+                    className, methodName, safeUser, safePerm);
             throw new AccessDeniedException("Access denied to operation: " + requiredPermission);
         }
 
         if (!authorized) {
             log.warn("Tentativa de acesso não autorizado em {}.{} para usuário={} permissão={}",
-                    className, methodName, username, requiredPermission);
+                    className, methodName, safeUser, safePerm);
         } else {
             log.debug("Acesso permitido em {}.{} para usuário={} permissão={}",
-                    className, methodName, username, requiredPermission);
+                    className, methodName, safeUser, safePerm);
         }
 
         return pjp.proceed();
