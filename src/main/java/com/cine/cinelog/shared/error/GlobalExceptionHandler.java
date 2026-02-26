@@ -4,6 +4,7 @@ import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.error.DuplicateException;
 import com.cine.cinelog.core.domain.error.ErrorCode;
 import com.cine.cinelog.core.domain.error.ForbiddenOperationException;
+import com.cine.cinelog.shared.security.BusinessLimitExceededException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
@@ -320,6 +321,20 @@ public class GlobalExceptionHandler {
             pd.setTitle(ex.getStatusCode().toString());
         }
         setCommon(pd, req, "SPRING_ERROR");
+        return pd;
+    }
+
+    // ===== A04: Limite de negócio excedido → 429 =====
+    @ExceptionHandler(BusinessLimitExceededException.class)
+    public ProblemDetail handleBusinessLimitExceeded(BusinessLimitExceededException ex,
+            HttpServletRequest req) {
+        log.warn("Business limit excedido. Path: {}, Message: {}",
+                req.getRequestURI(), ex.getMessage());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+        pd.setTitle("Too Many Requests");
+        pd.setType(URI.create("https://api.cinelog.com/errors/rate-limit"));
+        setCommon(pd, req, "BUSINESS_LIMIT_EXCEEDED");
         return pd;
     }
 

@@ -786,6 +786,343 @@ log.warn("Acesso negado para usuário={}", safeUser);
 
 ---
 
+## A04 (OWASP) — Design Inseguro
+
+### O que é?
+
+> **Design Inseguro** é fundamentalmente diferente das outras categorias do OWASP Top 10.
+> Não se trata de um **bug de implementação** (como esquecer de parametrizar uma query), mas
+> da **ausência de controles de segurança na arquitetura** do sistema.
+>
+> Mesmo que o código esteja "correto" — sem bugs, sem vulnerabilidades técnicas — se o
+> **design não previu cenários de abuso**, o sistema é vulnerável.
+
+> **Analogia:** imagine uma casa com fechaduras de alta qualidade em todas as portas (boa
+> implementação), mas o arquiteto esqueceu de colocar porta nos fundos (design inseguro).
+> Nenhuma quantidade de "código bem escrito" resolve uma falha de design — é preciso
+> **repensar a arquitetura**.
+
+> **A diferença prática entre implementação insegura e design inseguro:**
+>
+> | Implementação insegura (A01-A03) | Design inseguro (A04)                                          |
+> | -------------------------------- | -------------------------------------------------------------- |
+> | Query SQL concatenada com input  | Nenhum limite de quantas queries um usuário pode fazer por dia |
+> | Senha armazenada em texto plano  | Nenhum controle de tentativas de login (brute force)           |
+> | Stack trace exposto na resposta  | Mensagens de erro que revelam se um email existe no sistema    |
+> | JWT sem validação de assinatura  | Nenhum controle de fluxo em operações multi-step               |
+>
+> **Princípio central:** um sistema seguro por design assume que **todo usuário é
+> potencialmente malicioso** e modela controles para cada cenário de abuso — **antes** de
+> escrever código.
+
+---
+
+### 1. Rate Limiting (anti brute force e anti DoS)
+
+#### O que é Rate Limiting?
+
+> É o mecanismo que controla **quantas requisições** um cliente pode fazer num período
+> de tempo. Sem ele, um atacante pode:
+>
+> | Ataque                  | O que acontece                                        | Impacto                       |
+> | ----------------------- | ----------------------------------------------------- | ----------------------------- |
+> | **Brute force**         | Testa milhares de senhas/segundo no `/api/auth/login` | Conta comprometida            |
+> | **Credential stuffing** | Usa lista de credenciais vazadas de outros sites      | Contas comprometidas em massa |
+> | **DoS**                 | Envia milhões de requests legítimas                   | Servidor indisponível         |
+> | **Scraping**            | Extrai todos os dados da API programaticamente        | Vazamento massivo de dados    |
+> | **Resource exhaustion** | Cria milhares de registros (reviews, mídia)           | Banco de dados lotado         |
+
+#### Algoritmo: Fixed Window
+
+> **Como funciona:**
+>
+> ```
+> Janela 1 (00:00 — 00:59)           Janela 2 (01:00 — 01:59)
+> ┌────────────────────────────┐      ┌────────────────────────────┐
+> │ Req 1, 2, 3... 100         │      │ Contador reseta → 0        │
+> │ Req 101 → HTTP 429         │      │ Req 1, 2, 3...             │
+> └────────────────────────────┘      └────────────────────────────┘
+> ```
+>
+> 1. O tempo é dividido em janelas fixas de **60 segundos**.
+> 2. Cada IP recebe um contador que incrementa a cada request.
+> 3. Quando a janela expira, o contador zera automaticamente.
+> 4. Se o contador ultrapassar o limite → HTTP 429 (Too Many Requests).
+>
+> **Vantagens:** simples, baixo uso de memória, fácil de entender.
+>
+> **Desvantagem:** na fronteira entre duas janelas, um cliente pode alcançar até 2x o
+> limite (100 no final da janela 1 + 100 no início da janela 2). Em produção, considerar
+> **Sliding Window** ou **Token Bucket** como alternativas.
+
+#### Limites configurados
+
+> | Tipo de endpoint                 | Limite por minuto | Justificativa                            |
+> | -------------------------------- | ----------------- | ---------------------------------------- |
+> | `/api/auth/**` (login, registro) | **10**            | Humano real não tenta login 10x/min      |
+> | Demais endpoints autenticados    | **100**           | Uso normal de API com margem confortável |
+> | Swagger, health check            | **Sem limite**    | Ferramentas de dev e monitoramento       |
+>
+> **Por que auth tem limite muito menor?** Endpoints de autenticação são os principais alvos
+> de brute force. Um humano real digita errado no máximo 3-5 vezes. Se alguém tenta 10 vezes
+> em 1 minuto, é quase certamente um ataque automatizado.
+
+#### Headers de resposta (RFC 6585)
+
+> O filtro adiciona headers informativos para que o cliente saiba seu status de rate limit:
+>
+> ```http
+> HTTP/1.1 200 OK
+> X-RateLimit-Limit: 100          ← Limite total da janela
+> X-RateLimit-Remaining: 87       ← Requisições restantes
+> X-RateLimit-Reset: 1740614460   ← Timestamp Unix de quando a janela reseta
+>
+> HTTP/1.1 429 Too Many Requests
+> Retry-After: 34                 ← Segundos até poder tentar novamente
+> X-RateLimit-Limit: 10
+> X-RateLimit-Remaining: 0
+> X-RateLimit-Reset: 1740614460
+> ```
+>
+> Esses headers permitem que clientes bem-comportados (apps mobile, frontends)
+> implementem **backoff** automático, mostrando "tente novamente em X segundos".
+
+#### Resolução de IP do cliente (atrás de proxy)
+
+> ```
+> Cliente → Nginx/ALB (proxy) → Spring Boot
+>            │                      │
+>            │ X-Forwarded-For:     │ request.getRemoteAddr()
+>            │ 189.1.2.3            │ retorna IP do PROXY
+>            │                      │
+>            └──── IP real ─────────┘
+> ```
+>
+> **Ordem de prioridade para identificar o IP:**
+>
+> 1. `X-Forwarded-For` — header padrão de proxies (primeiro IP da cadeia)
+> 2. `X-Real-IP` — configuração alternativa do Nginx
+> 3. `request.getRemoteAddr()` — fallback (IP direto)
+>
+> **⚠️ Cuidado:** o header `X-Forwarded-For` pode ser **falsificado** pelo cliente.
+> Em produção, o proxy DEVE ser configurado para **sobrescrever** (não concatenar):
+>
+> ```nginx
+> # Nginx: garante que o X-Forwarded-For contém apenas o IP real
+> proxy_set_header X-Forwarded-For $remote_addr;
+> ```
+
+**Implementação:** `com.cine.cinelog.shared.security.RateLimitFilter`
+
+---
+
+### 2. Anti-Enumeração de Usuários
+
+#### O que é enumeração?
+
+> É quando o atacante descobre **quais usuários existem** no sistema baseando-se em
+> **diferenças nas respostas** da API.
+>
+> **Cenário de ataque SEM proteção:**
+>
+> ```
+> POST /api/auth/login  { "email": "admin@cinelog.com", "password": "errada" }
+> → 401: "Senha incorreta"              ← atacante sabe: EMAIL EXISTE
+>
+> POST /api/auth/login  { "email": "naoexiste@x.com", "password": "errada" }
+> → 404: "Usuário não encontrado"       ← atacante sabe: EMAIL NÃO EXISTE
+> ```
+>
+> Com duas respostas diferentes, o atacante mapeia quais emails estão cadastrados.
+> Depois usa essas listas para **credential stuffing** (testar senhas vazadas de outros
+> serviços — estudos mostram que ~65% dos usuários reutilizam senhas).
+>
+> **A enumeração não acontece apenas por mensagens.** Pode ser por:
+>
+> | Vetor de enumeração             | Como funciona                                           |
+> | ------------------------------- | ------------------------------------------------------- |
+> | **Mensagem de erro diferente**  | "Usuário não encontrado" vs "Senha incorreta"           |
+> | **Código HTTP diferente**       | 404 vs 401                                              |
+> | **Tempo de resposta diferente** | Email inexistente = 5ms; existente = 300ms (fez BCrypt) |
+> | **Endpoint de registro**        | "Email já cadastrado" confirma existência               |
+> | **Endpoint de reset de senha**  | "Email não encontrado" confirma inexistência            |
+
+#### 3 técnicas de prevenção implementadas
+
+> **Técnica 1 — Mensagens genéricas:**
+>
+> ```java
+> // ❌ INSEGURO — revela se email existe
+> if (user == null) throw new Exception("Usuário não encontrado");
+> if (!passwordMatch) throw new Exception("Senha incorreta");
+>
+> // ✅ SEGURO — mensagem IDÊNTICA em ambos os casos
+> throw new AuthenticationException("Credenciais inválidas.");
+> ```
+>
+> **Técnica 2 — Timing noise (anti timing-attack):**
+>
+> ```java
+> // Problema: mesmo com mensagem idêntica, o TEMPO denuncia
+> // - Email inexistente: 5ms (não fez BCrypt)
+> // - Email existente:   300ms (fez BCrypt, fator 12)
+> //
+> // Solução: delay aleatório de 100-300ms em TODA resposta de auth
+> antiEnumerationService.addTimingNoise();
+> ```
+>
+> **Por que o delay é aleatório com `SecureRandom`?** Se fosse fixo (ex: sempre 200ms), o
+> atacante calcularia a média e ainda detectaria a diferença. Com variação aleatória via
+> `SecureRandom` (entropia do SO), a distribuição de tempos se torna indistinguível.
+>
+> **Técnica 3 — Mensagens genéricas em registro e reset de senha:**
+>
+> ```java
+> // ❌ INSEGURO
+> "Este email já está cadastrado."
+>
+> // ✅ SEGURO
+> "Se este email estiver disponível, você receberá um link de confirmação."
+> ```
+
+**Implementação:** `com.cine.cinelog.shared.security.AntiEnumerationService`
+
+---
+
+### 3. Limites de Negócio (Business Logic Abuse Prevention)
+
+#### O que são limites de negócio?
+
+> São restrições que fazem sentido no **contexto do domínio**, não apenas no nível técnico.
+> Rate limiting controla "quantas requests por minuto"; business limits controlam
+> "quantos recursos por entidade de domínio".
+>
+> **Cenário de ataque SEM business limits:**
+>
+> ```
+> Atacante cria conta gratuita
+> → Script: 1 request/segundo (abaixo do rate limit de 100/min)
+> → Cria 86.400 reviews por dia
+> → Banco de dados cresce 100MB/dia com lixo
+> → Performance degrada para todos os usuários
+> → Storage enche → aplicação CAIA
+> ```
+>
+> Cada request individual é "válida" (autenticada, formato correto, dentro do rate limit).
+> Mas o **volume acumulado** é abusivo.
+
+#### Limites definidos para o CineLog
+
+> | Recurso                 | Limite    | Justificativa                        |
+> | ----------------------- | --------- | ------------------------------------ |
+> | Reviews por dia/usuário | **50**    | Humano real não avalia 50 filmes/dia |
+> | Itens na watchlist      | **1.000** | Limite razoável para lista pessoal   |
+> | Itens por operação bulk | **100**   | Previne payloads gigantes            |
+> | Upload de imagem        | **5 MB**  | Previne resource exhaustion          |
+
+#### Exemplo de uso no service layer
+
+> ```java
+> @Service
+> public class ReviewService {
+>
+>     private final BusinessLimitValidator limitValidator;
+>     private final ReviewRepository reviewRepository;
+>
+>     public Review createReview(CreateReviewRequest request, Long userId) {
+>         // Conta reviews do usuário criadas hoje
+>         long todayCount = reviewRepository.countByUserIdAndCreatedAtToday(userId);
+>
+>         // Valida contra o limite de negócio
+>         limitValidator.validateLimit(
+>             todayCount,
+>             BusinessLimitValidator.MAX_REVIEWS_PER_DAY,
+>             "reviews diárias"
+>         );
+>         // Se passou, cria a review normalmente
+>         // Se excedeu → BusinessLimitExceededException → HTTP 429
+>     }
+> }
+> ```
+
+**Implementação:** `com.cine.cinelog.shared.security.BusinessLimitValidator`
+
+---
+
+### 4. Cadeia de filtros completa (ordem de execução)
+
+> A **ordem** dos filtros importa para segurança e performance. A cadeia do CineLog:
+>
+> ```
+> Request HTTP
+>     │
+>     ▼
+> ┌──────────────────────────┐
+> │ 1. RateLimitFilter       │ ← Bloqueia antes de qualquer processamento
+> │    (por IP, Fixed Window) │    Previne DoS e brute force
+> └──────────┬───────────────┘
+>            │
+>            ▼
+> ┌──────────────────────────┐
+> │ 2. SqlInjectionFilter    │ ← Detecta payloads maliciosos (A03)
+> │    (query params)         │    Antes de autenticação (economiza CPU)
+> └──────────┬───────────────┘
+>            │
+>            ▼
+> ┌──────────────────────────┐
+> │ 3. JwtAuthFilter         │ ← Valida token e define SecurityContext
+> │    (Bearer token)         │    Após filtros de segurança perimetral
+> └──────────┬───────────────┘
+>            │
+>            ▼
+> ┌──────────────────────────┐
+> │ 4. URL Authorization     │ ← hasRole, authenticated, permitAll (A01)
+> │    (HttpSecurity)         │    Baseado no SecurityContext do passo 3
+> └──────────┬───────────────┘
+>            │
+>            ▼
+> ┌──────────────────────────┐
+> │ 5. Controller +          │ ← @SecureOperation, @PreAuthorize (A01)
+> │    Method Security        │    Validação granular no método
+> └──────────┬───────────────┘
+>            │
+>            ▼
+> ┌──────────────────────────┐
+> │ 6. BusinessLimit         │ ← Limites de domínio por recurso (A04)
+> │    Validator              │    Validação no service layer
+> └──────────────────────────┘
+> ```
+>
+> **Por que essa ordem?**
+>
+> - **Rate limit primeiro:** se o cliente está fazendo DoS, não faz sentido gastar CPU
+>   verificando SQL injection ou validando JWT.
+> - **SQL injection antes do JWT:** se o payload é malicioso, rejeitar antes de decodificar
+>   o token (que envolve operações criptográficas).
+> - **Business limits por último:** só faz sentido verificar cotas de domínio para
+>   usuários autenticados e autorizados.
+
+---
+
+### Checklist A04
+
+- [x] Rate limiting por IP (Fixed Window, 100/min geral, 10/min auth)
+- [x] Headers de rate limit (X-RateLimit-Limit, Remaining, Reset, Retry-After)
+- [x] Resolução de IP real via X-Forwarded-For / X-Real-IP
+- [x] Anti-enumeração: mensagens genéricas de erro em auth
+- [x] Anti-enumeração: timing noise com SecureRandom (100-300ms)
+- [x] Business limits: cotas por recurso (reviews/dia, watchlist, bulk, upload)
+- [x] `BusinessLimitExceededException` → HTTP 429 via GlobalExceptionHandler
+- [x] Cadeia de filtros ordenada (rate limit → injection → auth → authorization)
+- [x] Endpoints Swagger/health excluídos do rate limit
+- [x] Log de rate limit excedido com IP sanitizado
+- [ ] Rate limiting distribuído com Redis (múltiplas instâncias) — **pendente**
+- [ ] Rate limiting por usuário autenticado (além de IP) — **pendente**
+- [ ] CAPTCHA após N tentativas falhas de login — **pendente**
+- [ ] Threat modeling formal com abuse cases documentados — **pendente**
+
+---
+
 ## Proteções Implementadas
 
 ### 1. SQL Injection

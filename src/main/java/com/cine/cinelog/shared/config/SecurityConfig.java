@@ -2,6 +2,7 @@ package com.cine.cinelog.shared.config;
 
 import com.cine.cinelog.shared.security.JwtAuthenticationFilter;
 import com.cine.cinelog.shared.security.JwtTokenService;
+import com.cine.cinelog.shared.security.RateLimitFilter;
 import com.cine.cinelog.shared.security.SqlInjectionFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -70,7 +71,8 @@ public class SecurityConfig {
             HttpSecurity http,
             DaoAuthenticationProvider authProvider,
             JwtAuthenticationFilter jwtFilter,
-            SqlInjectionFilter sqlInjectionFilter) throws Exception {
+            SqlInjectionFilter sqlInjectionFilter,
+            RateLimitFilter rateLimitFilter) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
@@ -100,6 +102,9 @@ public class SecurityConfig {
 
                         // Endpoints gerais (usuário logado)
                         .anyRequest().authenticated())
+                // A04: Rate limit primeiro (bloqueia DoS antes de qualquer processamento)
+                .addFilterBefore(rateLimitFilter, SqlInjectionFilter.class)
+                // A03: Detecção de SQL injection antes de autenticação
                 .addFilterBefore(sqlInjectionFilter, JwtAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
