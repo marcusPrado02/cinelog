@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Aspect de "security boundary" que registra telemetria de acesso a operações
@@ -46,11 +45,12 @@ public class SecurityBoundaryAspect {
 
         String module = secureOperation.module().isBlank() ? "UNKNOWN" : secureOperation.module();
         String requiredPermission = secureOperation.value();
+        boolean enforce = secureOperation.enforce();
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth != null && auth.getName() != null ? auth.getName() : "anonymous";
 
-        boolean authorized = isAuthorized(auth, requiredPermission);
+        boolean authorized = isAuthorized(auth, requiredPermission, enforce);
         String outcome = authorized ? "ALLOWED" : "DENIED";
 
         List<Tag> tags = List.of(
@@ -66,7 +66,7 @@ public class SecurityBoundaryAspect {
 
         counter.increment();
 
-        if (!authorized && secureOperation.enforce()) {
+        if (!authorized && enforce) {
             log.warn("Acesso negado em {}.{} para usuário={} permissão={}",
                     className, methodName, username, requiredPermission);
             throw new AccessDeniedException("Access denied to operation: " + requiredPermission);
@@ -83,10 +83,13 @@ public class SecurityBoundaryAspect {
         return pjp.proceed();
     }
 
-    private boolean isAuthorized(Authentication auth, String requiredPermission) {
+    private boolean isAuthorized(Authentication auth, String requiredPermission, boolean enforce) {
         if (requiredPermission == null || requiredPermission.isBlank()) {
-            // Sem permissão específica configurada, não fazemos enforcement.
-            return true;
+            // Quando sem permissão específica, permitimos apenas uso observável
+            // (enforce=false).
+            // Com enforce=true, falhamos em modo fechado para evitar falsa sensação de
+            // proteção.
+            return !enforce;
         }
         if (auth == null || !auth.isAuthenticated()) {
             return false;
@@ -101,4 +104,5 @@ public class SecurityBoundaryAspect {
                 .map(Object::toString)
                 .anyMatch(requiredPermission::equals);
     }
+
 }

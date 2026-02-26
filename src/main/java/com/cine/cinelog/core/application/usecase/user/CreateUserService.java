@@ -18,7 +18,7 @@ import java.util.Map;
 
 /**
  * Serviço responsável por criar novos usuários no sistema.
- * 
+ *
  * <p>
  * Este caso de uso coordena a criação de um novo usuário, aplicando
  * validações rigorosas para garantir a integridade dos dados:
@@ -28,18 +28,18 @@ import java.util.Map;
  * <li>Verificação de unicidade de email (não pode haver emails duplicados)</li>
  * <li>Aplicação de políticas de domínio do usuário</li>
  * </ul>
- * 
+ *
  * <p>
  * O serviço realiza logging detalhado de todas as etapas do processo
  * de criação para facilitar auditoria e troubleshooting.
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link CreateUserUseCase} e utilizando a porta de saída
  * {@link UserRepositoryPort}
  * para persistência dos dados.
- * 
+ *
  * @since 1.0
  * @see CreateUserUseCase
  * @see UserPolicy
@@ -63,11 +63,11 @@ public class CreateUserService implements CreateUserUseCase {
 
     /**
      * Executa a criação de um novo usuário no sistema.
-     * 
+     *
      * <p>
      * Aplica todas as validações necessárias antes de persistir,
      * incluindo validação de campos, formato de email e unicidade.
-     * 
+     *
      * @param user o usuário a ser criado, contendo nome, email e senha
      * @return o usuário criado e persistido, com ID gerado
      * @throws DomainException se o usuário violar alguma regra de negócio ou
@@ -78,7 +78,7 @@ public class CreateUserService implements CreateUserUseCase {
     @Observed(name = "user.create", contextualName = "create-user-service")
     @Measured("cinelog.service.user.create")
     @AuditableAction(module = "USER", action = "CREATE", description = "Criação de novo usuário no sistema")
-    @SecureOperation(module = "USER")
+    @SecureOperation(module = "USER", value = "USER_ADMIN")
     public User execute(User user) {
         log.debug("Iniciando execute. Parâmetros: {}", Map.of("name", user.getName(), "email", user.getEmail()));
 

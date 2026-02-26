@@ -136,59 +136,54 @@ public TokenResponse refresh(@RequestBody RefreshTokenRequest request) {
 
 ## Autorização
 
-### Roles (Papéis)
+### A01 (OWASP) — Controle de Acesso Quebrado
+
+O projeto aplica autorização em duas camadas complementares:
+
+1. **URL Authorization** em `HttpSecurity.authorizeHttpRequests`.
+2. **Method Security** com `@PreAuthorize` e `@SecureOperation`.
+
+Modelo adotado: **deny-by-default** (`anyRequest().authenticated()`) com regras explícitas para superfícies administrativas.
+
+### URL Authorization (estado atual)
 
 ```java
-public enum Role {
-    USER,      // Usuário comum
-    ADMIN,     // Administrador
-    MODERATOR  // Moderador
+http.authorizeHttpRequests(auth -> auth
+    .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/auth/**").permitAll()
+    .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+    .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OPS")
+    .anyRequest().authenticated());
+```
+
+### Method Security e `@SecureOperation`
+
+- `@EnableMethodSecurity` está ativo.
+- `@SecureOperation` usa `enforce=true` por padrão.
+- Com `enforce=true`, ausência de permissão configurada resulta em **negação** (fail-closed).
+- Recomendação: para operação sensível, declarar sempre `value` (permissão) e `module`.
+
+Exemplo:
+
+```java
+@SecureOperation(module = "USER", value = "USER_ADMIN")
+public User create(CreateUserCommand command) {
+    // ...
 }
 ```
 
-### Anotações de Segurança
+### Riscos tratados nesta revisão
 
-```java
-@RestController
-@RequestMapping("/api/v1/admin")
-public class AdminController {
+- **Inconsistência de path admin**: `/admin/**` agora exige `ADMIN` ou `OPS` no filtro HTTP.
+- **Falsa sensação de segurança em AOP**: `@SecureOperation` segue comportamento fechado por padrão (`enforce=true`).
+- **Superfície de actuator**: somente `/actuator/health` e `/actuator/info` públicos.
 
-    @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<User> getAllUsers() {
-        // Apenas admins podem acessar
-    }
+### Checklist rápido de validação (A01)
 
-    @DeleteMapping("/media/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
-    public void deleteMedia(@PathVariable Long id) {
-        // Admins e moderadores podem acessar
-    }
-
-    @PutMapping("/users/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
-    public User updateUser(@PathVariable Long id, @RequestBody UserRequest request) {
-        // Admin ou o próprio usuário
-    }
-}
-```
-
-### Method Security
-
-```java
-@Configuration
-@EnableMethodSecurity
-public class SecurityConfig {
-
-    @Bean
-    public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
-        DefaultMethodSecurityExpressionHandler handler =
-            new DefaultMethodSecurityExpressionHandler();
-        handler.setPermissionEvaluator(new CustomPermissionEvaluator());
-        return handler;
-    }
-}
-```
+1. Usuário sem token em endpoint protegido → `401`.
+2. Usuário autenticado sem role adequada em `/admin/**` → `403`.
+3. Usuário com `ROLE_ADMIN` ou `ROLE_OPS` em `/admin/**` → acesso permitido.
+4. Endpoint com `@SecureOperation` sem authority requerida → `403` quando `enforce=true`.
 
 ---
 
@@ -224,23 +219,13 @@ public class CreateMediaRequest {
 
 ### 3. CSRF (Cross-Site Request Forgery)
 
-**Proteção**: Token CSRF para sessões
+**Configuração atual**: CSRF desabilitado para API stateless com JWT.
 
 ```java
-@Configuration
-public class SecurityConfig {
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf()
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .and()
-            // ...
-        return http.build();
-    }
-}
+http.csrf(csrf -> csrf.disable());
 ```
+
+**Justificativa**: a aplicação usa `SessionCreationPolicy.STATELESS` e autenticação por Bearer token.
 
 ### 4. Clickjacking
 
@@ -349,11 +334,11 @@ public class SecurityConfig {
 
 **Requisitos**:
 
--   Mínimo 8 caracteres
--   Pelo menos 1 letra maiúscula
--   Pelo menos 1 letra minúscula
--   Pelo menos 1 número
--   Pelo menos 1 caractere especial
+- Mínimo 8 caracteres
+- Pelo menos 1 letra maiúscula
+- Pelo menos 1 letra minúscula
+- Pelo menos 1 número
+- Pelo menos 1 caractere especial
 
 **Validação**:
 
@@ -390,9 +375,9 @@ private String secret;
 
 **Melhor prática**: Use serviços de gerenciamento de secrets:
 
--   AWS Secrets Manager
--   Azure Key Vault
--   HashiCorp Vault
+- AWS Secrets Manager
+- Azure Key Vault
+- HashiCorp Vault
 
 ### 3. HTTPS
 
@@ -538,25 +523,21 @@ public Media createMedia(@RequestBody CreateMediaRequest request) {
 ### Procedimento
 
 1. **Detecção**
-
     - Monitorar logs
     - Alertas automatizados
     - Relatórios de usuários
 
 2. **Contenção**
-
     - Isolar sistema afetado
     - Revogar tokens comprometidos
     - Bloquear IPs maliciosos
 
 3. **Erradicação**
-
     - Corrigir vulnerabilidade
     - Atualizar dependências
     - Aplicar patches
 
 4. **Recuperação**
-
     - Restaurar sistema
     - Validar funcionalidade
     - Monitorar atividade
@@ -568,9 +549,9 @@ public Media createMedia(@RequestBody CreateMediaRequest request) {
 
 ### Contatos de Emergência
 
--   **Security Team**: security@cinelog.com
--   **On-Call**: +55 11 9999-9999
--   **Incident Response**: incidents@cinelog.com
+- **Security Team**: security@cinelog.com
+- **On-Call**: +55 11 9999-9999
+- **Incident Response**: incidents@cinelog.com
 
 ---
 
@@ -578,23 +559,23 @@ public Media createMedia(@RequestBody CreateMediaRequest request) {
 
 ### Pre-Deploy
 
--   [ ] Secrets não commitados
--   [ ] Dependências atualizadas
--   [ ] Scan de vulnerabilidades executado
--   [ ] Testes de segurança passando
--   [ ] HTTPS configurado
--   [ ] Rate limiting habilitado
--   [ ] Logs de auditoria ativos
--   [ ] Backups configurados
+- [ ] Secrets não commitados
+- [ ] Dependências atualizadas
+- [ ] Scan de vulnerabilidades executado
+- [ ] Testes de segurança passando
+- [ ] HTTPS configurado
+- [ ] Rate limiting habilitado
+- [ ] Logs de auditoria ativos
+- [ ] Backups configurados
 
 ### Post-Deploy
 
--   [ ] Monitoramento ativo
--   [ ] Alertas configurados
--   [ ] Documentação atualizada
--   [ ] Equipe notificada
--   [ ] Testes de penetração agendados
+- [ ] Monitoramento ativo
+- [ ] Alertas configurados
+- [ ] Documentação atualizada
+- [ ] Equipe notificada
+- [ ] Testes de penetração agendados
 
 ---
 
-**Última atualização**: Dezembro 2025
+**Última atualização**: Fevereiro 2026
