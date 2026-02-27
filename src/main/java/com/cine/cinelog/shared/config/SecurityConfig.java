@@ -81,7 +81,6 @@ public class SecurityConfig {
         http
                 // A05: CORS restritivo — origens configuráveis por profile
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authProvider)
                 // A02/A05: Security headers via Spring Security
