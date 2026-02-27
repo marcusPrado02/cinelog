@@ -1,5 +1,7 @@
 package com.cine.cinelog.shared.config;
 
+import com.cine.cinelog.shared.observability.security.SecurityEventLogger;
+import com.cine.cinelog.shared.observability.security.SecurityMetricsService;
 import com.cine.cinelog.shared.security.JwtAuthenticationFilter;
 import com.cine.cinelog.shared.security.JwtTokenService;
 import com.cine.cinelog.shared.security.RateLimitFilter;
@@ -59,13 +61,18 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             JwtTokenService jwtTokenService,
-            UserDetailsService userDetailsService) {
-        return new JwtAuthenticationFilter(jwtTokenService, userDetailsService);
+            UserDetailsService userDetailsService,
+            SecurityEventLogger securityEventLogger,
+            SecurityMetricsService securityMetrics) {
+        return new JwtAuthenticationFilter(jwtTokenService, userDetailsService,
+                securityEventLogger, securityMetrics);
     }
 
     @Bean
-    public SqlInjectionFilter sqlInjectionFilter() {
-        return new SqlInjectionFilter();
+    public SqlInjectionFilter sqlInjectionFilter(
+            SecurityEventLogger securityEventLogger,
+            SecurityMetricsService securityMetrics) {
+        return new SqlInjectionFilter(securityEventLogger, securityMetrics);
     }
 
     @Bean

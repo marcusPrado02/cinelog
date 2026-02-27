@@ -1,5 +1,8 @@
 package com.cine.cinelog.shared.security;
 
+import com.cine.cinelog.shared.observability.security.SecurityEvent;
+import com.cine.cinelog.shared.observability.security.SecurityEventLogger;
+import com.cine.cinelog.shared.observability.security.SecurityMetricsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -65,6 +68,16 @@ import java.util.Set;
 @Slf4j
 public class SqlInjectionFilter extends OncePerRequestFilter {
 
+    /** A09:2025 — Logger e métricas de segurança. */
+    private final SecurityEventLogger securityEventLogger;
+    private final SecurityMetricsService securityMetrics;
+
+    public SqlInjectionFilter(SecurityEventLogger securityEventLogger,
+            SecurityMetricsService securityMetrics) {
+        this.securityEventLogger = securityEventLogger;
+        this.securityMetrics = securityMetrics;
+    }
+
     /**
      * Paths ignorados pelo filtro (conteúdo estático e documentação).
      * Não precisam de verificação SQL pois não interagem com banco de dados.
@@ -100,6 +113,13 @@ public class SqlInjectionFilter extends OncePerRequestFilter {
                             InputSanitizer.sanitizeForLog(uri),
                             InputSanitizer.sanitizeForLog(entry.getKey()),
                             InputSanitizer.sanitizeForLog(value));
+
+                    // A09:2025 — Evento de segurança ALERT + métrica dedicada
+                    securityEventLogger.log(SecurityEvent.SQL_INJECTION_ATTEMPT, Map.of(
+                            "ip", InputSanitizer.sanitizeForLog(request.getRemoteAddr()),
+                            "uri", InputSanitizer.sanitizeForLog(uri),
+                            "param", InputSanitizer.sanitizeForLog(entry.getKey())));
+                    securityMetrics.incrementSqlInjectionAttempt();
 
                     rejectRequest(response);
                     return;

@@ -79,6 +79,45 @@
         <reconnectionDelay>5000</reconnectionDelay>
     </appender>
 
+    <!-- ========= A09:2025 — Security Log (marker-based routing) ========= -->
+    <!--
+        Appender dedicado para eventos de segurança.
+        Filtra pelo Marker "SECURITY" emitido pelo SecurityEventLogger.
+        Retenção: 90 dias (vs 30 dos logs gerais) — compliance LGPD/PCI-DSS.
+    -->
+    <appender name="SECURITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}-security.log</file>
+
+        <!-- Só aceita eventos com marker SECURITY -->
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator class="ch.qos.logback.classic.boolex.OnMarkerEvaluator">
+                <marker>SECURITY</marker>
+            </evaluator>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp />
+                <version />
+                <logLevel />
+                <loggerName />
+                <threadName />
+                <message />
+                <mdc />
+                <context />
+                <stackTrace />
+            </providers>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}-security.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <!-- 90 dias para logs de segurança (compliance) -->
+            <maxHistory>90</maxHistory>
+        </rollingPolicy>
+    </appender>
+
     <!-- ========= Wrappers assíncronos ========= -->
     <appender name="ASYNC_JSON_CONSOLE"
         class="ch.qos.logback.classic.AsyncAppender">
@@ -101,23 +140,43 @@
         <discardingThreshold>0</discardingThreshold>
     </appender>
 
+    <appender name="ASYNC_SECURITY_FILE"
+        class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="SECURITY_FILE" />
+        <queueSize>4096</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
     <!-- ========= Perfis ========= -->
 
-    <!-- Profile dev/local: console texto + arquivo JSON -->
+    <!-- A09:2025 — Logger dedicado de segurança (recebe via SecurityEventLogger) -->
+    <logger name="SECURITY" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_SECURITY_FILE" />
+    </logger>
+
+    <!-- Profile dev/local: console texto + arquivo JSON + security file -->
     <springProfile name="dev,local">
         <root level="DEBUG">
             <appender-ref ref="PLAIN_CONSOLE" />
             <appender-ref ref="ASYNC_JSON_FILE" />
         </root>
+        <logger name="SECURITY" level="DEBUG" additivity="false">
+            <appender-ref ref="PLAIN_CONSOLE" />
+            <appender-ref ref="ASYNC_SECURITY_FILE" />
+        </logger>
     </springProfile>
 
-    <!-- Profile prod: só JSON (console + file + logstash) -->
+    <!-- Profile prod: só JSON (console + file + logstash + security) -->
     <springProfile name="prod">
         <root level="INFO">
             <appender-ref ref="ASYNC_JSON_CONSOLE" />
             <appender-ref ref="ASYNC_JSON_FILE" />
             <appender-ref ref="ASYNC_LOGSTASH" />
         </root>
+        <logger name="SECURITY" level="INFO" additivity="false">
+            <appender-ref ref="ASYNC_SECURITY_FILE" />
+            <appender-ref ref="ASYNC_LOGSTASH" />
+        </logger>
     </springProfile>
 
     <!-- Fallback profile -->

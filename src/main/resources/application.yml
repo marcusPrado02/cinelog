@@ -166,6 +166,13 @@ cinelog:
             # A07:2025 — Refresh token rotation
             refresh-token-expiration-seconds: ${CINELOG_AUTH_REFRESH_TOKEN_EXPIRATION_SECONDS:604800}
         enabled: true
+        # A09:2025 — Security alerting thresholds
+        alerting:
+            window-seconds: ${CINELOG_SECURITY_ALERTING_WINDOW_SECONDS:300}
+            threshold-auth-failure: ${CINELOG_SECURITY_ALERTING_THRESHOLD_AUTH_FAILURE:10}
+            threshold-sqli: ${CINELOG_SECURITY_ALERTING_THRESHOLD_SQLI:3}
+            threshold-rate-limit: ${CINELOG_SECURITY_ALERTING_THRESHOLD_RATE_LIMIT:50}
+            threshold-tamper: ${CINELOG_SECURITY_ALERTING_THRESHOLD_TAMPER:1}
     tmdb:
         base-url: https://api.themoviedb.org/3
         api-key: ${TMDB_API_KEY:coloque_sua_key_aqui}

@@ -2871,24 +2871,311 @@ cinelog:
 
 ## A09:2025 (OWASP) — Security Logging and Alerting Failures
 
-> **Status:** parcialmente implementado.
+> **Status:** implementado.
 >
 > Esta categoria abrange falhas em logging, monitoramento e alertas de segurança.
 > Sem logs adequados e alertas, ataques podem passar despercebidos por semanas ou meses.
-> Parte das proteções já existe: mascaramento de dados sensíveis (A04:2025),
-> sanitização de logs (A05:2025 — InputSanitizer), e infraestrutura de observabilidade.
+> Segundo o IBM Cost of a Data Breach 2024, o tempo médio para identificar uma breach
+> é **194 dias**. Com logging e alertas bem configurados, esse tempo cai para horas ou minutos.
 
-### Pontos a implementar
+### O problema
+
+Imagine o seguinte cenário: um atacante está fazendo **credential stuffing** no seu endpoint
+de login. Ele testa 10.000 credenciais vazadas em 30 minutos. O que acontece se você não tem
+logging de segurança?
+
+| Situação                    | Sem A09                      | Com A09                             |
+| --------------------------- | ---------------------------- | ----------------------------------- |
+| Brute force no login        | Ninguém percebe              | Alerta em 5 min                     |
+| JWT adulterado              | Catch silencioso, log vazio  | `SEC-010` com IP, URI e razão       |
+| SQL injection tentada       | Warning no log geral (ruído) | ALERT no log de segurança dedicado  |
+| Quem acessou dados de quem? | Sem registro                 | Audit trail com principal + recurso |
+| Rate limit atingido         | Warning sem métrica          | Counter Prometheus + alerta         |
+
+### Cenário real: o catch silencioso
+
+**Antes (vulnerável):**
+
+```java
+// JwtAuthenticationFilter.java — ANTES
+} catch (Exception e) {
+    // token inválido/expirado -> segue sem autenticar   ← SILENT!
+    SecurityContextHolder.clearContext();
+}
+```
+
+O atacante envia milhares de JWTs adulterados e nenhum log é gerado. Nenhuma métrica. Nenhum alerta.
+A equipe de segurança nunca descobre.
+
+**Depois (corrigido):**
+
+```java
+// JwtAuthenticationFilter.java — DEPOIS
+} catch (ExpiredJwtException e) {
+    securityEventLogger.log(SecurityEvent.JWT_EXPIRED, Map.of(
+            "uri", InputSanitizer.sanitizeForLog(request.getRequestURI()),
+            "reason", "expired"));
+    securityMetrics.incrementJwtFailure("expired");
+    SecurityContextHolder.clearContext();
+
+} catch (MalformedJwtException | SignatureException e) {
+    securityEventLogger.log(SecurityEvent.JWT_INVALID, Map.of(
+            "uri", InputSanitizer.sanitizeForLog(request.getRequestURI()),
+            "reason", e.getClass().getSimpleName()));
+    securityMetrics.incrementJwtFailure("invalid");
+    SecurityContextHolder.clearContext();
+}
+```
+
+Agora cada JWT inválido gera: log estruturado JSON no arquivo de segurança dedicado,
+métrica Micrometer (`cinelog.security.jwt_failures_total`), e avaliação de threshold
+para possível alerta.
+
+### Implementação
+
+#### 1. Taxonomia de eventos (SecurityEvent)
+
+Todos os eventos de segurança são tipados em um enum com campos padronizados:
+
+```java
+public enum SecurityEvent {
+    AUTH_SUCCESS          ("SEC-001", Severity.INFO,     "Login bem-sucedido",                    false),
+    AUTH_FAILURE          ("SEC-002", Severity.WARNING,  "Tentativa de login falha",              true),
+    AUTH_LOCKED           ("SEC-003", Severity.CRITICAL, "Conta bloqueada por excesso de falhas", true),
+    JWT_INVALID           ("SEC-010", Severity.WARNING,  "JWT inválido recebido",                 true),
+    JWT_EXPIRED           ("SEC-011", Severity.INFO,     "JWT expirado",                          false),
+    RATE_LIMITED          ("SEC-030", Severity.WARNING,  "Requisição bloqueada por rate limit",   true),
+    SQL_INJECTION_ATTEMPT ("SEC-040", Severity.ALERT,    "Padrão de SQL Injection detectado",     true),
+    TAMPER_DETECTED       ("SEC-041", Severity.ALERT,    "Adulteração de dados detectada",        true),
+    SENSITIVE_DATA_ACCESS ("SEC-050", Severity.INFO,     "Acesso a dados sensíveis registrado",   false),
+    // ... (20 eventos no total)
+}
+```
+
+**Por que tipado?** Eventos de segurança precisam ser pesquisáveis e agregáveis.
+Um código como `SEC-040` é mais útil em um SIEM do que a string "Padrão de SQL Injection detectado".
+
+**Severity levels:**
+
+| Severidade | SLF4J   | Exemplo                          | Ação esperada       |
+| ---------- | ------- | -------------------------------- | ------------------- |
+| INFO       | `info`  | Login OK, token refreshed        | Nenhuma (registro)  |
+| WARNING    | `warn`  | Login falho, rate limit atingido | Monitorar tendência |
+| CRITICAL   | `error` | Account lockout, JWT adulterado  | Investigar em 1h    |
+| ALERT      | `error` | SQL injection, tampering         | Resposta imediata   |
+
+#### 2. Logger centralizado (SecurityEventLogger)
+
+Serviço Spring que:
+
+1. Escreve no logger dedicado `SECURITY` (topic SLF4J separado do root logger)
+2. Usa **Marker** `SECURITY` para routing no logback (appender dedicado)
+3. Monta payload estruturado com campos fixos: `securityEvent`, `severity`, `principal`, `clientIp`, `traceId`, `timestamp`, `details`
+4. **Mascara dados sensíveis** automaticamente via `SensitiveDataMasker` (A04)
+5. **Sanitiza** valores de log via `InputSanitizer.sanitizeForLog()` (A05)
+6. Encaminha eventos alertáveis para `SecurityAlertService`
+
+```java
+// Exemplo de uso em qualquer service/filter:
+securityEventLogger.log(SecurityEvent.AUTH_FAILURE, Map.of(
+        "reason", "invalid_credentials",
+        "email", email,          // ← mascarado automaticamente? NÃO — email é exibido mascarado pelo resolvePrincipal()
+        "ip", clientIp));
+```
+
+**Saída JSON gerada:**
+
+```json
+{
+    "securityEvent": "SEC-002",
+    "eventName": "AUTH_FAILURE",
+    "severity": "WARNING",
+    "description": "Tentativa de login falha",
+    "timestamp": "2025-01-15T10:30:00Z",
+    "traceId": "abc123def456",
+    "clientIp": "192.168.1.100",
+    "principal": "us***@example.com",
+    "details": {
+        "reason": "invalid_credentials"
+    }
+}
+```
+
+#### 3. Alertas automatizados (SecurityAlertService)
+
+O serviço mantém **contadores sliding window** por tipo de evento. Quando N eventos
+ocorrem dentro de M segundos, um alerta é disparado.
+
+**Thresholds configuráveis** (application.yml):
+
+```yaml
+cinelog:
+    security:
+        alerting:
+            window-seconds: 300 # Janela de avaliação: 5 minutos
+            threshold-auth-failure: 10 # 10 falhas → possível brute force
+            threshold-sqli: 3 # 3 SQLi → ataque ativo
+            threshold-rate-limit: 50 # 50 rate limits → DDoS/scraping
+            threshold-tamper: 1 # 1 tamper → SEMPRE alerta (zero tolerance)
+```
+
+**Fluxo de alerta:**
+
+```
+SecurityEventLogger.log(AUTH_FAILURE)
+    ↓
+SecurityAlertService.evaluate(AUTH_FAILURE)
+    ↓ contadores: 10 em 5 min?
+    ↓ SIM → triggerAlert()
+        → log.error("🚨 SECURITY ALERT: SEC-002 ...")
+        → Counter: cinelog.security.alerts_total{event=AUTH_FAILURE}
+        → (extensível: webhook Slack, PagerDuty, email, Kafka topic)
+```
+
+**Por que sliding window e não simplesmente "a cada N"?**
+Sem janela temporal, 10 falhas em 1 ano seriam alerta. Com janela de 5 minutos,
+10 falhas concentradas = padrão de ataque real.
+
+#### 4. Métricas de segurança dedicadas (SecurityMetricsService)
+
+Métricas Micrometer separadas de BusinessMetricsService:
+
+| Métrica                                   | Labels                      | Descrição                |
+| ----------------------------------------- | --------------------------- | ------------------------ |
+| `cinelog.security.auth_failures_total`    | `reason`                    | Falhas de autenticação   |
+| `cinelog.security.account_lockouts_total` | —                           | Contas bloqueadas        |
+| `cinelog.security.jwt_failures_total`     | `reason`                    | JWT inválido/expirado    |
+| `cinelog.security.rate_limit_total`       | `path_class`                | Rate limit atingido      |
+| `cinelog.security.sqli_attempts_total`    | —                           | SQL injection bloqueado  |
+| `cinelog.security.access_denied_total`    | —                           | Acesso negado (403)      |
+| `cinelog.security.tamper_detected_total`  | `type`                      | Tampering detectado      |
+| `cinelog.security.sensitive_access_total` | `resource`                  | Acesso a dados sensíveis |
+| `cinelog.security.events_total`           | `event`, `severity`, `code` | Todos os eventos         |
+| `cinelog.security.alerts_total`           | `event`, `severity`         | Alertas disparados       |
+
+**Por que separadas?** Métricas de negócio (media.created, user.registered) têm
+consumidores diferentes das métricas de segurança (SOC, compliance). Prefixo `cinelog.security.*`
+permite dashboard Grafana dedicado e alerting rules Prometheus independentes.
+
+#### 5. Auditoria de acesso a dados sensíveis (DataAccessAuditAspect)
+
+AOP aspect que intercepta métodos anotados com `@AuditSensitiveAccess`:
+
+```java
+@AuditSensitiveAccess(resource = "user_profile", action = "VIEW")
+public UserDTO getUserById(Long id) {
+    // execução normal — aspecto registra quem acessou
+}
+```
+
+O aspecto:
+
+1. Identifica o **principal** autenticado (quem acessou)
+2. Registra o **recurso** e **ação** via SecurityEventLogger (`SEC-050`)
+3. Incrementa `cinelog.security.sensitive_access_total{resource=user_profile}`
+4. Funciona mesmo em caso de exceção (tentativa é registrada)
+
+**Por que annotation-driven?** Código de auditoria em cada método é DRY violation
+e inevitavelmente esquecido. Com `@AuditSensitiveAccess`, a auditoria é declarativa
+e impossível de "esquecer" — se o método está anotado, o log acontece.
+
+#### 6. Log de segurança dedicado (logback-spring.xml)
+
+Appender dedicado com **marker-based routing**:
+
+```xml
+<!-- Só aceita eventos com marker SECURITY -->
+<appender name="SECURITY_FILE" class="RollingFileAppender">
+    <file>./logs/cinelog-security.log</file>
+    <filter class="EvaluatorFilter">
+        <evaluator class="OnMarkerEvaluator">
+            <marker>SECURITY</marker>
+        </evaluator>
+        <onMatch>ACCEPT</onMatch>
+        <onMismatch>DENY</onMismatch>
+    </filter>
+    <!-- Retenção: 90 dias (compliance LGPD/PCI-DSS) -->
+    <rollingPolicy class="TimeBasedRollingPolicy">
+        <maxHistory>90</maxHistory>
+    </rollingPolicy>
+</appender>
+```
+
+**Diferenças do log geral:**
+
+| Característica    | Log geral              | Log de segurança               |
+| ----------------- | ---------------------- | ------------------------------ |
+| Arquivo           | `cinelog.log`          | `cinelog-security.log`         |
+| Retenção          | 30 dias                | 90 dias (compliance)           |
+| Conteúdo          | Tudo                   | Só eventos com marker SECURITY |
+| Profiles          | dev: texto, prod: JSON | Ambos: JSON + file             |
+| Destino adicional | Logstash               | Logstash (SIEM-ready)          |
+
+**Por que 90 dias?** A LGPD (Art. 37) exige rastreabilidade de operações sobre dados pessoais.
+O PCI-DSS (Req. 10.7) exige 1 ano de histórico de auditoria (90 dias online + arquivo).
+
+#### 7. Correções em componentes existentes
+
+**JwtAuthenticationFilter** — Catch silencioso → logging granular:
+
+- `ExpiredJwtException` → `SEC-011` (INFO) + métrica `jwt_failures_total{reason=expired}`
+- `MalformedJwtException | SignatureException` → `SEC-010` (WARNING) + métrica `jwt_failures_total{reason=invalid}`
+- Genérico → `SEC-010` + métrica `jwt_failures_total{reason=unknown}`
+
+**AuditTrailAspect** — userId era sempre `null`:
+
+- Agora extrai do `SecurityContextHolder.getContext().getAuthentication()`
+- Auditoria sem "quem fez" é inútil para compliance
+
+**RateLimitFilter** — log.warn sem métrica:
+
+- Agora dispara `SEC-030` via SecurityEventLogger
+- Incrementa `cinelog.security.rate_limit_total{path_class=auth|general}`
+
+**SqlInjectionFilter** — log.warn sem métrica:
+
+- Agora dispara `SEC-040` (ALERT) via SecurityEventLogger
+- Incrementa `cinelog.security.sqli_attempts_total`
+- Zero tolerância: threshold de 3 tentativas em 5 min → alerta
+
+**LoginAttemptService** — log.warn sem métrica:
+
+- Agora dispara `SEC-003` (CRITICAL) quando conta é bloqueada
+- Incrementa `cinelog.security.account_lockouts_total`
+
+### Arquivos criados/modificados
+
+| Arquivo                        | Ação           | Descrição                                                           |
+| ------------------------------ | -------------- | ------------------------------------------------------------------- |
+| `SecurityEvent.java`           | **Criado**     | Enum com 20 eventos, severidade, código e flag alertable            |
+| `SecurityEventLogger.java`     | **Criado**     | Logger centralizado com marker SECURITY, mascaramento e sanitização |
+| `SecurityAlertService.java`    | **Criado**     | Detecção de padrões (sliding window) + thresholds configuráveis     |
+| `SecurityMetricsService.java`  | **Criado**     | 10 métricas Micrometer dedicadas a segurança                        |
+| `AuditSensitiveAccess.java`    | **Criado**     | Annotation para auditoria de acesso a dados sensíveis               |
+| `DataAccessAuditAspect.java`   | **Criado**     | Aspect AOP que intercepta @AuditSensitiveAccess                     |
+| `logback-spring.xml`           | **Modificado** | Appender SECURITY_FILE (90 dias), marker routing, async wrapper     |
+| `JwtAuthenticationFilter.java` | **Modificado** | Catch silencioso → logging granular por tipo de exceção JWT         |
+| `AuditTrailAspect.java`        | **Modificado** | userId null → integrado com SecurityContext                         |
+| `RateLimitFilter.java`         | **Modificado** | +SecurityEventLogger, +SecurityMetricsService                       |
+| `SqlInjectionFilter.java`      | **Modificado** | +SecurityEventLogger, +SecurityMetricsService                       |
+| `LoginAttemptService.java`     | **Modificado** | +SecurityEventLogger, +SecurityMetricsService                       |
+| `SecurityConfig.java`          | **Modificado** | Atualizado para injetar novas dependências nos filtros              |
+| `application.yml`              | **Modificado** | Bloco cinelog.security.alerting com thresholds                      |
+
+### Checklist de conformidade
 
 - [x] SensitiveDataMasker para mascaramento em logs (A04:2025)
 - [x] InputSanitizer.sanitizeForLog() contra log injection (A05:2025)
 - [x] Logging estruturado com Logback JSON
 - [x] Stack de observabilidade (Prometheus, Grafana, Loki, Tempo)
-- [ ] Alertas automatizados para eventos de segurança — **pendente**
-- [ ] Correlação de eventos de segurança (SIEM) — **pendente**
-- [ ] Retenção de logs de auditoria com imutabilidade — **pendente**
-- [ ] Dashboard de segurança em Grafana — **pendente**
-- [ ] Notificação em tempo real de ataques detectados — **pendente**
+- [x] Taxonomia de eventos de segurança com códigos padronizados (SEC-xxx)
+- [x] Alertas automatizados com thresholds configuráveis
+- [x] Log de segurança dedicado com retenção de 90 dias (compliance)
+- [x] Métricas Micrometer dedicadas a segurança
+- [x] Auditoria de acesso a dados sensíveis (annotation-driven)
+- [x] JwtAuthenticationFilter com logging granular (antes silencioso)
+- [x] AuditTrailAspect com userId integrado ao SecurityContext
+- [x] Filtros de segurança (Rate Limit, SQLi, Login) com métricas e eventos
 
 ---
 

@@ -6,6 +6,8 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -58,8 +60,14 @@ public class AuditTrailAspect {
             audit.put("method", methodName);
             audit.put("success", success);
 
-            // Placeholder: integrar com seu contexto de segurança no futuro
-            audit.put("userId", null);
+            // A09:2025 — Integra userId do SecurityContext (antes era sempre null)
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String userId = null;
+            if (auth != null && auth.isAuthenticated()
+                    && !"anonymousUser".equals(auth.getName())) {
+                userId = auth.getName();
+            }
+            audit.put("userId", userId);
 
             // Exemplo: se retornar Media, extrair info relevante
             if (result instanceof com.cine.cinelog.core.domain.model.Media media) {

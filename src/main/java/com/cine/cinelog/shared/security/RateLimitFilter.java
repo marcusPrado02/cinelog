@@ -1,5 +1,8 @@
 package com.cine.cinelog.shared.security;
 
+import com.cine.cinelog.shared.observability.security.SecurityEvent;
+import com.cine.cinelog.shared.observability.security.SecurityEventLogger;
+import com.cine.cinelog.shared.observability.security.SecurityMetricsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -86,6 +89,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
      */
     private final Map<String, WindowCounter> counters = new ConcurrentHashMap<>();
 
+    /** A09:2025 — Logger de eventos de segurança. */
+    private final SecurityEventLogger securityEventLogger;
+
+    /** A09:2025 — Métricas de segurança. */
+    private final SecurityMetricsService securityMetrics;
+
+    public RateLimitFilter(SecurityEventLogger securityEventLogger,
+            SecurityMetricsService securityMetrics) {
+        this.securityEventLogger = securityEventLogger;
+        this.securityMetrics = securityMetrics;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response,
@@ -109,6 +124,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     InputSanitizer.sanitizeForLog(clientIp),
                     InputSanitizer.sanitizeForLog(path),
                     currentCount, limit);
+
+            // A09:2025 — Evento de segurança + métrica dedicada
+            securityEventLogger.log(SecurityEvent.RATE_LIMITED, Map.of(
+                    "ip", InputSanitizer.sanitizeForLog(clientIp),
+                    "path", InputSanitizer.sanitizeForLog(path),
+                    "count", currentCount,
+                    "limit", limit));
+            securityMetrics.incrementRateLimit(classifyPath(path));
 
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

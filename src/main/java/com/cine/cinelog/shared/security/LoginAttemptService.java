@@ -1,5 +1,8 @@
 package com.cine.cinelog.shared.security;
 
+import com.cine.cinelog.shared.observability.security.SecurityEvent;
+import com.cine.cinelog.shared.observability.security.SecurityEventLogger;
+import com.cine.cinelog.shared.observability.security.SecurityMetricsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -35,13 +38,21 @@ public class LoginAttemptService {
     private final int maxAttempts;
     private final long lockDurationSeconds;
 
+    /** A09:2025 — Logger e métricas de segurança. */
+    private final SecurityEventLogger securityEventLogger;
+    private final SecurityMetricsService securityMetrics;
+
     private final Map<String, AttemptRecord> attemptsMap = new ConcurrentHashMap<>();
 
     public LoginAttemptService(
             @Value("${cinelog.security.auth.max-login-attempts:5}") int maxAttempts,
-            @Value("${cinelog.security.auth.lock-duration-seconds:900}") long lockDurationSeconds) {
+            @Value("${cinelog.security.auth.lock-duration-seconds:900}") long lockDurationSeconds,
+            SecurityEventLogger securityEventLogger,
+            SecurityMetricsService securityMetrics) {
         this.maxAttempts = maxAttempts;
         this.lockDurationSeconds = lockDurationSeconds;
+        this.securityEventLogger = securityEventLogger;
+        this.securityMetrics = securityMetrics;
         log.info("LoginAttemptService: maxAttempts={}, lockDuration={}s", maxAttempts, lockDurationSeconds);
     }
 
@@ -61,6 +72,11 @@ public class LoginAttemptService {
         if (rec != null && rec.getCount() >= maxAttempts) {
             log.warn("A07:2025 — Conta bloqueada por excesso de tentativas: key_hash={}",
                     hashKey(key));
+            // A09:2025 — Evento de segurança CRITICAL + métrica
+            securityEventLogger.log(SecurityEvent.AUTH_LOCKED, Map.of(
+                    "key_hash", hashKey(key),
+                    "attempts", rec.getCount()));
+            securityMetrics.incrementAccountLockout();
         }
     }
 
