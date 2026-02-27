@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd">
+
+    <!-- A08:2025 — Tabela de audit trail com hash chain (blockchain-lite) -->
+    <changeSet id="20260227100000-1" author="cinelog">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="audit_integrity_log" />
+            </not>
+        </preConditions>
+
+        <createTable tableName="audit_integrity_log"
+            remarks="A08:2025 — Audit trail com hash chain para detecção de adulteração">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="sequence_number" type="BIGINT">
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="uk_audit_integrity_sequence" />
+            </column>
+            <column name="entity_type" type="VARCHAR(100)">
+                <constraints nullable="false" />
+            </column>
+            <column name="entity_id" type="VARCHAR(100)">
+                <constraints nullable="false" />
+            </column>
+            <column name="action" type="VARCHAR(20)">
+                <constraints nullable="false" />
+            </column>
+            <column name="entity_hmac" type="VARCHAR(64)">
+                <constraints nullable="false" />
+            </column>
+            <column name="previous_hash" type="VARCHAR(64)">
+                <constraints nullable="false" />
+            </column>
+            <column name="record_hash" type="VARCHAR(64)">
+                <constraints nullable="false" />
+            </column>
+            <column name="user_id" type="BIGINT" />
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+            <column name="description" type="VARCHAR(500)" />
+        </createTable>
+
+        <createIndex indexName="idx_audit_integrity_entity_type" tableName="audit_integrity_log">
+            <column name="entity_type" />
+        </createIndex>
+
+        <createIndex indexName="idx_audit_integrity_entity_id" tableName="audit_integrity_log">
+            <column name="entity_id" />
+        </createIndex>
+
+        <createIndex indexName="idx_audit_integrity_created" tableName="audit_integrity_log">
+            <column name="created_at" />
+        </createIndex>
+
+        <createIndex indexName="idx_audit_integrity_sequence" tableName="audit_integrity_log">
+            <column name="sequence_number" />
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

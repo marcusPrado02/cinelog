@@ -3,6 +3,7 @@ package com.cine.cinelog.shared.persistence;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedBy;
@@ -20,10 +21,13 @@ import java.time.OffsetDateTime;
 /**
  * Entidade JPA que representa a tabela de auditable no banco de dados.
  * Mapeia a estrutura de persistência para Auditable.
- * 
- * <p>Esta entidade contém as anotações JPA necessárias para mapeamento objeto-relacional
- * e é convertida para/de Auditable pelo AuditableMapper.</p>
- * 
+ *
+ * <p>
+ * Esta entidade contém as anotações JPA necessárias para mapeamento
+ * objeto-relacional
+ * e é convertida para/de Auditable pelo AuditableMapper.
+ * </p>
+ *
  * @since 1.0
  * @see Auditable
  */
@@ -46,6 +50,13 @@ public abstract class AuditableEntity {
     @Column(name = "updated_by")
     protected Long updatedBy;
 
+    /**
+     * A08:2025 — Optimistic locking.
+     * JPA incrementa automaticamente a cada UPDATE.
+     * Se duas transações concorrentes tentarem atualizar o mesmo registro,
+     * a segunda receberá {@link jakarta.persistence.OptimisticLockException}.
+     */
+    @Version
     @Column(name = "version", nullable = false)
     protected Long version;
 }

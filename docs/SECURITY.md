@@ -2421,19 +2421,451 @@ cinelog:
 
 ## A08:2025 (OWASP) — Software or Data Integrity Failures
 
-> **Status:** pendente de implementação.
+> **Status:** ✅ implementado.
 >
 > Esta categoria cobre falhas na verificação de integridade de software e dados:
-> atualizações sem validação, serialização insegura, pipelines de CI/CD vulneráveis
-> e manipulação de dados em trânsito.
+> dados adulterados no banco, payloads Kafka modificados em trânsito, race conditions
+> por falta de optimistic locking, deserialização insegura e manipulação de requests.
 
-### Pontos a implementar
+### O que são Software or Data Integrity Failures?
 
-- [ ] Verificação de integridade em atualizações de dependências
-- [ ] Proteção contra deserialização insegura
-- [ ] Assinatura digital de artefatos de build
-- [ ] Validação de integridade de dados em eventos Kafka
-- [ ] Pipeline de CI/CD com verificações de segurança
+Ocorrem quando o sistema **confia cegamente** em dados, código ou atualizações sem
+verificar se foram **adulterados**. A OWASP define como cenários onde:
+
+1. **Dados no banco** são alterados diretamente (bypass da API) sem detecção
+2. **Payloads de mensagens** (Kafka, filas) são modificados em trânsito
+3. **Requests HTTP** são manipulados (campos imutáveis como userId alterados)
+4. **Updates concorrentes** causam perda de dados (lost update problem)
+5. **Deserialização** aceita classes arbitrárias (gadget chain → RCE)
+6. **Registros de auditoria** são adulterados sem rastro
+
+### Cenários de ataque reais
+
+| Cenário                 | Ataque                                               | Sem proteção                    | Com proteção (CineLog)                           |
+| ----------------------- | ---------------------------------------------------- | ------------------------------- | ------------------------------------------------ |
+| **DB tampering**        | DBA malicioso altera role USER→ADMIN                 | Mudança invisível               | HMAC no campo detecta adulteração                |
+| **Kafka tampering**     | Atacante altera payload no broker                    | Processamento de dados falsos   | HMAC header rejeita payload adulterado           |
+| **Request tampering**   | Cliente troca userId no JSON body                    | Opera em nome de outro usuário  | `TamperProofRequestValidator` rejeita            |
+| **Lost update**         | Dois requests simultâneos atualizam o mesmo registro | Último sobrescreve o primeiro   | `@Version` (optimistic locking) detecta conflito |
+| **Deserialization RCE** | Classe maliciosa na mensagem Kafka                   | Remote Code Execution           | `trusted.packages` restrito                      |
+| **Audit tampering**     | Atacante apaga/altera log de auditoria               | Evidência destruída             | Hash chain detecta adulteração                   |
+| **Link forgery**        | Atacante modifica userId no link de reset            | Reset da senha de outro usuário | HMAC no token de ação                            |
+
+### Proteções implementadas no CineLog
+
+#### 1. `IntegrityService` — HMAC-SHA256 para dados críticos
+
+Serviço central de integridade que gera e verifica assinaturas HMAC-SHA256.
+Usado para proteger registros no banco e payloads de eventos.
+
+```
+📁 shared/security/IntegrityService.java
+```
+
+**Como funciona:**
+
+```java
+@Component
+public class IntegrityService {
+
+    // Gera HMAC para campos críticos de uma entidade
+    public String signEntity(Object... criticalFields) {
+        String content = buildSignableContent(criticalFields);
+        return sign(content);  // HMAC-SHA256 → Base64 URL-safe
+    }
+
+    // Verifica integridade (comparação em tempo constante)
+    public boolean verifyEntity(String storedHmac, Object... criticalFields) {
+        String content = buildSignableContent(criticalFields);
+        return verify(content, storedHmac);
+    }
+}
+```
+
+**Exemplo: protegendo campo role do usuário:**
+
+```java
+// Ao salvar/atualizar:
+String hmac = integrityService.signEntity(user.getId(), user.getEmail(), user.getRole());
+user.setIntegrityHmac(hmac);
+
+// Ao carregar — verificar integridade:
+boolean ok = integrityService.verifyEntity(
+    user.getIntegrityHmac(), user.getId(), user.getEmail(), user.getRole());
+if (!ok) {
+    throw new TamperDetectedException("UserEntity", user.getId().toString());
+}
+```
+
+**Detalhes técnicos:**
+
+| Aspecto          | Decisão                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| Algoritmo        | HMAC-SHA256                                                                  |
+| Chave            | `cinelog.security.integrity.secret` (min 32 chars, fallback para JWT secret) |
+| Output           | Base64 URL-safe sem padding                                                  |
+| Comparação       | Tempo constante (`constantTimeEquals`) — previne timing attack               |
+| Campos assinados | Concatenados com pipe (`\|`) como separador                                  |
+
+#### 2. `@Version` — Optimistic locking em todas as entidades
+
+**Antes:** o campo `version` existia em `AuditableEntity` mas **NÃO** tinha a anotação
+`@jakarta.persistence.Version`. Resultado: nenhuma proteção contra updates concorrentes.
+
+**Depois:** adicionamos `@Version`, ativando optimistic locking para **9 entidades**
+que estendem `AuditableEntity`:
+
+```
+📁 shared/persistence/AuditableEntity.java
+```
+
+```java
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
+public abstract class AuditableEntity {
+
+    @Version  // ← A08:2025 — Optimistic locking ativado
+    @Column(name = "version", nullable = false)
+    protected Long version;
+
+    // ... createdAt, updatedAt, createdBy, updatedBy
+}
+```
+
+**Entidades protegidas automaticamente:**
+
+| Entidade            | Tabela        | Dados críticos            |
+| ------------------- | ------------- | ------------------------- |
+| UserEntity          | `users`       | Credenciais, role, email  |
+| WatchEntryEntity    | `watch_entry` | Avaliações do usuário     |
+| MediaEntity         | `media`       | Catálogo de filmes/séries |
+| PersonEntity        | `people`      | Elenco e equipe           |
+| GenreEntity         | `genres`      | Categorias                |
+| CreditEntity        | `credits`     | Créditos                  |
+| EpisodeEntity       | `episodes`    | Episódios de séries       |
+| SeasonEntity        | `seasons`     | Temporadas                |
+| WatchlistItemEntity | `watchlist`   | Lista de desejos          |
+
+**Como funciona o optimistic locking:**
+
+```
+Transação A: SELECT FROM users WHERE id=1 → version=5
+Transação B: SELECT FROM users WHERE id=1 → version=5
+
+Transação A: UPDATE users SET role='ADMIN', version=6 WHERE id=1 AND version=5 → ✅ OK
+Transação B: UPDATE users SET name='Hack',  version=6 WHERE id=1 AND version=5 → ❌ FALHA!
+              ↳ version já é 6 (Transação A mudou) → OptimisticLockException → 409 Conflict
+```
+
+**Resposta ao cliente (RFC 7807):**
+
+```json
+{
+    "type": "https://api.cinelog.com/errors/conflict",
+    "title": "Concurrent Modification",
+    "status": 409,
+    "detail": "O registro foi modificado por outra operação. Tente novamente.",
+    "errorCode": "OPTIMISTIC_LOCK_CONFLICT"
+}
+```
+
+#### 3. Audit trail com hash chain — blockchain-lite (`AuditIntegrityService`)
+
+Cada registro de auditoria contém o **hash do registro anterior**, formando uma cadeia
+imutável. Se qualquer registro for deletado ou modificado no banco, a cadeia se quebra.
+
+```
+📁 shared/observability/audit/AuditIntegrityLogEntity.java
+📁 shared/observability/audit/AuditIntegrityLogRepository.java
+📁 shared/observability/audit/AuditIntegrityService.java
+```
+
+**Estrutura da cadeia:**
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  Bloco #1   │    │  Bloco #2   │    │  Bloco #3   │    │  Bloco #N   │
+│             │    │             │    │             │    │             │
+│ prevHash:   │    │ prevHash:   │    │ prevHash:   │    │ prevHash:   │
+│  "GENESIS"  │←───│  hash(#1)   │←───│  hash(#2)   │←───│  hash(N-1)  │
+│             │    │             │    │             │    │             │
+│ recordHash: │    │ recordHash: │    │ recordHash: │    │ recordHash: │
+│  HMAC(...)  │    │  HMAC(...)  │    │  HMAC(...)  │    │  HMAC(...)  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+**Se alguém alterar o Bloco #2:**
+
+```
+Verificação: hash(Bloco #2_adulterado) ≠ prevHash do Bloco #3
+             → CADEIA QUEBRADA → ADULTERAÇÃO DETECTADA
+```
+
+**Como registrar uma operação auditada:**
+
+```java
+// Gerar HMAC da entidade
+String entityHmac = integrityService.signEntity(user.getId(), user.getEmail(), user.getRole());
+
+// Registrar na cadeia (transação separada para não bloquear a principal)
+auditIntegrityService.record(
+    "UserEntity",
+    user.getId().toString(),
+    "UPDATE",
+    entityHmac,
+    currentUserId,
+    "Role alterada para ADMIN"
+);
+```
+
+**Verificação periódica da cadeia:**
+
+```java
+ChainVerificationResult result = auditIntegrityService.verifyChain();
+
+if (!result.valid()) {
+    // ALERTA: registros de auditoria foram adulterados!
+    log.error("A08 — Cadeia de auditoria comprometida: {}", result.message());
+    // Notificar equipe de segurança
+}
+```
+
+**Tabela `audit_integrity_log`:**
+
+| Coluna            | Tipo           | Propósito                                         |
+| ----------------- | -------------- | ------------------------------------------------- |
+| `sequence_number` | BIGINT, UNIQUE | Ordenação global da cadeia                        |
+| `entity_type`     | VARCHAR(100)   | Tipo da entidade auditada                         |
+| `entity_id`       | VARCHAR(100)   | ID da entidade                                    |
+| `action`          | VARCHAR(20)    | CREATE, UPDATE, DELETE                            |
+| `entity_hmac`     | VARCHAR(64)    | HMAC dos campos críticos no momento da operação   |
+| `previous_hash`   | VARCHAR(64)    | Hash do registro anterior (ou "GENESIS")          |
+| `record_hash`     | VARCHAR(64)    | HMAC(seq\|type\|id\|action\|entityHmac\|prevHash) |
+| `user_id`         | BIGINT         | Quem executou a ação                              |
+| `created_at`      | TIMESTAMP      | Quando                                            |
+
+#### 4. `TamperProofRequestValidator` — Anti-tampering em requests
+
+Valida que campos imutáveis nos requests (userId, email, role) não foram manipulados
+pelo cliente.
+
+```
+📁 shared/security/TamperProofRequestValidator.java
+```
+
+**Cenário de ataque: userId tampering**
+
+```http
+POST /api/v1/reviews
+Authorization: Bearer <token do user 42>
+{
+    "userId": 999,     ← atacante trocou de 42 para 999
+    "mediaId": 1,
+    "rating": 10
+}
+```
+
+**Proteção:**
+
+```java
+@PostMapping
+public ResponseEntity<?> createReview(@RequestBody ReviewRequest request) {
+    // Valida que userId do body == userId do JWT
+    tamperProofValidator.validateUserOwnership(request.getUserId());
+    // Se não bater → 403 Forbidden + log de segurança
+}
+```
+
+**Validações disponíveis:**
+
+| Método                                  | Proteção                                  |
+| --------------------------------------- | ----------------------------------------- |
+| `validateUserOwnership(requestUserId)`  | userId no body == userId do JWT           |
+| `validateEmailOwnership(requestEmail)`  | email no body == email do JWT             |
+| `validateRoleNotEscalated(requestRole)` | Não-admin não pode definir role != "USER" |
+
+**Resposta ao cliente (RFC 7807):**
+
+```json
+{
+    "type": "https://api.cinelog.com/errors/integrity",
+    "title": "Integrity Violation",
+    "status": 403,
+    "detail": "Operação rejeitada por violação de integridade.",
+    "errorCode": "TAMPER_DETECTED"
+}
+```
+
+#### 5. `SecureActionTokenService` — Tokens HMAC para ações
+
+Gera tokens autocontidos com assinatura HMAC para ações como reset de senha e
+confirmação de email. Impede que atacantes forjem ou manipulem links de ação.
+
+```
+📁 shared/security/SecureActionTokenService.java
+```
+
+**Formato do token:**
+
+```
+Base64URL( purpose : userId : expiresEpochSeconds : HMAC-SHA256 )
+```
+
+**Cenário de ataque sem proteção:**
+
+```
+Link de reset: /reset-password?userId=42&token=abc123
+Atacante altera: /reset-password?userId=1&token=abc123    ← admin!
+→ Sem HMAC: reset funciona para admin!
+```
+
+**Com proteção:**
+
+```
+Link de reset: /reset-password?token=UEFTU1dPUkRfUkVTRVQ6NDI6MTcwOTIyMDAwMDpITUFD...
+Atacante altera o token → HMAC não bate → REJEITADO
+```
+
+**Como usar:**
+
+```java
+// Gerar token para reset de senha (expira em 1h)
+String token = secureActionTokenService.generateToken("PASSWORD_RESET", userId);
+
+// Verificar token quando usuário clica no link
+ActionTokenPayload payload = secureActionTokenService.verifyToken(token, "PASSWORD_RESET");
+Long userId = payload.userId();  // Seguro — veio do HMAC
+```
+
+**Verificações feitas:**
+
+| Passo | Verificação                                   |
+| ----- | --------------------------------------------- |
+| 1     | Token decodifica corretamente (Base64)        |
+| 2     | Propósito (`purpose`) bate com o esperado     |
+| 3     | Não expirou (`expiresAt > now`)               |
+| 4     | HMAC-SHA256 é válido (integridade do payload) |
+
+#### 6. Proteção contra deserialização insegura (Kafka)
+
+**Antes:** o Kafka consumer aceitava **qualquer classe Java** para deserialização:
+
+```yaml
+# ⚠️ PERIGOSO — permite Remote Code Execution
+"[spring.json.trusted.packages]": "*"
+```
+
+**Depois:** restringimos para apenas os pacotes do projeto:
+
+```yaml
+# ✅ A08:2025 — Apenas pacotes confiáveis
+"[spring.json.trusted.packages]": "com.cine.cinelog.core.domain.events,com.cine.cinelog.core.domain.events.watchentry,com.cine.cinelog.infrastructure.persistence.outbox,java.util,java.lang"
+```
+
+**Por que isso é crítico?**
+
+Com `*` (wildcard), um atacante que consiga publicar uma mensagem no Kafka com uma
+classe maliciosa (gadget chain) pode executar código arbitrário no servidor.
+Restringindo os pacotes, apenas classes do nosso domínio são desserializadas.
+
+#### 7. Verificação de integridade em eventos Kafka (`KafkaEventIntegrityVerifier`)
+
+Assina payloads de eventos antes de publicar no Kafka e verifica ao consumir.
+
+```
+📁 shared/security/KafkaEventIntegrityVerifier.java
+```
+
+**Fluxo:**
+
+```
+Produtor:
+  1. Serializar evento → JSON payload
+  2. HMAC = KafkaEventIntegrityVerifier.signPayload(payload)
+  3. Adicionar header "X-Integrity-HMAC" = HMAC
+  4. Publicar no Kafka
+
+Consumidor:
+  1. Receber record do Kafka
+  2. verified = KafkaEventIntegrityVerifier.verifyRecord(record)
+  3. Se !verified → REJEITAR (log de segurança)
+  4. Se verified → processar normalmente
+```
+
+**Backward compatibility:** eventos antigos sem header HMAC são aceitos com warning,
+permitindo migração gradual.
+
+### Configuração em `application.yml`
+
+```yaml
+cinelog:
+    security:
+        integrity:
+            # Chave HMAC para integridade (fallback: usa JWT secret)
+            secret: ${CINELOG_SECURITY_INTEGRITY_SECRET:${CINELOG_SECURITY_JWT_SECRET:...}}
+        action-token:
+            expiration-seconds: 3600 # Tokens de ação expiram em 1h
+```
+
+### Diagrama: camadas de integridade
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    REQUEST HTTP                      │
+│  TamperProofRequestValidator                        │
+│  ├── validateUserOwnership(body.userId vs JWT)      │
+│  ├── validateEmailOwnership(body.email vs JWT)      │
+│  └── validateRoleNotEscalated(body.role)            │
+├─────────────────────────────────────────────────────┤
+│                   PERSISTENCE                        │
+│  @Version (optimistic locking)                      │
+│  ├── UPDATE ... WHERE version = ? → auto-increment  │
+│  └── Conflito → OptimisticLockException → 409       │
+│                                                      │
+│  IntegrityService (HMAC)                            │
+│  ├── signEntity(fields...) → HMAC no campo          │
+│  └── verifyEntity(hmac, fields...) → tamper check   │
+├─────────────────────────────────────────────────────┤
+│                     EVENTOS                          │
+│  KafkaEventIntegrityVerifier                        │
+│  ├── Produtor: header X-Integrity-HMAC              │
+│  └── Consumidor: verify antes de processar          │
+│                                                      │
+│  Kafka trusted.packages (restrito)                  │
+│  └── Apenas pacotes do domínio aceitos              │
+├─────────────────────────────────────────────────────┤
+│                   AUDITORIA                          │
+│  AuditIntegrityService (hash chain)                 │
+│  ├── Cada registro → hash do anterior               │
+│  └── verifyChain() → detecta adulteração            │
+├─────────────────────────────────────────────────────┤
+│                  AÇÕES SEGURAS                       │
+│  SecureActionTokenService                           │
+│  ├── Token HMAC: purpose + userId + expiry          │
+│  └── Impede forgery de links de reset/confirm       │
+└─────────────────────────────────────────────────────┘
+```
+
+### Checklist de proteções A08:2025
+
+- [x] HMAC-SHA256 para integridade de dados críticos (`IntegrityService`)
+- [x] Comparação em tempo constante (previne timing attack)
+- [x] `@Version` JPA para optimistic locking em 9 entidades
+- [x] Handler para `OptimisticLockException` → 409 Conflict
+- [x] Audit trail com hash chain — blockchain-lite (`AuditIntegrityService`)
+- [x] Tabela `audit_integrity_log` via Liquibase
+- [x] Verificação periódica de integridade da cadeia (`verifyChain()`)
+- [x] `TamperProofRequestValidator` para anti-tampering em requests
+- [x] Validação de ownership (userId, email) vs JWT autenticado
+- [x] Proteção contra privilege escalation (role não-admin)
+- [x] `SecureActionTokenService` para tokens HMAC de ações
+- [x] Tokens de ação com propósito, expiração e HMAC
+- [x] Kafka `trusted.packages` restrito (anti-RCE por deserialização)
+- [x] `KafkaEventIntegrityVerifier` para assinatura de eventos
+- [x] Handler para `TamperDetectedException` → 403 Forbidden
+- [x] Handler para `InvalidActionTokenException` → 400 Bad Request
+- [ ] Subresource Integrity (SRI) para assets frontend — **N/A (API-only)**
+- [ ] SLSA provenance para artefatos de build — **roadmap futuro**
 
 ---
 

@@ -57,7 +57,9 @@ spring:
             auto-offset-reset: earliest
             enable-auto-commit: false
             properties:
-                "[spring.json.trusted.packages]": "*"
+                # A08:2025 — Restringir pacotes confiáveis para desserialização Kafka
+                # (wildcard "*" permite desserialização arbitrária → RCE)
+                "[spring.json.trusted.packages]": "com.cine.cinelog.core.domain.events,com.cine.cinelog.core.domain.events.watchentry,com.cine.cinelog.infrastructure.persistence.outbox,java.util,java.lang"
         listener:
             ack-mode: manual
 

@@ -7,7 +7,10 @@ import com.cine.cinelog.core.domain.error.ForbiddenOperationException;
 import com.cine.cinelog.features.auth.service.AuthService;
 import com.cine.cinelog.features.auth.service.RefreshTokenService;
 import com.cine.cinelog.shared.security.BusinessLimitExceededException;
+import com.cine.cinelog.shared.security.IntegrityService;
+import com.cine.cinelog.shared.security.SecureActionTokenService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -63,6 +66,7 @@ public class GlobalExceptionHandler {
     private static final URI TYPE_INTERNAL = URI.create("https://api.cinelog.com/errors/internal");
     private static final URI TYPE_AUTH = URI.create("https://api.cinelog.com/errors/authentication");
     private static final URI TYPE_LOCKED = URI.create("https://api.cinelog.com/errors/account-locked");
+    private static final URI TYPE_INTEGRITY = URI.create("https://api.cinelog.com/errors/integrity");
 
     private final MessageSource messageSource;
 
@@ -383,6 +387,49 @@ public class GlobalExceptionHandler {
         pd.setTitle("Registration Error");
         pd.setType(TYPE_CONFLICT);
         setCommon(pd, req, "REGISTRATION_ERROR");
+        return pd;
+    }
+
+    // ===== A08:2025 — Optimistic lock (conflito de concorrência) =====
+    @ExceptionHandler(OptimisticLockException.class)
+    public ProblemDetail handleOptimisticLock(OptimisticLockException ex,
+            HttpServletRequest req) {
+        log.warn("A08:2025 — Conflito de concorrência (optimistic lock). Path: {}",
+                req.getRequestURI());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "O registro foi modificado por outra operação. Tente novamente.");
+        pd.setTitle("Concurrent Modification");
+        pd.setType(TYPE_CONFLICT);
+        setCommon(pd, req, "OPTIMISTIC_LOCK_CONFLICT");
+        return pd;
+    }
+
+    // ===== A08:2025 — Adulteração detectada (tamper) =====
+    @ExceptionHandler(IntegrityService.TamperDetectedException.class)
+    public ProblemDetail handleTamperDetected(IntegrityService.TamperDetectedException ex,
+            HttpServletRequest req) {
+        log.error("A08:2025 — ADULTERAÇÃO DETECTADA. Path: {}, Entity: {}#{}",
+                req.getRequestURI(), ex.getEntityType(), ex.getEntityId());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
+                "Operação rejeitada por violação de integridade.");
+        pd.setTitle("Integrity Violation");
+        pd.setType(TYPE_INTEGRITY);
+        setCommon(pd, req, "TAMPER_DETECTED");
+        return pd;
+    }
+
+    // ===== A08:2025 — Token de ação inválido =====
+    @ExceptionHandler(SecureActionTokenService.InvalidActionTokenException.class)
+    public ProblemDetail handleInvalidActionToken(SecureActionTokenService.InvalidActionTokenException ex,
+            HttpServletRequest req) {
+        log.warn("A08:2025 — Token de ação inválido. Path: {}", req.getRequestURI());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        pd.setTitle("Invalid Action Token");
+        pd.setType(TYPE_AUTH);
+        setCommon(pd, req, "INVALID_ACTION_TOKEN");
         return pd;
     }
 
