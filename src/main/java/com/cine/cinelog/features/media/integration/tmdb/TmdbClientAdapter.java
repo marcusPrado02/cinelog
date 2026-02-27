@@ -26,6 +26,7 @@ import com.cine.cinelog.shared.config.tmdb.TmdbProperties;
 import com.cine.cinelog.shared.observability.aop.AlertIfSlow;
 import com.cine.cinelog.shared.observability.aop.Measured;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -91,6 +92,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchMovie")
     public Optional<TmdbMediaDetails> fetchMovie(Long tmdbId) {
         if (tmdbId == null) {
             return Optional.empty();
@@ -121,6 +124,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchTv")
     public Optional<TmdbMediaDetails> fetchTv(Long tmdbId) {
         if (tmdbId == null) {
             return Optional.empty();
@@ -186,6 +191,9 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackSearchMovies")
+    @Bulkhead(name = TMDB_INSTANCE)
     public TmdbSearchResult<TmdbMediaSummary> searchMovies(String query, Integer year, int page) {
         if (query == null || query.isBlank()) {
             return TmdbSearchResult.<TmdbMediaSummary>builder()
@@ -235,6 +243,9 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackSearchTvShows")
+    @Bulkhead(name = TMDB_INSTANCE)
     public TmdbSearchResult<TmdbMediaSummary> searchTvShows(String query, Integer year, int page) {
         if (query == null || query.isBlank()) {
             return TmdbSearchResult.<TmdbMediaSummary>builder()
@@ -288,6 +299,9 @@ public class TmdbClientAdapter implements TmdbClientPort {
     // ========================================================================
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackDiscoverMovies")
+    @Bulkhead(name = TMDB_INSTANCE)
     public TmdbSearchResult<TmdbMediaSummary> discoverMovies(TmdbDiscoverQuery query) {
         int page = query.getPage() == null || query.getPage() <= 0 ? 1 : query.getPage();
 
@@ -332,6 +346,9 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackDiscoverTvShows")
+    @Bulkhead(name = TMDB_INSTANCE)
     public TmdbSearchResult<TmdbMediaSummary> discoverTvShows(TmdbDiscoverQuery query) {
         int page = query.getPage() == null || query.getPage() <= 0 ? 1 : query.getPage();
 
@@ -389,6 +406,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
     // ========================================================================
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchMovieGenres")
     public List<TmdbGenre> fetchMovieGenres() {
         TmdbGenreListResponse response = tmdbWebClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -413,6 +432,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchTvGenres")
     public List<TmdbGenre> fetchTvGenres() {
         TmdbGenreListResponse response = tmdbWebClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -441,6 +462,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
     // ========================================================================
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchMovieCredits")
     public Optional<TmdbCredits> fetchMovieCredits(Long movieId) {
         if (movieId == null) {
             return Optional.empty();
@@ -463,6 +486,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchTvCredits")
     public Optional<TmdbCredits> fetchTvCredits(Long tvId) {
         if (tvId == null) {
             return Optional.empty();
@@ -489,6 +514,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
     // ========================================================================
 
     @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchImageConfig")
     public TmdbImageConfig fetchImageConfig() {
         // usa cache simples em memória
         TmdbImageConfig localCache = cachedImageConfig;
@@ -521,6 +548,82 @@ public class TmdbClientAdapter implements TmdbClientPort {
 
         cachedImageConfig = config;
         return config;
+    }
+
+    // ========================================================================
+    // A10:2025 — Fallback methods (Resilience4j)
+    // ========================================================================
+
+    @SuppressWarnings("unused")
+    private Optional<TmdbMediaDetails> fallbackFetchMovie(Long tmdbId, Throwable ex) {
+        log.warn("Fallback fetchMovie(tmdbId={}) due to {}", tmdbId, ex.toString());
+        return Optional.empty();
+    }
+
+    @SuppressWarnings("unused")
+    private Optional<TmdbMediaDetails> fallbackFetchTv(Long tmdbId, Throwable ex) {
+        log.warn("Fallback fetchTv(tmdbId={}) due to {}", tmdbId, ex.toString());
+        return Optional.empty();
+    }
+
+    @SuppressWarnings("unused")
+    private TmdbSearchResult<TmdbMediaSummary> fallbackSearchMovies(String query, Integer year, int page,
+            Throwable ex) {
+        log.warn("Fallback searchMovies(query='{}', year={}, page={}) due to {}", query, year, page, ex.toString());
+        return emptySearchResult(page);
+    }
+
+    @SuppressWarnings("unused")
+    private TmdbSearchResult<TmdbMediaSummary> fallbackSearchTvShows(String query, Integer year, int page,
+            Throwable ex) {
+        log.warn("Fallback searchTvShows(query='{}', year={}, page={}) due to {}", query, year, page, ex.toString());
+        return emptySearchResult(page);
+    }
+
+    @SuppressWarnings("unused")
+    private TmdbSearchResult<TmdbMediaSummary> fallbackDiscoverMovies(TmdbDiscoverQuery query, Throwable ex) {
+        log.warn("Fallback discoverMovies due to {}", ex.toString());
+        return emptySearchResult(query.getPage() != null ? query.getPage() : 1);
+    }
+
+    @SuppressWarnings("unused")
+    private TmdbSearchResult<TmdbMediaSummary> fallbackDiscoverTvShows(TmdbDiscoverQuery query, Throwable ex) {
+        log.warn("Fallback discoverTvShows due to {}", ex.toString());
+        return emptySearchResult(query.getPage() != null ? query.getPage() : 1);
+    }
+
+    @SuppressWarnings("unused")
+    private List<TmdbGenre> fallbackFetchMovieGenres(Throwable ex) {
+        log.warn("Fallback fetchMovieGenres due to {}", ex.toString());
+        return Collections.emptyList();
+    }
+
+    @SuppressWarnings("unused")
+    private List<TmdbGenre> fallbackFetchTvGenres(Throwable ex) {
+        log.warn("Fallback fetchTvGenres due to {}", ex.toString());
+        return Collections.emptyList();
+    }
+
+    @SuppressWarnings("unused")
+    private Optional<TmdbCredits> fallbackFetchMovieCredits(Long movieId, Throwable ex) {
+        log.warn("Fallback fetchMovieCredits(movieId={}) due to {}", movieId, ex.toString());
+        return Optional.empty();
+    }
+
+    @SuppressWarnings("unused")
+    private Optional<TmdbCredits> fallbackFetchTvCredits(Long tvId, Throwable ex) {
+        log.warn("Fallback fetchTvCredits(tvId={}) due to {}", tvId, ex.toString());
+        return Optional.empty();
+    }
+
+    @SuppressWarnings("unused")
+    private TmdbImageConfig fallbackFetchImageConfig(Throwable ex) {
+        log.warn("Fallback fetchImageConfig due to {}", ex.toString());
+        TmdbImageConfig localCache = cachedImageConfig;
+        if (localCache != null) {
+            return localCache;
+        }
+        return TmdbImageConfig.builder().build();
     }
 
     // ========================================================================

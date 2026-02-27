@@ -138,6 +138,8 @@ resilience4j:
                 waitDurationInOpenState: 10s
                 permittedNumberOfCallsInHalfOpenState: 3
                 automaticTransitionFromOpenToHalfOpenEnabled: true
+                # A10:2025 — registrar mudanças de estado no log
+                registerHealthIndicator: true
 
     retry:
         instances:
@@ -147,6 +149,20 @@ resilience4j:
                 retryExceptions:
                     - org.springframework.web.reactive.function.client.WebClientRequestException
                     - java.io.IOException
+
+    # A10:2025 — Timeout para chamadas à API TMDb
+    timelimiter:
+        instances:
+            tmdb:
+                timeoutDuration: 3s
+                cancelRunningFuture: true
+
+    # A10:2025 — Limitar chamadas concorrentes à API TMDb
+    bulkhead:
+        instances:
+            tmdb:
+                maxConcurrentCalls: 10
+                maxWaitDuration: 500ms
 
 cinelog:
     security:

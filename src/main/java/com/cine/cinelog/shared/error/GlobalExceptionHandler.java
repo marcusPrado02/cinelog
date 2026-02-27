@@ -9,6 +9,8 @@ import com.cine.cinelog.features.auth.service.RefreshTokenService;
 import com.cine.cinelog.shared.security.BusinessLimitExceededException;
 import com.cine.cinelog.shared.security.IntegrityService;
 import com.cine.cinelog.shared.security.SecureActionTokenService;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -26,8 +29,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
@@ -67,6 +73,8 @@ public class GlobalExceptionHandler {
     private static final URI TYPE_AUTH = URI.create("https://api.cinelog.com/errors/authentication");
     private static final URI TYPE_LOCKED = URI.create("https://api.cinelog.com/errors/account-locked");
     private static final URI TYPE_INTEGRITY = URI.create("https://api.cinelog.com/errors/integrity");
+    private static final URI TYPE_SERVICE_UNAVAILABLE = URI
+            .create("https://api.cinelog.com/errors/service-unavailable");
 
     private final MessageSource messageSource;
 
@@ -443,6 +451,103 @@ public class GlobalExceptionHandler {
         pd.setTitle("Too Many Requests");
         pd.setType(URI.create("https://api.cinelog.com/errors/rate-limit"));
         setCommon(pd, req, "BUSINESS_LIMIT_EXCEEDED");
+        return pd;
+    }
+
+    // ===== A10:2025 — Circuit breaker aberto (serviço externo indisponível) =====
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ProblemDetail handleCircuitBreakerOpen(CallNotPermittedException ex,
+            HttpServletRequest req) {
+        log.warn("A10:2025 — Circuit breaker OPEN. Path: {}, CB: {}",
+                req.getRequestURI(), ex.getCausingCircuitBreakerName());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "Serviço externo temporariamente indisponível. Tente novamente em alguns instantes.");
+        pd.setTitle("Service Unavailable");
+        pd.setType(TYPE_SERVICE_UNAVAILABLE);
+        pd.setProperty("circuitBreaker", ex.getCausingCircuitBreakerName());
+        setCommon(pd, req, "CIRCUIT_BREAKER_OPEN");
+        return pd;
+    }
+
+    // ===== A10:2025 — Bulkhead cheio (excesso de chamadas concorrentes) =====
+    @ExceptionHandler(BulkheadFullException.class)
+    public ProblemDetail handleBulkheadFull(BulkheadFullException ex,
+            HttpServletRequest req) {
+        log.warn("A10:2025 — Bulkhead cheio. Path: {}, Message: {}",
+                req.getRequestURI(), ex.getMessage());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
+                "Limite de chamadas concorrentes atingido. Tente novamente em instantes.");
+        pd.setTitle("Too Many Concurrent Requests");
+        pd.setType(TYPE_SERVICE_UNAVAILABLE);
+        setCommon(pd, req, "BULKHEAD_FULL");
+        return pd;
+    }
+
+    // ===== A10:2025 — Tipo de argumento incompatível (ex.: String no lugar de
+    // Long) =====
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+            HttpServletRequest req) {
+        String paramName = ex.getName();
+        String requiredType = ex.getRequiredType() != null
+                ? ex.getRequiredType().getSimpleName()
+                : "desconhecido";
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Parâmetro '" + paramName + "' deve ser do tipo " + requiredType + ".");
+        pd.setTitle("Invalid Parameter Type");
+        pd.setType(TYPE_BAD_REQUEST);
+        pd.setProperty("parameter", paramName);
+        pd.setProperty("expectedType", requiredType);
+        setCommon(pd, req, "TYPE_MISMATCH");
+        return pd;
+    }
+
+    // ===== A10:2025 — Parâmetro obrigatório ausente na request =====
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ProblemDetail handleMissingParam(MissingServletRequestParameterException ex,
+            HttpServletRequest req) {
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Parâmetro obrigatório '" + ex.getParameterName() + "' não informado.");
+        pd.setTitle("Missing Required Parameter");
+        pd.setType(TYPE_BAD_REQUEST);
+        pd.setProperty("parameter", ex.getParameterName());
+        pd.setProperty("expectedType", ex.getParameterType());
+        setCommon(pd, req, "MISSING_PARAMETER");
+        return pd;
+    }
+
+    // ===== A10:2025 — Erro em chamada a serviço externo (WebClient) =====
+    @ExceptionHandler(WebClientResponseException.class)
+    public ProblemDetail handleWebClientError(WebClientResponseException ex,
+            HttpServletRequest req) {
+        // A02: não expor detalhes do serviço externo (headers, body) ao cliente
+        log.error("A10:2025 — Erro de serviço externo. Path: {}, StatusCode: {}, Message: {}",
+                req.getRequestURI(), ex.getStatusCode(), ex.getMessage());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY,
+                "Erro na comunicação com serviço externo.");
+        pd.setTitle("Bad Gateway");
+        pd.setType(TYPE_SERVICE_UNAVAILABLE);
+        setCommon(pd, req, "EXTERNAL_SERVICE_ERROR");
+        return pd;
+    }
+
+    // ===== A10:2025 — Erro genérico de acesso a dados (exceto DataIntegrity) =====
+    @ExceptionHandler(DataAccessException.class)
+    public ProblemDetail handleDataAccess(DataAccessException ex,
+            HttpServletRequest req) {
+        // A02: não expor detalhes do banco (queries, schema, constraint) ao cliente
+        log.error("A10:2025 — Erro de acesso a dados. Path: {}, ExceptionType: {}, Message: {}",
+                req.getRequestURI(), ex.getClass().getSimpleName(), ex.getMessage());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Erro de acesso a dados. Tente novamente.");
+        pd.setTitle("Data Access Error");
+        pd.setType(TYPE_INTERNAL);
+        setCommon(pd, req, "DATA_ACCESS_ERROR");
         return pd;
     }
 

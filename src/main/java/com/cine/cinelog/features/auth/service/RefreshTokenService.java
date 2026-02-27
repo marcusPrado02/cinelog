@@ -162,14 +162,23 @@ public class RefreshTokenService {
      * Housekeeping: remove tokens expirados há mais de 1 dia (reduz tamanho da
      * tabela).
      * Executado diariamente às 02:00.
+     *
+     * A10:2025 — try-catch obrigatório em @Scheduled para evitar que uma exceção
+     * transiente (ex.: DB temporariamente indisponível) mate o scheduler thread
+     * e impeça todas as execuções futuras.
      */
     @Scheduled(cron = "0 0 2 * * ?")
     @Transactional
     public void cleanupExpiredTokens() {
-        Instant cutoff = Instant.now().minusSeconds(86400); // expirados há mais de 24h
-        int deleted = refreshTokenRepository.deleteExpiredBefore(cutoff);
-        if (deleted > 0) {
-            log.info("Housekeeping: removidos {} refresh tokens expirados", deleted);
+        try {
+            Instant cutoff = Instant.now().minusSeconds(86400); // expirados há mais de 24h
+            int deleted = refreshTokenRepository.deleteExpiredBefore(cutoff);
+            if (deleted > 0) {
+                log.info("Housekeeping: removidos {} refresh tokens expirados", deleted);
+            }
+        } catch (Exception ex) {
+            log.error("A10:2025 — Falha no housekeeping de refresh tokens. "
+                    + "Scheduler continuará na próxima execução.", ex);
         }
     }
 

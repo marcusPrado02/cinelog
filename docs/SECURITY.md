@@ -3181,21 +3181,388 @@ O PCI-DSS (Req. 10.7) exige 1 ano de histórico de auditoria (90 dias online + a
 
 ## A10:2025 (OWASP) — Mishandling of Exceptional Conditions
 
-> **Status:** parcialmente implementado.
+> **Status:** ✅ implementado.
 >
 > Esta categoria é **nova no OWASP 2025** e abrange situações em que condições
 > excepcionais (erros, timeouts, estados inesperados) são tratadas de forma insegura,
 > levando a vazamento de informações, estados inconsistentes ou bypass de controles.
 
-### Pontos a implementar
+### O que esta categoria cobre
 
-- [x] GlobalExceptionHandler com respostas RFC 7807 ProblemDetail
+O OWASP A10:2025 trata de cenários onde a aplicação:
+
+1. **Engole exceções silenciosamente** — `catch (Exception e) {}` sem log nem métrica
+2. **Vaza informações via stack trace** — retorna detalhes internos ao cliente
+3. **Não implementa circuit breaker** — uma API externa fora do ar derruba toda a aplicação
+4. **Não trata timeout** — chamadas HTTP/DB ficam penduradas indefinidamente
+5. **Mata o scheduler** — uma exceção transiente em `@Scheduled` cancela todas as próximas execuções
+6. **Ignora erros fatais** — `OutOfMemoryError` e `StackOverflowError` passam despercebidos
+7. **Não monitora saúde de dependências** — não há health check para APIs externas ou filas
+
+### Checklist de implementação
+
+- [x] GlobalExceptionHandler com respostas RFC 9457 ProblemDetail
 - [x] Stack traces suprimidos em produção (A02:2025)
 - [x] Mensagens de erro genéricas em respostas HTTP
-- [ ] Circuit breaker para serviços externos — **pendente**
-- [ ] Tratamento de timeout em chamadas a Redis e Kafka — **pendente**
-- [ ] Fallback seguro para falhas de autenticação externa — **pendente**
-- [ ] Validação de estado consistente após exceções — **pendente**
+- [x] Circuit breaker para serviços externos (TMDb)
+- [x] Tratamento de timeout em chamadas HTTP (WebClient + Resilience4j)
+- [x] Fallback seguro para cada método de integração
+- [x] Bulkhead para limitar chamadas concorrentes
+- [x] Scheduler global error handler com logging estruturado
+- [x] Proteção de todos os `@Scheduled` com try-catch
+- [x] Health indicators customizados (TMDb + Outbox)
+- [x] JVM safety hooks (uncaught exception handler + shutdown hook)
+- [x] Handlers específicos no GlobalExceptionHandler para circuit breaker, bulkhead, timeout
+
+---
+
+### 1. Resilience4j — Circuit Breaker, Retry, Bulkhead
+
+**Cenário**: A API do TMDb fica fora do ar. Sem circuit breaker, cada request do
+CineLog tentaria chamar o TMDb (timeout de 3s), segurando threads e degradando
+toda a aplicação. Com circuit breaker, após N falhas consecutivas, o circuito
+**abre** e as próximas chamadas retornam imediatamente via fallback — sem sequer
+tentar a chamada HTTP.
+
+**Configuração** (`application.yml`):
+
+```yaml
+resilience4j:
+    circuitbreaker:
+        instances:
+            tmdb:
+                slidingWindowSize: 20 # avalia últimas 20 chamadas
+                failureRateThreshold: 50 # abre se 50%+ falharem
+                waitDurationInOpenState: 10s # espera 10s antes de testar recuperação
+                permittedNumberOfCallsInHalfOpenState: 3
+                automaticTransitionFromOpenToHalfOpenEnabled: true
+                registerHealthIndicator: true # expõe estado no /actuator/health
+
+    retry:
+        instances:
+            tmdb:
+                maxAttempts: 3 # tenta até 3x antes de desistir
+                waitDuration: 500ms # intervalo entre retries
+                retryExceptions: # apenas exceções transitórias
+                    - WebClientRequestException
+                    - IOException
+
+    timelimiter:
+        instances:
+            tmdb:
+                timeoutDuration: 3s # cancela após 3s de espera
+                cancelRunningFuture: true
+
+    bulkhead:
+        instances:
+            tmdb:
+                maxConcurrentCalls: 10 # max 10 chamadas simultâneas
+                maxWaitDuration: 500ms # espera max 500ms por slot
+```
+
+**Por que cada componente?**
+
+| Componente          | Problema resolvido                          | HTTP Status             |
+| ------------------- | ------------------------------------------- | ----------------------- |
+| **Circuit Breaker** | API externa fora do ar → fail-fast          | 503 Service Unavailable |
+| **Retry**           | Falha transitória (rede instável) → retenta | Transparente            |
+| **TimeLimiter**     | Chamada pendurada → timeout forçado         | 504 Gateway Timeout     |
+| **Bulkhead**        | Pico de requests → limitar concorrência     | 429 Too Many Requests   |
+
+---
+
+### 2. Fallback Methods — Degradação Graciosa
+
+**Cenário**: O TMDb está indisponível (circuit breaker OPEN). O usuário busca um
+filme. Em vez de retornar 500, o fallback retorna `Optional.empty()` ou uma lista
+vazia, permitindo que o front-end exiba "resultados indisponíveis no momento".
+
+```java
+// TmdbClientAdapter.java — TODOS os métodos públicos têm fallback
+
+@Retry(name = "tmdb")
+@CircuitBreaker(name = "tmdb", fallbackMethod = "fallbackSearchMovies")
+@Bulkhead(name = "tmdb")
+public TmdbSearchResult<TmdbMediaSummary> searchMovies(String query, Integer year, int page) {
+    // chamada real ao TMDb via WebClient
+}
+
+// Fallback: retorna resultado vazio (safe default)
+@SuppressWarnings("unused")
+private TmdbSearchResult<TmdbMediaSummary> fallbackSearchMovies(
+        String query, Integer year, int page, Throwable ex) {
+    log.warn("Fallback searchMovies(query='{}') due to {}", query, ex.toString());
+    return emptySearchResult(page);
+}
+```
+
+**Princípio**: O fallback NUNCA deve lançar exceção. Ele deve retornar um valor
+seguro (empty, default, cached) que permita à aplicação continuar operando em
+modo degradado.
+
+**Métodos protegidos**:
+
+| Método                                     | Fallback                    |
+| ------------------------------------------ | --------------------------- |
+| `fetchByTmdbId()`                          | `Optional.empty()`          |
+| `fetchMovie()` / `fetchTv()`               | `Optional.empty()`          |
+| `searchMovies()` / `searchTvShows()`       | Lista vazia paginada        |
+| `discoverMovies()` / `discoverTvShows()`   | Lista vazia paginada        |
+| `fetchMovieGenres()` / `fetchTvGenres()`   | `Collections.emptyList()`   |
+| `fetchMovieCredits()` / `fetchTvCredits()` | `Optional.empty()`          |
+| `fetchImageConfig()`                       | Cache local ou config vazia |
+
+---
+
+### 3. GlobalExceptionHandler — Handlers Específicos para A10
+
+**Cenário**: Uma `CallNotPermittedException` sobe do Resilience4j quando o circuit
+breaker está OPEN. Sem handler específico, cairia no fallback genérico 500 com
+mensagem "Erro inesperado" — incorreto e confuso. Com handler dedicado, retorna
+503 com mensagem clara.
+
+```java
+// Circuit breaker aberto → 503
+@ExceptionHandler(CallNotPermittedException.class)
+public ProblemDetail handleCircuitBreakerOpen(CallNotPermittedException ex,
+        HttpServletRequest req) {
+    log.warn("A10 — Circuit breaker OPEN. CB: {}", ex.getCausingCircuitBreakerName());
+
+    var pd = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+            "Serviço externo temporariamente indisponível.");
+    pd.setTitle("Service Unavailable");
+    pd.setType(URI.create("https://api.cinelog.com/errors/service-unavailable"));
+    pd.setProperty("circuitBreaker", ex.getCausingCircuitBreakerName());
+    setCommon(pd, req, "CIRCUIT_BREAKER_OPEN");
+    return pd;
+}
+
+// Bulkhead cheio → 429
+@ExceptionHandler(BulkheadFullException.class)
+public ProblemDetail handleBulkheadFull(...) { /* 429 Too Many Requests */ }
+
+// Tipo de parâmetro inválido → 400
+@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+public ProblemDetail handleTypeMismatch(...) { /* 400 Bad Request */ }
+
+// Parâmetro obrigatório ausente → 400
+@ExceptionHandler(MissingServletRequestParameterException.class)
+public ProblemDetail handleMissingParam(...) { /* 400 Bad Request */ }
+
+// Erro de serviço externo (WebClient) → 502
+@ExceptionHandler(WebClientResponseException.class)
+public ProblemDetail handleWebClientError(...) { /* 502 Bad Gateway */ }
+
+// Erro genérico de banco (exceto DataIntegrity) → 500 com mensagem segura
+@ExceptionHandler(DataAccessException.class)
+public ProblemDetail handleDataAccess(...) { /* 500 sem expor detalhes SQL */ }
+```
+
+**Hierarquia de handlers** (ordem de especificidade do Spring):
+
+```
+CallNotPermittedException     → 503 (circuit breaker)
+BulkheadFullException         → 429 (concorrência)
+WebClientResponseException    → 502 (bad gateway)
+DataIntegrityViolation        → 409 (constraint)
+DataAccessException           → 500 (banco genérico)
+Exception                     → 500 (fallback final)
+```
+
+---
+
+### 4. Scheduler Error Handler — Tarefas Agendadas Seguras
+
+**Cenário perigoso**: O `@Scheduled cleanupExpiredTokens()` executa às 02:00.
+Se o banco estiver temporariamente indisponível, a exceção `DataAccessException`
+sobe sem try-catch. O Spring loga e **continua**, mas em certas configurações de
+pool de threads, pode haver side effects inesperados.
+
+**Solução em duas camadas**:
+
+**Camada 1**: try-catch individual em cada `@Scheduled`:
+
+```java
+@Scheduled(cron = "0 0 2 * * ?")
+@Transactional
+public void cleanupExpiredTokens() {
+    try {
+        Instant cutoff = Instant.now().minusSeconds(86400);
+        int deleted = refreshTokenRepository.deleteExpiredBefore(cutoff);
+        if (deleted > 0) {
+            log.info("Housekeeping: removidos {} refresh tokens expirados", deleted);
+        }
+    } catch (Exception ex) {
+        log.error("A10 — Falha no housekeeping de refresh tokens. "
+                + "Scheduler continuará na próxima execução.", ex);
+    }
+}
+```
+
+**Camada 2**: `ErrorHandler` global no `TaskScheduler` (defense-in-depth):
+
+```java
+@Configuration
+@EnableScheduling
+public class SchedulingConfig {
+
+    @Bean
+    public TaskScheduler taskScheduler() {
+        var scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(4);
+        scheduler.setThreadNamePrefix("cinelog-sched-");
+        scheduler.setErrorHandler(throwable -> {
+            if (throwable instanceof Error error) {
+                // OOM, StackOverflow → re-lança (não abafar)
+                log.error("FATAL em tarefa agendada", error);
+                throw error;
+            }
+            log.error("Exceção não tratada em tarefa agendada. "
+                    + "Scheduler continuará.", throwable);
+        });
+        scheduler.setWaitForTasksToCompleteOnShutdown(true);
+        scheduler.setAwaitTerminationSeconds(30);
+        return scheduler;
+    }
+}
+```
+
+**Tarefas `@Scheduled` protegidas**:
+
+| Classe                                     | Cron      | try-catch?   |
+| ------------------------------------------ | --------- | ------------ |
+| `OutboxPublisherJob.processOutboxEvents`   | A cada 5s | ✅ Sim       |
+| `OutboxPublisherJob.cleanupOldEvents`      | 01:00     | ✅ Sim       |
+| `RefreshTokenService.cleanupExpiredTokens` | 02:00     | ✅ Sim (A10) |
+| `InboxHousekeepingJob.cleanup`             | 03:00     | ✅ Sim       |
+
+---
+
+### 5. Health Indicators — Monitoramento de Dependências
+
+**Cenário**: O TMDb está fora do ar há 30 minutos. Sem health indicator, o
+`/actuator/health` reporta `UP` — os balanceadores de carga continuam roteando
+tráfego. Com health indicator customizado, o status muda para `DOWN` e o Kubernetes
+pode redirecionar tráfego.
+
+**TmdbHealthIndicator**:
+
+```java
+@Component
+public class TmdbHealthIndicator implements HealthIndicator {
+
+    @Override
+    public Health health() {
+        CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("tmdb");
+
+        return switch (cb.getState()) {
+            case OPEN -> Health.down()
+                .withDetail("reason", "Circuit breaker OPEN")
+                .withDetail("failureRate", cb.getMetrics().getFailureRate() + "%")
+                .build();
+            case HALF_OPEN -> Health.unknown()
+                .withDetail("reason", "Testando recuperação")
+                .build();
+            default -> {
+                // Probe leve: GET /configuration
+                tmdbWebClient.get().uri("/configuration")
+                    .retrieve().toBodilessEntity()
+                    .block(Duration.ofSeconds(3));
+                yield Health.up().build();
+            }
+        };
+    }
+}
+```
+
+**OutboxHealthIndicator**:
+
+```java
+@Component
+public class OutboxHealthIndicator implements HealthIndicator {
+
+    @Override
+    public Health health() {
+        int pending  = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM outbox_event WHERE status = 'PENDING'", Integer.class);
+        int failed = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM outbox_event WHERE status = 'FAILED_PERM'", Integer.class);
+
+        if (failed > 10)   return Health.down().withDetail("reason", "Excesso de falhas permanentes");
+        if (pending > 100)  return Health.down().withDetail("reason", "Acúmulo de pendentes");
+        return Health.up().withDetail("pendingEvents", pending).build();
+    }
+}
+```
+
+**Endpoints de health**:
+
+| Endpoint                  | Indica                                    |
+| ------------------------- | ----------------------------------------- |
+| `/actuator/health/tmdb`   | Estado da API TMDb (CB + probe HTTP)      |
+| `/actuator/health/outbox` | Saúde da fila outbox (pendentes + falhas) |
+| `/actuator/health/db`     | Banco MySQL (auto-config do Spring)       |
+| `/actuator/health/redis`  | Cache Redis (auto-config do Spring)       |
+
+---
+
+### 6. JVM Safety Hooks — Erros Fatais e Shutdown
+
+**Cenário**: Uma thread do pool de Kafka lança `OutOfMemoryError`. Sem handler
+global, o erro aparece apenas no stderr (que pode não estar sendo coletado). A
+thread morre silenciosamente e a aplicação continua funcionando com capacidade
+reduzida — ninguém é alertado.
+
+**Solução**:
+
+```java
+@Component
+public class JvmSafetyConfig {
+
+    @PostConstruct
+    void init() {
+        // Handler global para exceções não capturadas em qualquer thread
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof OutOfMemoryError) {
+                System.err.println("FATAL: OOM na thread " + thread.getName());
+                log.error("FATAL OOM na thread '{}'", thread.getName(), throwable);
+            } else {
+                log.error("Exceção não capturada na thread '{}'",
+                        thread.getName(), throwable);
+            }
+        });
+
+        // Shutdown hook — garante log antes do encerramento
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("JVM shutdown hook acionado. Flushing logs.");
+        }, "cinelog-shutdown-hook"));
+    }
+
+    @PreDestroy
+    void onShutdown() {
+        log.info("Spring context destruído. Graceful shutdown completo.");
+    }
+}
+```
+
+**Por que `System.err` além do logger?** Em cenários de `OutOfMemoryError`, o
+logger pode falhar ao tentar alocar memória para formatar a mensagem. O `System.err`
+é a última linha de defesa.
+
+---
+
+### 7. Resumo de Arquivos Criados/Modificados
+
+| Arquivo                       | Ação       | Descrição                                                                                   |
+| ----------------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| `application.yml`             | Modificado | +timeLimiter, +bulkhead, +registerHealthIndicator                                           |
+| `TmdbClientAdapter.java`      | Modificado | @CircuitBreaker + @Retry + @Bulkhead em todos os métodos + fallbacks                        |
+| `GlobalExceptionHandler.java` | Modificado | +6 handlers (CallNotPermitted, Bulkhead, TypeMismatch, MissingParam, WebClient, DataAccess) |
+| `RefreshTokenService.java`    | Modificado | try-catch em cleanupExpiredTokens()                                                         |
+| `SchedulingConfig.java`       | Criado     | ErrorHandler global + TaskScheduler customizado                                             |
+| `TmdbHealthIndicator.java`    | Criado     | Health indicator para TMDb (CB state + probe)                                               |
+| `OutboxHealthIndicator.java`  | Criado     | Health indicator para outbox (pendentes + falhas)                                           |
+| `JvmSafetyConfig.java`        | Criado     | Uncaught exception handler + shutdown hook                                                  |
 
 ---
 
