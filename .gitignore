@@ -32,5 +32,3 @@ build/
 ## Environment Variables
 .env
 
-## GitHub
-.github/workflows/

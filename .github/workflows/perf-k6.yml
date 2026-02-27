@@ -1,0 +1,33 @@
+name: Performance - k6 Load Tests
+
+permissions:
+    contents: read
+    packages: read
+    id-token: write
+
+on:
+    workflow_dispatch:
+
+jobs:
+    perf-test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+
+            - name: Install Docker Compose
+              run: sudo apt-get update && sudo apt-get install -y docker-compose
+
+            - name: Build CineLog + DB stack
+              run: docker-compose up -d db app
+
+            - name: Wait for application startup
+              run: sleep 25
+
+            - name: Run k6 load test
+              run: docker-compose run --rm k6 run load-media.js
+              working-directory: ./performance/k6
+
+            - name: Stop containers
+              run: docker-compose down
