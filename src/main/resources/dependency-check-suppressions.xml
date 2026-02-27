@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Arquivo de supressões do OWASP Dependency-Check.
+
+    O que é? Uma lista de CVEs que foram ANALISADAS pela equipe e consideradas
+    falsos positivos ou não aplicáveis ao contexto do CineLog.
+
+    REGRAS para adicionar supressões:
+    1. Cada supressão DEVE ter um comentário explicando POR QUE não se aplica
+    2. Deve incluir a data da análise e quem analisou
+    3. Deve ser revisada a cada 90 dias (quarterly review)
+    4. NUNCA suprimir uma CVE sem investigar primeiro
+
+    Uso: referenciado automaticamente pelo plugin dependency-check-maven no pom.xml
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+    <!--
+        TEMPLATE para novas supressões:
+
+        <suppress>
+            <notes><![CDATA[
+                CVE-YYYY-XXXXX — [Descrição breve]
+                Motivo da supressão: [Falso positivo / Não aplicável porque...]
+                Analisado por: [Nome] em [Data]
+                Próxima revisão: [Data + 90 dias]
+            ]]></notes>
+            <cve>CVE-YYYY-XXXXX</cve>
+        </suppress>
+    -->
+
+</suppressions>

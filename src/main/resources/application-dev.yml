@@ -1,9 +1,39 @@
-# Perfil DEV — sobrescreve defaults de produção para auxiliar no desenvolvimento local.
+# ═══════════════════════════════════════════════════════════════════
+# Perfil DEV — sobrescreve defaults de produção para auxiliar no
+# desenvolvimento local.  A05 (OWASP): configs permissivas apenas aqui.
+# ═══════════════════════════════════════════════════════════════════
 
 server:
     error:
         include-message: always
         include-binding-errors: always
+        include-stacktrace: on_param
+
+# Swagger habilitado em dev (via @Profile no OpenApiConfig)
+springdoc:
+    swagger-ui:
+        enabled: true
+    api-docs:
+        enabled: true
+
+# Actuator mais permissivo em dev
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,env,beans,mappings,metrics,prometheus
+        enabled-by-default: true
+    endpoint:
+        health:
+            show-details: always
+        env:
+            show-values: when-authorized
+
+# CORS permissivo para dev local (React/Vue/Angular)
+cinelog:
+    security:
+        cors:
+            allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:4200
 
 logging:
     level:

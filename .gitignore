@@ -33,5 +33,4 @@ build/
 .env
 
 ## GitHub
-.github/
 .github/workflows/

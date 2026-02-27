@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.9</version>
+        <version>3.5.11</version>
         <relativePath />
         <!-- lookup parent from repository -->
     </parent>
@@ -46,8 +46,46 @@
         <jjwt.version>0.12.6</jjwt.version>
         <resilience4j.version>2.3.0</resilience4j.version>
         <archunit.version>1.3.0</archunit.version>
-        <kafka.version>3.9.0</kafka.version>
+        <kafka.version>3.9.2</kafka.version>
+        <!-- A03:2025 — Supply Chain Security -->
+        <dependency-check-maven.version>11.1.1</dependency-check-maven.version>
+        <cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     </properties>
+
+    <!-- ═════════════════════════════════════════════════════════════
+         A03:2025 — DEPENDENCY MANAGEMENT: override de transitivas
+         com CVEs conhecidas que o BOM do Spring Boot não gerencia.
+         ═════════════════════════════════════════════════════════════ -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- jose4j: CVE DoS via compressed JWE (GHSA-3677-xxcr-wjqv) -->
+            <dependency>
+                <groupId>org.bitbucket.b_c</groupId>
+                <artifactId>jose4j</artifactId>
+                <version>0.9.6</version>
+            </dependency>
+            <!-- lz4-java: OOB memory / info-leak (GHSA-vqf4-7m7x-wgfc, GHSA-cmp6-m4wj-q63q) -->
+            <dependency>
+                <groupId>org.lz4</groupId>
+                <artifactId>lz4-java</artifactId>
+                <version>1.8.1</version>
+            </dependency>
+            <!-- commons-beanutils: improper access control (GHSA-wxr5-93ph-8wr9) -->
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>1.11.0</version>
+            </dependency>
+            <!-- commons-compress: OOM / DoS (GHSA-4265-ccf5-phj5, GHSA-4g9r-vxhx-9pgx) -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.27.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -349,9 +387,7 @@
                                 <exclude>**/*Request.class</exclude>
                                 <exclude>**/*Response.class</exclude>
 
-                                <!-- Ignorar anotados (se usar @Generated/@ExcludeFromCoverage) -->
-                                <!-- <exclude>@*Generated*</exclude> -->
-                                <!-- <exclude>@*ExcludeFromCoverage*</exclude> -->
+
                             </excludes>
                         </configuration>
                     </execution>
@@ -384,6 +420,93 @@
                                 <csv enabled="false" />
                             </reports>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ═══════════════════════════════════════════════════
+                 A03:2025 — SOFTWARE SUPPLY CHAIN SECURITY PLUGINS
+                 ═══════════════════════════════════════════════════ -->
+
+            <!-- OWASP Dependency-Check: escaneia CVEs em todas as dependências.
+                 Uso: ./mvnw dependency-check:check
+                 Build FALHA se encontrar CVE com CVSS >= 7.0 (HIGH/CRITICAL). -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>${dependency-check-maven.version}</version>
+                <configuration>
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <formats>
+                        <format>HTML</format>
+                        <format>JSON</format>
+                    </formats>
+                    <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
+                    <suppressionFile>src/main/resources/dependency-check-suppressions.xml</suppressionFile>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
+                    <skipTestScope>false</skipTestScope>
+                    <skipProvidedScope>false</skipProvidedScope>
+                </configuration>
+            </plugin>
+
+            <!-- CycloneDX: gera SBOM (Software Bill of Materials).
+                 Gerado automaticamente durante 'mvn package'.
+                 Uso manual: ./mvnw cyclonedx:makeBom -->
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>${cyclonedx-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <schemaVersion>1.5</schemaVersion>
+                    <includeLicenseText>false</includeLicenseText>
+                    <includeCompileScope>true</includeCompileScope>
+                    <includeRuntimeScope>true</includeRuntimeScope>
+                    <includeTestScope>false</includeTestScope>
+                    <includeProvidedScope>false</includeProvidedScope>
+                    <includeSystemScope>false</includeSystemScope>
+                    <outputFormat>all</outputFormat>
+                    <outputName>cinelog-sbom</outputName>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Enforcer: impõe regras de build (versões, duplicatas, convergência).
+                 Uso: ./mvnw enforcer:enforce -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin.version}</version>
+                <configuration>
+                    <rules>
+                        <requireJavaVersion>
+                            <version>[21,)</version>
+                            <message>CineLog requer Java 21 ou superior.</message>
+                        </requireJavaVersion>
+                        <requireMavenVersion>
+                            <version>[3.9,)</version>
+                            <message>CineLog requer Maven 3.9 ou superior.</message>
+                        </requireMavenVersion>
+                        <banDuplicatePomDependencyVersions />
+                        <requireReleaseDeps>
+                            <onlyWhenRelease>true</onlyWhenRelease>
+                            <message>Dependências SNAPSHOT não permitidas em builds de release.</message>
+                        </requireReleaseDeps>
+                    </rules>
+                    <fail>true</fail>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>enforce-rules</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

@@ -72,6 +72,8 @@ springdoc:
     default-flat-param-object: true # Usa parâmetros simples (não nested) para Pageable
 
 server:
+    # A05: não expor versão/tecnologia em headers HTTP
+    server-header: ""
     error:
         # A02: não expor detalhes internos ao cliente em produção.
         # O perfil dev (application-dev.yml) pode sobrescrever para always.
@@ -79,6 +81,8 @@ server:
         include-binding-errors: never
         include-exception: false
         include-stacktrace: never
+        whitelabel:
+            enabled: false
 
 logging:
     level:
@@ -89,14 +93,21 @@ logging:
         slow-threshold-ms: 800
         sample-rate: 1.0 # 1.0 = logar tudo; 0.1 = 10%
 
+# A05: Actuator — superfície mínima por padrão (profiles podem ampliar)
 management:
     endpoints:
         web:
             exposure:
-                include: health,info,loggers,env,metrics,threaddump,heapdump,prometheus,configprops
+                include: health,info,prometheus
+        enabled-by-default: false
     endpoint:
         health:
-            show-details: always
+            enabled: true
+            show-details: never
+        info:
+            enabled: true
+        prometheus:
+            enabled: true
     # Micrometer tracing
     tracing:
         sampling:
@@ -137,6 +148,11 @@ resilience4j:
 
 cinelog:
     security:
+        # A05: CORS — origens permitidas (profile-specific)
+        cors:
+            allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+            allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+            max-age-seconds: 3600
         jwt:
             # trunk-ignore(checkov/CKV_SECRET_6)
             secret: ${CINELOG_SECURITY_JWT_SECRET:MINHA_CHAVE_MEGA_SECRETA_DE_NO_MINIMO_32_CHARS}

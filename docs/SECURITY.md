@@ -4,12 +4,23 @@
 
 1. [Visão Geral](#visão-geral)
 2. [Autenticação](#autenticação)
-3. [Autorização](#autorização)
+3. OWASP Top 10:2025
+    - [A01:2025 — Broken Access Control](#a012025-owasp--broken-access-control)
+    - [A02:2025 — Security Misconfiguration](#a022025-owasp--security-misconfiguration)
+    - [A03:2025 — Software Supply Chain Failures](#a032025-owasp--software-supply-chain-failures)
+    - [A04:2025 — Cryptographic Failures](#a042025-owasp--cryptographic-failures)
+    - [A05:2025 — Injection](#a052025-owasp--injection)
+    - [A06:2025 — Insecure Design](#a062025-owasp--insecure-design)
+    - [A07:2025 — Authentication Failures](#a072025-owasp--authentication-failures)
+    - [A08:2025 — Software or Data Integrity Failures](#a082025-owasp--software-or-data-integrity-failures)
+    - [A09:2025 — Security Logging and Alerting Failures](#a092025-owasp--security-logging-and-alerting-failures)
+    - [A10:2025 — Mishandling of Exceptional Conditions](#a102025-owasp--mishandling-of-exceptional-conditions)
 4. [Proteções Implementadas](#proteções-implementadas)
 5. [Boas Práticas](#boas-práticas)
 6. [Configuração](#configuração)
 7. [Auditoria](#auditoria)
 8. [Resposta a Incidentes](#resposta-a-incidentes)
+9. [Checklist de Segurança](#checklist-de-segurança)
 
 ---
 
@@ -134,9 +145,7 @@ public TokenResponse refresh(@RequestBody RefreshTokenRequest request) {
 
 ---
 
-## Autorização
-
-### A01 (OWASP) — Controle de Acesso Quebrado
+## A01:2025 (OWASP) — Broken Access Control
 
 > **O que é?** Controle de acesso quebrado acontece quando um sistema permite que usuários realizem ações
 > ou acessem recursos para os quais **não têm permissão**. É o risco #1 do OWASP Top 10 porque
@@ -253,7 +262,7 @@ public void execute(Long genreId) { ... }
 | `@SecureOperation(enforce=true)`            | Método executado sem permission mesmo com URL liberada |
 | `@EnableMethodSecurity`                     | Anotações de segurança sendo silenciosamente ignoradas |
 
-### Checklist rápido de validação (A01)
+### Checklist A01:2025
 
 1. Usuário sem token em endpoint protegido → `401 Unauthorized`.
 2. Usuário autenticado sem role adequada em `/admin/**` → `403 Forbidden`.
@@ -263,7 +272,815 @@ public void execute(Long genreId) { ... }
 
 ---
 
-## A02 (OWASP) — Falhas Criptográficas e Exposição de Dados Sensíveis
+## A02:2025 (OWASP) — Security Misconfiguration
+
+### O que é?
+
+> **Security Misconfiguration** é quando o sistema está tecnicamente funcional mas
+> **configurado de forma insegura**. É o risco mais comum do OWASP Top 10 porque
+> envolve não apenas código, mas **configuração de servidor, framework, banco de dados,
+> cloud e dependências**.
+>
+> **Analogia:** é como ter uma casa com fechadura de alta segurança, mas deixar a chave
+> debaixo do tapete. A fechadura (código) está correta — o problema é a **configuração**.
+>
+> **Por que é tão frequente?**
+>
+> - Frameworks vêm com configurações **permissivas** para facilitar desenvolvimento
+> - Desenvolvedores copiam configs de dev para prod sem revisar
+> - Features de debug/diagnóstico ficam ativadas em produção
+> - Valores padrão são documentados publicamente (atacantes conhecem todos)
+>
+> **Exemplos reais de misconfiguration:**
+>
+> | Misconfiguration                      | O que o atacante ganha                                       |
+> | ------------------------------------- | ------------------------------------------------------------ |
+> | Swagger aberto em produção            | Mapa completo da API sem esforço de reconhecimento           |
+> | `/actuator/env` público               | JWT_SECRET, credenciais do banco de dados                    |
+> | `/actuator/heapdump` público          | Tokens JWT ativos, dados pessoais em memória                 |
+> | Stack traces em respostas HTTP        | Nome de classes, estrutura interna, versão de libs           |
+> | CORS com `*` (qualquer origem)        | Roubar dados do usuário via site malicioso                   |
+> | Headers sem `nosniff`, sem HSTS       | MIME sniffing → XSS, downgrade para HTTP → man-in-the-middle |
+> | `Server: Apache-Coyote/1.1` no header | Identificação da stack → busca de CVEs específicas           |
+
+---
+
+### Proteções implementadas
+
+---
+
+#### 1. Security Headers HTTP
+
+##### O que são?
+
+> São headers de **resposta** que instruem o browser a ativar proteções de segurança.
+> O servidor diz ao browser: "para este site, aplique estas regras". Sem eles, o browser
+> usa comportamentos padrão que frequentemente são inseguros (retrocompatibilidade).
+
+##### Headers configurados no CineLog
+
+> | Header                      | Valor                                                      | O que previne            | Cenário de ataque                                                            |
+> | --------------------------- | ---------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+> | `X-Content-Type-Options`    | `nosniff`                                                  | **MIME sniffing**        | Upload de `.jpg` que é HTML+JS → browser executa script → XSS                |
+> | `X-Frame-Options`           | `DENY`                                                     | **Clickjacking**         | Site malicioso coloca CineLog num `<iframe>` invisível e engana cliques      |
+> | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains`                      | **Downgrade HTTPS→HTTP** | Atacante na mesma WiFi força HTTP e intercepta tráfego (MITM)                |
+> | `Content-Security-Policy`   | `default-src 'self'; script-src 'self'; ...`               | **XSS, data injection**  | Mesmo que atacante injete `<script src="evil.com">`, browser recusa carregar |
+> | `Referrer-Policy`           | `strict-origin-when-cross-origin`                          | **Vazamento de URL**     | Token em query string não é enviado para sites externos via Referer          |
+> | `Permissions-Policy`        | `camera=(), microphone=(), geolocation=(), payment=()`     | **Acesso a hardware**    | Site comprometido não ativa câmera/microfone silenciosamente                 |
+> | `Cache-Control`             | `no-store, no-cache, must-revalidate, private` (em `/api`) | **Cache de dados**       | Após logout, dados pessoais não ficam no cache do browser/proxy              |
+> | `Server`                    | _(vazio)_                                                  | **Fingerprinting**       | Atacante não descobre versão do Tomcat → não busca CVEs específicas          |
+> | `X-Powered-By`              | _(removido)_                                               | **Fingerprinting**       | Idem — remove identificação da tecnologia                                    |
+
+##### O que é MIME sniffing?
+
+> O browser tenta "adivinhar" o tipo de um arquivo ignorando o `Content-Type` declarado
+> pelo servidor. Lê os primeiros bytes e compara com assinaturas conhecidas. Um arquivo com
+> `<html>` nos primeiros bytes pode ser interpretado como HTML mesmo que o servidor declare
+> `image/jpeg`. Com `nosniff`, o browser **respeita** o Content-Type declarado.
+
+##### O que é Clickjacking?
+
+> ```
+> ┌─── Site do atacante (visível) ──────────┐
+> │                                          │
+> │  "Clique aqui para ganhar um iPhone!"    │
+> │         [ CLIQUE AQUI ]                  │
+> │                                          │
+> │  ┌── CineLog em iframe (invisível) ──┐  │
+> │  │                                    │  │
+> │  │     [ Deletar minha conta ]  ←──── │──│── Botão real
+> │  │                                    │  │
+> │  └────────────────────────────────────┘  │
+> └──────────────────────────────────────────┘
+> ```
+>
+> Com `X-Frame-Options: DENY`, o browser **recusa** carregar o CineLog dentro de iframe.
+
+##### O que é Content-Security-Policy (CSP)?
+
+> CSP é uma **whitelist** de recursos que o browser pode carregar:
+>
+> ```
+> Content-Security-Policy: default-src 'self'; script-src 'self'; ...
+> ```
+>
+> | Diretiva                           | Significado                                            |
+> | ---------------------------------- | ------------------------------------------------------ |
+> | `default-src 'self'`               | Por padrão, só carrega do próprio domínio              |
+> | `script-src 'self'`                | Scripts só do próprio domínio (bloqueia CDNs externas) |
+> | `style-src 'self' 'unsafe-inline'` | Estilos do domínio + inline (Swagger UI)               |
+> | `frame-ancestors 'none'`           | Ninguém pode embeber este site em iframe               |
+> | `base-uri 'self'`                  | Impede que `<base>` redirecione URLs relativas         |
+> | `form-action 'self'`               | Formulários só enviam para o próprio domínio           |
+>
+> Mesmo que um atacante injete `<script src="https://evil.com/keylogger.js">`,
+> o browser **recusa carregar** porque `evil.com` não está na whitelist.
+
+Implementação: `com.cine.cinelog.shared.config.SecurityHeadersConfig`
+
+---
+
+#### 2. CORS restritivo por profile
+
+##### O que é CORS?
+
+> **Cross-Origin Resource Sharing** controla quais **origens** (domínios)
+> podem acessar a API via JavaScript no browser.
+>
+> **O que é uma "origem"?** Combinação de `protocolo + domínio + porta`:
+>
+> ```
+> https://cinelog.com       ← origem A
+> https://api.cinelog.com   ← origem B (domínio diferente)
+> http://localhost:3000     ← origem C
+> http://localhost:8080     ← origem D (porta diferente)
+> ```
+
+##### Cenário de ataque sem CORS restritivo
+
+> ```
+> 1. Usuário está logado no CineLog (JWT armazenado no browser)
+> 2. Visita evil.com (site do atacante)
+> 3. JavaScript em evil.com faz: fetch("https://api.cinelog.com/api/users/me")
+> 4. Browser envia o JWT automaticamente (credentials: 'include')
+> 5. Se CORS permite "*", a resposta chega ao JavaScript do atacante
+> 6. Atacante lê dados pessoais, reviews, watchlist...
+> ```
+
+##### Configuração por profile
+
+> | Profile  | Origens permitidas                                     | Justificativa              |
+> | -------- | ------------------------------------------------------ | -------------------------- |
+> | **dev**  | `localhost:3000`, `localhost:5173`, `localhost:4200`   | Frontend React/Vue/Angular |
+> | **prod** | Apenas `${CORS_ALLOWED_ORIGINS}` (env var obrigatória) | Domínio real do frontend   |
+>
+> **⚠️ NUNCA usar `*` com credentials!** CORS com `allowCredentials(true)` e
+> `allowedOrigins("*")` é **rejeitado** pelos browsers modernos (e pelo Spring).
+> É obrigatório listar origens explicitamente.
+
+```yaml
+# Produção: origins via variável de ambiente
+cinelog:
+  security:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+# Dev: múltiplas origens para desenvolvimento local
+cinelog:
+  security:
+    cors:
+      allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:4200
+```
+
+Implementação: `com.cine.cinelog.shared.config.CorsConfig`
+
+---
+
+#### 3. Actuator protegido por SecurityFilterChain dedicado
+
+##### O que é o Actuator?
+
+> São endpoints operacionais que o Spring Boot expõe. **Essenciais para ops,
+> perigosíssimos se públicos.**
+>
+> **Tabela de risco por endpoint:**
+>
+> | Endpoint                | Risco          | O que expõe                                          |
+> | ----------------------- | -------------- | ---------------------------------------------------- |
+> | `/actuator/health`      | 🟢 Baixo       | Apenas UP/DOWN (sem detalhes em prod)                |
+> | `/actuator/info`        | 🟢 Baixo       | Versão da build                                      |
+> | `/actuator/prometheus`  | 🟢 Baixo       | Métricas (necessário para Grafana)                   |
+> | `/actuator/metrics`     | 🟡 Médio       | Métricas de performance (pode revelar carga)         |
+> | `/actuator/env`         | 🔴 **Crítico** | **Variáveis de ambiente** (JWT_SECRET, DB password!) |
+> | `/actuator/configprops` | 🔴 **Crítico** | Todas as propriedades (podem ter secrets)            |
+> | `/actuator/heapdump`    | 🔴 **Crítico** | **Dump de memória** (tokens ativos, dados em cache!) |
+> | `/actuator/beans`       | 🟠 Alto        | Todos os beans Spring (revela arquitetura)           |
+> | `/actuator/mappings`    | 🟠 Alto        | Todos os endpoints HTTP (mapa da API)                |
+> | `/actuator/threaddump`  | 🟠 Alto        | Estado de threads (pode ter dados sensíveis)         |
+
+##### Configuração por profile
+
+> | Profile  | Endpoints expostos                                      | Autenticação                                 |
+> | -------- | ------------------------------------------------------- | -------------------------------------------- |
+> | **dev**  | health, info, env, beans, mappings, metrics, prometheus | Nenhuma (dev local)                          |
+> | **prod** | **Apenas health, info, prometheus**                     | health/info/prometheus público, demais ADMIN |
+
+##### SecurityFilterChain dedicado
+
+> A proteção usa um `SecurityFilterChain` com `@Order(1)` separado do chain principal
+> (`@Order(2)`). Isso garante que requests para `/actuator/**` sejam avaliadas por
+> regras específicas antes de cair no chain genérico:
+>
+> ```java
+> @Configuration
+> @Order(1)  // Avaliado ANTES do SecurityConfig (@Order 2)
+> public class ActuatorSecurityConfig {
+>
+>     @Bean
+>     SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+>         http
+>             .securityMatcher(EndpointRequest.toAnyEndpoint())
+>             .authorizeHttpRequests(auth -> auth
+>                 .requestMatchers(EndpointRequest.to(HealthEndpoint.class, InfoEndpoint.class))
+>                     .permitAll()
+>                 .anyRequest().hasRole("ADMIN")  // Todos os demais exigem ADMIN
+>             );
+>         return http.build();
+>     }
+> }
+> ```
+
+```yaml
+# application-prod.yml: endpoints sensíveis DESABILITADOS
+management:
+    endpoint:
+        env:
+            enabled: false # /actuator/env NUNCA em produção
+        heapdump:
+            enabled: false # /actuator/heapdump NUNCA em produção
+        configprops:
+            enabled: false # /actuator/configprops NUNCA em produção
+        beans:
+            enabled: false
+        mappings:
+            enabled: false
+```
+
+Implementação: `com.cine.cinelog.shared.config.ActuatorSecurityConfig`
+
+---
+
+#### 4. Swagger desabilitado em produção
+
+##### Por que desabilitar?
+
+> O Swagger UI expõe em uma interface interativa:
+>
+> - **Todos os endpoints** da API (incluindo admin e internos)
+> - **Schemas** completos de request/response (estrutura dos DTOs)
+> - **Exemplos** de payloads válidos
+> - **"Try it out"** — interface para testar endpoints ao vivo
+>
+> Isso dá ao atacante um **mapa completo** da API sem nenhum esforço de reconhecimento.
+> É como entregar a planta da casa para um ladrão.
+
+##### Como funciona
+
+> A classe `OpenApiConfig` usa `@Profile({"dev", "test", "default"})`,
+> o que significa que os beans do Swagger só são registrados nesses profiles.
+> Em produção, o bean simplesmente **não existe**, e o `springdoc` é desabilitado
+> via `application-prod.yml`:
+>
+> ```yaml
+> # application-prod.yml
+> springdoc:
+>     swagger-ui:
+>         enabled: false # UI desabilitada
+>     api-docs:
+>         enabled: false # JSON da spec desabilitado
+> ```
+>
+> **Defesa em profundidade:** mesmo em dev, o Swagger exige JWT para endpoints
+> protegidos (configurado via `SecurityScheme` no OpenAPI).
+
+---
+
+#### 5. Configuração de erros por profile
+
+##### O que pode vazar em mensagens de erro?
+
+> | Propriedade Spring               | O que expõe quando ativa                                |
+> | -------------------------------- | ------------------------------------------------------- |
+> | `include-message: always`        | Mensagem da exceção Java (pode ter SQL, paths internos) |
+> | `include-stacktrace: always`     | Stack trace completo (classes, linhas, versão de libs)  |
+> | `include-exception: true`        | Nome completo da classe de exceção                      |
+> | `include-binding-errors: always` | Nomes de campos e regras de validação internas          |
+>
+> **Cenário real:**
+>
+> ```json
+> // ❌ Resposta em produção com include-stacktrace: always
+> {
+>   "status": 500,
+>   "error": "Internal Server Error",
+>   "trace": "org.postgresql.util.PSQLException: ERROR: relation \"users\" ...\n
+>             at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(v6.4.1)\n
+>             at com.cine.cinelog.features.users.repository.UserRepository..."
+> }
+> // Atacante agora sabe: PostgreSQL, Hibernate 6.4.1, estrutura de packages
+> ```
+
+##### Configuração segura
+
+> | Profile  | include-message | include-stacktrace | include-exception | whitelabel |
+> | -------- | --------------- | ------------------ | ----------------- | ---------- |
+> | **base** | `never`         | `never`            | `false`           | `false`    |
+> | **dev**  | `always`        | `on_param`         | (herda base)      | (herda)    |
+> | **prod** | `never`         | `never`            | `false`           | `false`    |
+
+---
+
+#### 6. Remoção de fingerprinting
+
+##### O que é fingerprinting?
+
+> Técnica de **identificar tecnologias** usadas pelo servidor analisando headers,
+> mensagens de erro e formatos de resposta.
+>
+> ```http
+> # ❌ ANTES (expõe tecnologia)
+> Server: Apache-Coyote/1.1
+> X-Powered-By: Spring Boot 3.3.0
+>
+> # ✅ DEPOIS (nenhuma informação)
+> Server:
+> (X-Powered-By removido)
+> ```
+>
+> **Por que importa?** Cada versão de software tem CVEs publicadas. Se o atacante sabe
+> que é "Tomcat 10.1.24", busca vulnerabilidades específicas em 30 segundos. Sem essa
+> informação, precisa testar genericamente — muito mais lento e ruidoso nos logs.
+
+Implementação: `SecurityHeadersConfig` (remove `Server` e `X-Powered-By`) + `server.server-header: ""` no YAML
+
+---
+
+### Comparativo dev vs prod
+
+> | Aspecto               | Dev                                                     | Prod                             |
+> | --------------------- | ------------------------------------------------------- | -------------------------------- |
+> | Swagger               | ✅ Ativo                                                | ❌ Desabilitado                  |
+> | Stack traces          | ✅ Visíveis (`on_param`)                                | ❌ Nunca                         |
+> | Actuator endpoints    | health, info, env, beans, mappings, metrics, prometheus | Apenas health, info, prometheus  |
+> | Actuator show-details | `always`                                                | `never`                          |
+> | CORS origins          | localhost:3000/5173/4200                                | Apenas `${CORS_ALLOWED_ORIGINS}` |
+> | Error messages        | Detalhadas                                              | Genéricas                        |
+> | SQL logging           | DEBUG                                                   | WARN                             |
+> | Security logging      | DEBUG                                                   | WARN                             |
+> | Heapdump              | Disponível                                              | **Desabilitado**                 |
+> | Server header         | Vazio                                                   | Vazio                            |
+
+---
+
+### Checklist A02:2025
+
+- [x] Security headers completos (CSP, HSTS, nosniff, X-Frame-Options, Permissions-Policy, Referrer-Policy)
+- [x] Headers de fingerprinting removidos (Server, X-Powered-By)
+- [x] Cache-Control em respostas de API (`no-store, private`)
+- [x] CORS restritivo por profile (nunca `*` com credentials)
+- [x] Actuator protegido: SecurityFilterChain dedicado com @Order(1)
+- [x] Actuator: heapdump, env, configprops desabilitados em prod
+- [x] Swagger desabilitado em produção via profile + springdoc config
+- [x] OpenApiConfig com `@Profile({"dev", "test", "default"})`
+- [x] Mensagens de erro sem stack trace em produção
+- [x] `server.server-header: ""` (não expõe Tomcat)
+- [x] `whitelabel.enabled: false`
+- [x] Configurações separadas por profile (application-dev/prod.yml)
+- [ ] Scan de CVEs em dependências (OWASP Dependency Check) — **pendente**
+- [ ] Security headers validados via securityheaders.com — **pendente**
+- [ ] CSP em modo report-only para ajuste fino — **pendente**
+
+---
+
+## A03:2025 (OWASP) — Software Supply Chain Failures
+
+### O que é?
+
+> **Software Supply Chain Failures** acontece quando o software é comprometido através
+> de seus **componentes de terceiros** — bibliotecas, frameworks, plugins, imagens de
+> container ou ferramentas de build. É uma categoria **nova no OWASP 2025**, desmembrada
+> de A06:2021 (Vulnerable and Outdated Components) e A08:2021 (Software and Data
+> Integrity Failures).
+>
+> **Analogia:** imagine que você cozinha em casa com ingredientes comprados no mercado.
+> Mesmo que sua técnica culinária seja perfeita, se um dos ingredientes estiver
+> **contaminado na fábrica**, o prato final está comprometido. Você não escreveu o
+> código da dependência, mas ela roda com os **mesmos privilégios** da sua aplicação.
+>
+> **Números que importam:**
+>
+> | Estatística                                                | Fonte                          |
+> | ---------------------------------------------------------- | ------------------------------ |
+> | 80% do código de uma aplicação moderna vem de dependências | Synopsys OSSRA 2024            |
+> | 1 em cada 8 downloads de open-source contém CVE conhecida  | Sonatype State of SSC 2024     |
+> | Tempo médio entre CVE publicada e exploit: **5 dias**      | Mandiant M-Trends 2024         |
+> | 96% das vulnerabilidades têm patch disponível              | Snyk Open Source Security 2024 |
+>
+> **Tipos de ataque à supply chain:**
+>
+> | Tipo                              | Como funciona                                                          | Exemplo real                                              |
+> | --------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
+> | **Dependency Confusion**          | Atacante publica pacote malicioso com nome similar no registry público | `ua-parser-js` npm (2021) — 8M downloads/semana           |
+> | **Typosquatting**                 | Nome quase idêntico ao original (`sprig-boot` em vez de `spring-boot`) | `colors.js` e `faker.js` (2022)                           |
+> | **Comprometimento de maintainer** | Conta do mantenedor é invadida; atacante publica versão maliciosa      | `event-stream` npm (2018) — roubo de Bitcoin              |
+> | **CVE não corrigida**             | Dependência usa versão com vulnerabilidade conhecida há meses          | Log4Shell (CVE-2021-44228) — afetou milhões de aplicações |
+> | **Build pipeline poisoning**      | Atacante compromete o CI/CD para injetar código malicioso              | SolarWinds Orion (2020) — 18.000 organizações afetadas    |
+> | **Licença restritiva**            | Dependência usa GPL/AGPL, forçando open-source do projeto inteiro      | Problemas legais em software proprietário                 |
+
+---
+
+### Proteções implementadas
+
+---
+
+#### 1. OWASP Dependency-Check (CVE scanning)
+
+##### O que é?
+
+> É uma ferramenta que escaneia **todas as dependências** do projeto (diretas e
+> transitivas) e compara contra o **NVD** (National Vulnerability Database do NIST) —
+> o maior banco de dados público de vulnerabilidades do mundo.
+>
+> **Como funciona:**
+>
+> ```
+> pom.xml (dependências declaradas)
+>     │
+>     ▼
+> Maven resolve dependências transitivas
+>     │
+>     ▼ (todas as .jar, incluindo dependências de dependências)
+> ┌─────────────────────────────────────┐
+> │ OWASP Dependency-Check              │
+> │                                     │
+> │ 1. Identifica cada .jar (CPE match) │
+> │ 2. Consulta NVD (CVE database)      │
+> │ 3. Calcula CVSS score               │
+> │ 4. Gera relatório HTML/JSON/SARIF   │
+> │ 5. FALHA se score >= 7.0 (HIGH)     │
+> └─────────────────────────────────────┘
+>     │
+>     ▼
+> Build PASSA ou FALHA
+> ```
+>
+> **O que é CVSS?** Common Vulnerability Scoring System — escala de 0 a 10 que
+> classifica a severidade de uma vulnerabilidade:
+>
+> | Score      | Severidade   | Ação no CineLog                             |
+> | ---------- | ------------ | ------------------------------------------- |
+> | 0.0        | Nenhuma      | Informativo                                 |
+> | 0.1 – 3.9  | **LOW**      | Monitorar, atualizar no próximo sprint      |
+> | 4.0 – 6.9  | **MEDIUM**   | Atualizar em até 30 dias                    |
+> | 7.0 – 8.9  | **HIGH**     | ⛔ **Build falha**, atualizar imediatamente |
+> | 9.0 – 10.0 | **CRITICAL** | ⛔ **Build falha**, hotfix emergencial      |
+>
+> **Por que o threshold é 7.0?** CVEs HIGH e CRITICAL frequentemente têm exploits
+> públicos e são ativamente exploradas. Permitir deploy com essas vulnerabilidades
+> é risco inaceitável.
+
+##### Como usar
+
+> ```bash
+> # Executar scan de CVEs
+> ./mvnw dependency-check:check
+>
+> # Relatório gerado em:
+> # target/dependency-check/dependency-check-report.html  (visual)
+> # target/dependency-check/dependency-check-report.json  (consumo por ferramentas)
+> ```
+>
+> **Exemplo de saída quando encontra CVE:**
+>
+> ```
+> [WARNING] CVE-2024-22259 — spring-web-6.1.4.jar
+>   CVSS Score: 8.1 (HIGH)
+>   Descrição: Open redirect vulnerability in UriComponentsBuilder
+>   Solução: Atualizar para spring-web >= 6.1.5
+>
+> [ERROR] Build falhou: 1 dependência com CVSS >= 7.0
+> ```
+
+##### Supressão de falsos positivos
+
+> Nem toda CVE reportada é aplicável. Pode ser:
+>
+> - **Falso positivo:** a ferramenta associou a CVE errada ao componente
+> - **Não aplicável:** a CVE afeta uma funcionalidade que o CineLog não usa
+>
+> Para esses casos, usamos o arquivo de supressões:
+> `src/main/resources/dependency-check-suppressions.xml`
+>
+> **Regras para suprimir:**
+>
+> 1. Cada supressão **DEVE** ter comentário explicando **por que** não se aplica
+> 2. **DEVE** incluir data da análise e responsável
+> 3. **DEVE** ser revisada a cada 90 dias (quarterly review)
+> 4. **NUNCA** suprimir sem investigar primeiro
+
+---
+
+#### 2. SBOM — Software Bill of Materials (CycloneDX)
+
+##### O que é?
+
+> SBOM é um **inventário completo** de todos os componentes, bibliotecas e dependências
+> que compõem o software — incluindo versão, licença e hashes criptográficos.
+>
+> **Analogia:** é o "rótulo de ingredientes" (tabela nutricional) do software. Assim
+> como alimentos são obrigados a listar todos os ingredientes, software crítico está
+> sendo obrigado a fornecer SBOM (Executive Order 14028 dos EUA, 2021).
+>
+> **Para que serve:**
+>
+> | Caso de uso                | Exemplo                                                                                 |
+> | -------------------------- | --------------------------------------------------------------------------------------- |
+> | **Resposta a incidentes**  | Log4Shell publicada → em 5 minutos sabe se o projeto usa Log4j                          |
+> | **Auditoria de segurança** | Auditor externo valida que todas as dependências estão atualizadas                      |
+> | **Compliance regulatório** | Governo/enterprise exige SBOM para contratos                                            |
+> | **Gestão de licenças**     | Identifica se alguma dependência tem licença incompatível (GPL em projeto proprietário) |
+>
+> **Formato CycloneDX 1.5:**
+>
+> ```json
+> {
+>     "bomFormat": "CycloneDX",
+>     "specVersion": "1.5",
+>     "components": [
+>         {
+>             "type": "library",
+>             "name": "spring-boot-starter-web",
+>             "version": "3.5.9",
+>             "group": "org.springframework.boot",
+>             "hashes": [{ "alg": "SHA-256", "content": "a1b2c3d4..." }],
+>             "licenses": [{ "license": { "id": "Apache-2.0" } }]
+>         }
+>     ]
+> }
+> ```
+
+##### Como usar
+
+> ```bash
+> # Gerar SBOM
+> ./mvnw cyclonedx:makeBom
+>
+> # Arquivos gerados:
+> # target/cinelog-sbom.json   (formato JSON, consumo por ferramentas)
+> # target/cinelog-sbom.xml    (formato XML, padrão OWASP)
+> ```
+>
+> O SBOM é gerado **automaticamente** durante `mvn package` e publicado como
+> artefato no GitHub Actions (retido por 90 dias).
+
+---
+
+#### 3. Maven Enforcer (regras de build)
+
+##### O que é?
+
+> É um plugin que **impõe regras** no processo de build. Se qualquer regra for violada,
+> o build **falha imediatamente** (fail-fast). Funciona como um "guarda de trânsito"
+> que impede práticas inseguras.
+>
+> **Regras configuradas:**
+>
+> | Regra                               | O que previne                     | Cenário de ataque                                               |
+> | ----------------------------------- | --------------------------------- | --------------------------------------------------------------- |
+> | `requireJavaVersion [21,)`          | Build com Java desatualizado      | Java < 21 sem patches de segurança recentes                     |
+> | `requireMavenVersion [3.9,)`        | Maven antigo com bugs conhecidos  | Maven < 3.9 com vulnerabilidades no resolver                    |
+> | `banDuplicatePomDependencyVersions` | Duas versões da mesma dependência | Versão vulnerável sobrescreve versão corrigida                  |
+> | `requireReleaseDeps`                | Dependências SNAPSHOT em release  | SNAPSHOT pode mudar a qualquer momento → build não reproduzível |
+>
+> **O que é o problema de dependências duplicadas?**
+>
+> ```
+> cinelog-app
+> ├── spring-boot-starter-web
+> │   └── spring-core:6.1.5        ← versão A
+> └── spring-boot-starter-data-jpa
+>     └── spring-core:6.1.3        ← versão B (conflito!)
+> ```
+>
+> Sem o Enforcer, o Maven escolhe silenciosamente uma das versões (regra
+> de "nearest wins"). Se escolher 6.1.3 e o fix de segurança está em 6.1.5, o projeto
+> está vulnerável sem ninguém saber. O Enforcer **força** a resolução explícita.
+
+##### Como usar
+
+> ```bash
+> # Executar regras do Enforcer
+> ./mvnw enforcer:enforce
+> ```
+
+---
+
+#### 4. Dependabot (atualizações automáticas)
+
+##### O que é?
+
+> É um serviço **integrado ao GitHub** que monitora as dependências do projeto e
+> cria **Pull Requests automaticamente** quando:
+>
+> 1. Uma nova versão é publicada (patch, minor ou major)
+> 2. Uma CVE é descoberta numa dependência usada
+>
+> **Fluxo:**
+>
+> ```
+> Maven Central publica spring-boot 3.5.10 (patch de segurança)
+>     │
+>     ▼
+> Dependabot detecta (scan semanal, segunda-feira 06:00 BRT)
+>     │
+>     ▼
+> Cria PR automático: "deps: bump spring-boot from 3.5.9 to 3.5.10"
+>     │
+>     ▼
+> CI roda (testes, dependency-check, SBOM)
+>     │
+>     ▼
+> Reviewer aprova e faz merge
+> ```
+>
+> **Agrupamento inteligente:** dependências do mesmo ecossistema são agrupadas
+> num único PR (ex: todas as libs Spring Boot juntas, todas as de teste juntas).
+> Isso reduz ruído e facilita review.
+>
+> **Grupos configurados:**
+>
+> | Grupo           | Dependências agrupadas                             |
+> | --------------- | -------------------------------------------------- |
+> | `spring-boot`   | `org.springframework.boot*`, `cloud*`, `security*` |
+> | `testing`       | `org.junit*`, `org.mockito*`, `org.assertj*`       |
+> | `observability` | `io.micrometer*`, `io.opentelemetry*`              |
+
+Configuração: `.github/dependabot.yml`
+
+---
+
+#### 5. Dependency Review (gate em PRs)
+
+##### O que é?
+
+> É um GitHub Action que analisa **apenas as dependências NOVAS ou ALTERADAS** num
+> Pull Request. Diferente do Dependency-Check (que escaneia tudo), este foca
+> especificamente no **delta** do PR.
+>
+> **Cenário prevenido:**
+>
+> ```
+> Desenvolvedor adiciona no pom.xml:
+>   <dependency>
+>     <groupId>com.fasterxml.jackson.core</groupId>
+>     <artifactId>jackson-databind</artifactId>
+>     <version>2.13.0</version>  ← versão com CVE-2022-42003 (HIGH)
+>   </dependency>
+>
+> Dependency Review:
+>   ⛔ BLOCKED — jackson-databind:2.13.0 has known vulnerability
+>              CVE-2022-42003 (CVSS: 7.5)
+>   Recommendation: use version >= 2.13.4.2
+>
+> PR não pode ser mergeado até corrigir a versão.
+> ```
+>
+> **Também verifica licenças:** PRs que introduzem dependências com licenças
+> restritivas (GPL, AGPL) são **bloqueados** automaticamente.
+
+Configuração: `.github/workflows/dependency-review.yml`
+
+---
+
+#### 6. Pipeline de segurança (CI/CD)
+
+##### Visão geral do pipeline
+
+> ```
+> Push/PR para master
+>     │
+>     ├─── 🛡️ OWASP Dependency-Check ─── Relatório HTML/JSON → Artifacts
+>     │                                    SARIF → GitHub Security tab
+>     │
+>     ├─── 📋 CycloneDX SBOM ──────────── cinelog-sbom.json → Artifacts (90 dias)
+>     │
+>     ├─── ⚖️ Maven Enforcer ──────────── Java 21+, Maven 3.9+, sem duplicatas
+>     │
+>     └─── 📜 License Check ───────────── Relatório de licenças → Artifacts
+>
+> Pull Request para master
+>     │
+>     └─── 🔎 Dependency Review ────────── Bloqueia CVE HIGH+ e licenças GPL
+>
+> Scan semanal (domingo 00:00 UTC)
+>     │
+>     └─── 🛡️ OWASP Dependency-Check ─── Detecta CVEs publicadas durante a semana
+> ```
+>
+> **Por que scan semanal além do push?** CVEs novas são publicadas diariamente.
+> Uma dependência que estava limpa na segunda pode ter CVE na sexta. O scan
+> semanal garante que mesmo sem commits, o projeto é monitorado.
+
+Configuração: `.github/workflows/security-scan.yml`
+
+---
+
+#### 7. Caso prático: remediação de CVEs (pom.xml)
+
+##### Contexto
+
+> O scanner OSV (Trunk) detectou **15 issues** em dependências transitivas do projeto
+> CineLog — 6 HIGH, 6 MEDIUM, 2 LOW e 1 INFO. Este caso documenta o processo completo
+> de análise, categorização e correção, servindo como referência para futuras remediações.
+
+##### Metodologia de correção
+
+> O processo segue a hierarquia de menor impacto:
+>
+> 1. **Atualizar o BOM pai** (Spring Boot) — corrige todas as dependências que ele gerencia
+> 2. **Atualizar propriedades explicitas** (`kafka.version`) — corrige dependências controladas pelo projeto
+> 3. **Override via `<dependencyManagement>`** — só para transitivas que nenhum BOM gerencia
+>
+> **Por que essa ordem?** Quanto menor o escopo da mudança, menor o risco de regressão.
+> Subir o Spring Boot de 3.5.9 → 3.5.11 é um patch seguro que corrige múltiplas CVEs
+> de uma vez. Override manual de transitivas é último recurso.
+
+##### CVEs detectadas e correções aplicadas
+
+> | Severidade | Dependência         | Versão vulnerável | Versão corrigida | CVE / Advisory                                     | Estratégia                                            |
+> | ---------- | ------------------- | ----------------- | ---------------- | -------------------------------------------------- | ----------------------------------------------------- |
+> | **HIGH**   | `jose4j`            | 0.9.4             | **0.9.6**        | GHSA-3677-xxcr-wjqv (DoS via JWE)                  | `<dependencyManagement>` override                     |
+> | **HIGH**   | `kafka-clients`     | 3.9.0             | **3.9.2**        | GHSA-76qp-h5mr-frr4                                | Propriedade `kafka.version`                           |
+> | **HIGH**   | `kafka_2.13`        | 3.9.0             | **3.9.2**        | GHSA-vgq5-3255-v292                                | Propriedade `kafka.version`                           |
+> | **HIGH**   | `lz4-java`          | 1.8.0             | **1.8.1**        | GHSA-cmp6-m4wj-q63q, GHSA-vqf4-7m7x-wgfc           | Resolvida pelo Kafka 3.9.2 + `<dependencyManagement>` |
+> | **HIGH**   | `assertj-core`      | 3.27.6            | **3.27.7**       | GHSA-rqfh-9r24-8c9r (XXE)                          | Spring Boot BOM 3.5.11                                |
+> | **HIGH**   | `commons-beanutils` | 1.9.4             | **1.11.0**       | GHSA-wxr5-93ph-8wr9                                | `<dependencyManagement>` override                     |
+> | **MEDIUM** | `commons-compress`  | 1.24.0            | **1.27.1**       | GHSA-4265-ccf5-phj5, GHSA-4g9r-vxhx-9pgx (OOM/DoS) | `<dependencyManagement>` override                     |
+> | **MEDIUM** | `commons-lang3`     | 3.17.0            | 3.17.0           | GHSA-j288-q9x7-2f5v                                | Gerenciada pelo Liquibase — monitorando               |
+> | **LOW**    | `logback-core`      | 1.5.22            | **1.5.32**       | GHSA-qqpg-mvqg-649v                                | Spring Boot BOM 3.5.11                                |
+> | **INFO**   | `spring-boot`       | 3.5.9             | **3.5.11**       | Múltiplos patches                                  | Atualização de parent POM                             |
+>
+> **Bônus:** a atualização do Spring Boot e do Kafka trouxe upgrades adicionais:
+> `spring-kafka` 3.3.11 → **3.3.13**, `zookeeper` 3.8.5 → **3.8.6**.
+
+##### O que é `<dependencyManagement>`?
+
+> É a seção do `pom.xml` que permite **sobrescrever a versão** de dependências
+> transitivas (aquelas que vêm "de carona" com outra lib) sem adicioná-las
+> diretamente no `<dependencies>`.
+>
+> **Por que é necessário?** Quando uma CVE está numa dependência transitiva
+> (ex: `jose4j` vem via `kafka_2.13` → `jose4j`), você não controla qual versão
+> o Kafka traz. O `<dependencyManagement>` faz o Maven usar a versão que **você**
+> definiu, ignorando a que a dependência pai declarou.
+>
+> ```xml
+> <dependencyManagement>
+>     <dependencies>
+>         <!-- Override: força jose4j 0.9.6 mesmo que kafka traga 0.9.4 -->
+>         <dependency>
+>             <groupId>org.bitbucket.b_c</groupId>
+>             <artifactId>jose4j</artifactId>
+>             <version>0.9.6</version>
+>         </dependency>
+>     </dependencies>
+> </dependencyManagement>
+> ```
+>
+> **Como verificar:** use `mvn dependency:tree -Dincludes=<groupId>:<artifactId>` para
+> confirmar que a versão resolvida é a corrigida.
+
+##### Comando de validação
+
+> ```bash
+> # 1. Verificar as versões resolvidas das dependências afetadas
+> ./mvnw dependency:tree -DskipTests \
+>   -Dincludes=org.bitbucket.b_c:jose4j,org.lz4:lz4-java,commons-beanutils:commons-beanutils,org.apache.commons:commons-compress
+>
+> # 2. Confirmar que o build compila sem erros
+> ./mvnw compile -DskipTests
+>
+> # 3. Rodar enforcer para validar regras
+> ./mvnw enforcer:enforce
+>
+> # 4. Scan completo de CVEs (precisa NVD_API_KEY para velocidade)
+> ./mvnw dependency-check:check
+> ```
+
+---
+
+### Checklist A03:2025
+
+- [x] OWASP Dependency-Check integrado ao Maven (`failBuildOnCVSS=7`)
+- [x] Arquivo de supressões com template documentado
+- [x] SBOM gerado automaticamente (CycloneDX 1.5, JSON + XML)
+- [x] Maven Enforcer: Java 21+, Maven 3.9+, sem duplicatas, sem SNAPSHOT
+- [x] Dependabot configurado (scan semanal, agrupamento por ecossistema)
+- [x] Dependency Review em PRs (bloqueia CVE HIGH+ e licenças GPL)
+- [x] GitHub Actions: pipeline de segurança com 4 jobs
+- [x] SARIF upload para GitHub Security tab
+- [x] Scan semanal automático (cron domingo 00:00 UTC)
+- [x] Relatórios retidos como artifacts (30-90 dias)
+- [x] Remediação de CVEs via `<dependencyManagement>` + atualizações de BOM
+- [x] Spring Boot 3.5.9 → 3.5.11, Kafka 3.9.0 → 3.9.2
+- [ ] Verificação de assinatura GPG de artefatos Maven — **pendente**
+- [ ] Integração com Snyk ou Grype para cobertura adicional — **pendente**
+- [ ] SLSA (Supply-chain Levels for Software Artifacts) level 2+ — **pendente**
+- [ ] Política de atualização: patch em 7 dias, minor em 30 dias — **pendente**
+
+---
+
+## A04:2025 (OWASP) — Cryptographic Failures
 
 > **O que é?** Esta categoria cobre situações em que dados sensíveis (senhas, tokens, dados
 > pessoais) são **expostos** porque não foram criptografados adequadamente — seja em trânsito
@@ -496,7 +1313,7 @@ No `GlobalExceptionHandler`: detalhes de constraint do banco (nomes de tabela, c
 
 ---
 
-### Checklist A02
+### Checklist A04:2025
 
 - [x] HTTPS obrigatório em produção (TLS 1.2+)
 - [x] HSTS habilitado (1 ano, incluindo subdomínios)
@@ -522,7 +1339,7 @@ No `GlobalExceptionHandler`: detalhes de constraint do banco (nomes de tabela, c
 
 ---
 
-## A03 (OWASP) — Injeção
+## A05:2025 (OWASP) — Injection
 
 ### O que é?
 
@@ -769,7 +1586,7 @@ String safeUser = InputSanitizer.sanitizeForLog(username);
 log.warn("Acesso negado para usuário={}", safeUser);
 ```
 
-### Checklist A03
+### Checklist A05:2025
 
 - [x] JPA com Prepared Statements em todas as queries
 - [x] `SqlInjectionFilter` como camada perimetral (query params)
@@ -786,7 +1603,7 @@ log.warn("Acesso negado para usuário={}", safeUser);
 
 ---
 
-## A04 (OWASP) — Design Inseguro
+## A06:2025 (OWASP) — Insecure Design
 
 ### O que é?
 
@@ -804,12 +1621,12 @@ log.warn("Acesso negado para usuário={}", safeUser);
 
 > **A diferença prática entre implementação insegura e design inseguro:**
 >
-> | Implementação insegura (A01-A03) | Design inseguro (A04)                                          |
-> | -------------------------------- | -------------------------------------------------------------- |
-> | Query SQL concatenada com input  | Nenhum limite de quantas queries um usuário pode fazer por dia |
-> | Senha armazenada em texto plano  | Nenhum controle de tentativas de login (brute force)           |
-> | Stack trace exposto na resposta  | Mensagens de erro que revelam se um email existe no sistema    |
-> | JWT sem validação de assinatura  | Nenhum controle de fluxo em operações multi-step               |
+> | Implementação insegura (A01:2025, A04:2025, A05:2025) | Design inseguro (A06:2025)                                     |
+> | ----------------------------------------------------- | -------------------------------------------------------------- |
+> | Query SQL concatenada com input                       | Nenhum limite de quantas queries um usuário pode fazer por dia |
+> | Senha armazenada em texto plano                       | Nenhum controle de tentativas de login (brute force)           |
+> | Stack trace exposto na resposta                       | Mensagens de erro que revelam se um email existe no sistema    |
+> | JWT sem validação de assinatura                       | Nenhum controle de fluxo em operações multi-step               |
 >
 > **Princípio central:** um sistema seguro por design assume que **todo usuário é
 > potencialmente malicioso** e modela controles para cada cenário de abuso — **antes** de
@@ -1064,7 +1881,7 @@ log.warn("Acesso negado para usuário={}", safeUser);
 >            │
 >            ▼
 > ┌──────────────────────────┐
-> │ 2. SqlInjectionFilter    │ ← Detecta payloads maliciosos (A03)
+> │ 2. SqlInjectionFilter    │ ← Detecta payloads maliciosos (A05:2025)
 > │    (query params)         │    Antes de autenticação (economiza CPU)
 > └──────────┬───────────────┘
 >            │
@@ -1076,19 +1893,19 @@ log.warn("Acesso negado para usuário={}", safeUser);
 >            │
 >            ▼
 > ┌──────────────────────────┐
-> │ 4. URL Authorization     │ ← hasRole, authenticated, permitAll (A01)
+> │ 4. URL Authorization     │ ← hasRole, authenticated, permitAll (A01:2025)
 > │    (HttpSecurity)         │    Baseado no SecurityContext do passo 3
 > └──────────┬───────────────┘
 >            │
 >            ▼
 > ┌──────────────────────────┐
-> │ 5. Controller +          │ ← @SecureOperation, @PreAuthorize (A01)
+> │ 5. Controller +          │ ← @SecureOperation, @PreAuthorize (A01:2025)
 > │    Method Security        │    Validação granular no método
 > └──────────┬───────────────┘
 >            │
 >            ▼
 > ┌──────────────────────────┐
-> │ 6. BusinessLimit         │ ← Limites de domínio por recurso (A04)
+> │ 6. BusinessLimit         │ ← Limites de domínio por recurso (A06:2025)
 > │    Validator              │    Validação no service layer
 > └──────────────────────────┘
 > ```
@@ -1104,7 +1921,7 @@ log.warn("Acesso negado para usuário={}", safeUser);
 
 ---
 
-### Checklist A04
+### Checklist A06:2025
 
 - [x] Rate limiting por IP (Fixed Window, 100/min geral, 10/min auth)
 - [x] Headers de rate limit (X-RateLimit-Limit, Remaining, Reset, Retry-After)
@@ -1120,6 +1937,90 @@ log.warn("Acesso negado para usuário={}", safeUser);
 - [ ] Rate limiting por usuário autenticado (além de IP) — **pendente**
 - [ ] CAPTCHA após N tentativas falhas de login — **pendente**
 - [ ] Threat modeling formal com abuse cases documentados — **pendente**
+
+---
+
+## A07:2025 (OWASP) — Authentication Failures
+
+> **Status:** parcialmente implementado.
+>
+> Esta categoria foca em falhas de autenticação: credenciais fracas, falta de MFA,
+> sessões mal gerenciadas e mecanismos de recuperação de senha inseguros.
+> Parte das proteções já existe na seção Autenticação (JWT, BCrypt) e em
+> A01:2025 (controle de acesso) e A06:2025 (anti-enumeração).
+
+### Pontos a implementar
+
+- [x] JWT com validação de assinatura e expiração
+- [x] BCrypt fator 12 para hashing de senhas
+- [x] Anti-enumeração de usuários (A06:2025)
+- [x] Rate limiting em endpoints de auth (A06:2025)
+- [ ] Multi-Factor Authentication (MFA/2FA) — **pendente**
+- [ ] Política de complexidade de senha mais rigorosa — **pendente**
+- [ ] Detecção de credenciais comprometidas (HaveIBeenPwned API) — **pendente**
+- [ ] Refresh token rotation — **pendente**
+- [ ] Bloqueio de conta após N tentativas falhas — **pendente**
+
+---
+
+## A08:2025 (OWASP) — Software or Data Integrity Failures
+
+> **Status:** pendente de implementação.
+>
+> Esta categoria cobre falhas na verificação de integridade de software e dados:
+> atualizações sem validação, serialização insegura, pipelines de CI/CD vulneráveis
+> e manipulação de dados em trânsito.
+
+### Pontos a implementar
+
+- [ ] Verificação de integridade em atualizações de dependências
+- [ ] Proteção contra deserialização insegura
+- [ ] Assinatura digital de artefatos de build
+- [ ] Validação de integridade de dados em eventos Kafka
+- [ ] Pipeline de CI/CD com verificações de segurança
+
+---
+
+## A09:2025 (OWASP) — Security Logging and Alerting Failures
+
+> **Status:** parcialmente implementado.
+>
+> Esta categoria abrange falhas em logging, monitoramento e alertas de segurança.
+> Sem logs adequados e alertas, ataques podem passar despercebidos por semanas ou meses.
+> Parte das proteções já existe: mascaramento de dados sensíveis (A04:2025),
+> sanitização de logs (A05:2025 — InputSanitizer), e infraestrutura de observabilidade.
+
+### Pontos a implementar
+
+- [x] SensitiveDataMasker para mascaramento em logs (A04:2025)
+- [x] InputSanitizer.sanitizeForLog() contra log injection (A05:2025)
+- [x] Logging estruturado com Logback JSON
+- [x] Stack de observabilidade (Prometheus, Grafana, Loki, Tempo)
+- [ ] Alertas automatizados para eventos de segurança — **pendente**
+- [ ] Correlação de eventos de segurança (SIEM) — **pendente**
+- [ ] Retenção de logs de auditoria com imutabilidade — **pendente**
+- [ ] Dashboard de segurança em Grafana — **pendente**
+- [ ] Notificação em tempo real de ataques detectados — **pendente**
+
+---
+
+## A10:2025 (OWASP) — Mishandling of Exceptional Conditions
+
+> **Status:** parcialmente implementado.
+>
+> Esta categoria é **nova no OWASP 2025** e abrange situações em que condições
+> excepcionais (erros, timeouts, estados inesperados) são tratadas de forma insegura,
+> levando a vazamento de informações, estados inconsistentes ou bypass de controles.
+
+### Pontos a implementar
+
+- [x] GlobalExceptionHandler com respostas RFC 7807 ProblemDetail
+- [x] Stack traces suprimidos em produção (A02:2025)
+- [x] Mensagens de erro genéricas em respostas HTTP
+- [ ] Circuit breaker para serviços externos — **pendente**
+- [ ] Tratamento de timeout em chamadas a Redis e Kafka — **pendente**
+- [ ] Fallback seguro para falhas de autenticação externa — **pendente**
+- [ ] Validação de estado consistente após exceções — **pendente**
 
 ---
 

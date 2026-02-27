@@ -6,6 +6,7 @@ import com.cine.cinelog.shared.security.RateLimitFilter;
 import com.cine.cinelog.shared.security.SqlInjectionFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Classe de configuração Spring para gerenciamento de security.
@@ -67,18 +69,22 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(2)
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             DaoAuthenticationProvider authProvider,
             JwtAuthenticationFilter jwtFilter,
             SqlInjectionFilter sqlInjectionFilter,
-            RateLimitFilter rateLimitFilter) throws Exception {
+            RateLimitFilter rateLimitFilter,
+            CorsConfigurationSource corsConfigurationSource) throws Exception {
 
         http
+                // A05: CORS restritivo — origens configuráveis por profile
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authProvider)
-                // A02: Security headers para prevenir clickjacking, MIME sniffing, XSS
+                // A02/A05: Security headers via Spring Security
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.deny())
                         .contentTypeOptions(cto -> {
@@ -87,19 +93,17 @@ public class SecurityConfig {
                                 .includeSubDomains(true)
                                 .maxAgeInSeconds(31536000)))
                 .authorizeHttpRequests(auth -> auth
+                        // Docs (condicionados por springdoc.enabled via profile)
                         .requestMatchers(
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/api/auth/**")
+                                "/v3/api-docs/**")
                         .permitAll()
-                        .requestMatchers(
-                                "/actuator/health",
-                                "/actuator/info")
+                        .requestMatchers("/api/auth/**")
                         .permitAll()
+                        // Actuator: regras dedicadas em ActuatorSecurityConfig (@Order 1)
                         // Endpoints ADMIN
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OPS")
-
                         // Endpoints gerais (usuário logado)
                         .anyRequest().authenticated())
                 // A04: Rate limit primeiro (bloqueia DoS antes de qualquer processamento)
