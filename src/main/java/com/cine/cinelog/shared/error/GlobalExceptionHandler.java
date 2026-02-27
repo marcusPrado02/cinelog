@@ -4,6 +4,8 @@ import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.error.DuplicateException;
 import com.cine.cinelog.core.domain.error.ErrorCode;
 import com.cine.cinelog.core.domain.error.ForbiddenOperationException;
+import com.cine.cinelog.features.auth.service.AuthService;
+import com.cine.cinelog.features.auth.service.RefreshTokenService;
 import com.cine.cinelog.shared.security.BusinessLimitExceededException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -59,6 +61,8 @@ public class GlobalExceptionHandler {
     private static final URI TYPE_DOMAIN = URI.create("https://api.cinelog.com/errors/domain");
     private static final URI TYPE_BAD_REQUEST = URI.create("https://api.cinelog.com/errors/bad-request");
     private static final URI TYPE_INTERNAL = URI.create("https://api.cinelog.com/errors/internal");
+    private static final URI TYPE_AUTH = URI.create("https://api.cinelog.com/errors/authentication");
+    private static final URI TYPE_LOCKED = URI.create("https://api.cinelog.com/errors/account-locked");
 
     private final MessageSource messageSource;
 
@@ -325,6 +329,63 @@ public class GlobalExceptionHandler {
     }
 
     // ===== A04: Limite de negócio excedido → 429 =====
+    // ===== A07:2025 — Conta bloqueada por excesso de tentativas =====
+    @ExceptionHandler(AuthService.AccountLockedException.class)
+    public ProblemDetail handleAccountLocked(AuthService.AccountLockedException ex,
+            HttpServletRequest req) {
+        log.warn("A07:2025 — Conta bloqueada. Path: {}, retryAfter: {}s",
+                req.getRequestURI(), ex.getRetryAfterSeconds());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.LOCKED, ex.getMessage());
+        pd.setTitle("Account Locked");
+        pd.setType(TYPE_LOCKED);
+        pd.setProperty("retryAfterSeconds", ex.getRetryAfterSeconds());
+        setCommon(pd, req, "ACCOUNT_LOCKED");
+        return pd;
+    }
+
+    // ===== A07:2025 — Senha não atende à política =====
+    @ExceptionHandler(AuthService.PasswordPolicyException.class)
+    public ProblemDetail handlePasswordPolicy(AuthService.PasswordPolicyException ex,
+            HttpServletRequest req) {
+        log.info("A07:2025 — Senha rejeitada pela política. Path: {}", req.getRequestURI());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Senha não atende à política de segurança.");
+        pd.setTitle("Password Policy Violation");
+        pd.setType(TYPE_VALIDATION);
+        pd.setProperty("violations", ex.getViolations());
+        setCommon(pd, req, "PASSWORD_POLICY_VIOLATION");
+        return pd;
+    }
+
+    // ===== A07:2025 — Refresh token inválido/expirado =====
+    @ExceptionHandler(RefreshTokenService.RefreshTokenException.class)
+    public ProblemDetail handleRefreshToken(RefreshTokenService.RefreshTokenException ex,
+            HttpServletRequest req) {
+        log.warn("A07:2025 — Refresh token inválido. Path: {}, Message: {}",
+                req.getRequestURI(), ex.getMessage());
+
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+        pd.setTitle("Invalid Refresh Token");
+        pd.setType(TYPE_AUTH);
+        setCommon(pd, req, "INVALID_REFRESH_TOKEN");
+        return pd;
+    }
+
+    // ===== A07:2025 — Email já cadastrado (anti-enumeração) =====
+    @ExceptionHandler(AuthService.EmailAlreadyExistsException.class)
+    public ProblemDetail handleEmailAlreadyExists(AuthService.EmailAlreadyExistsException ex,
+            HttpServletRequest req) {
+        // A06: NÃO revelar que o email existe — mensagem genérica
+        var pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "Erro ao processar registro.");
+        pd.setTitle("Registration Error");
+        pd.setType(TYPE_CONFLICT);
+        setCommon(pd, req, "REGISTRATION_ERROR");
+        return pd;
+    }
+
     @ExceptionHandler(BusinessLimitExceededException.class)
     public ProblemDetail handleBusinessLimitExceeded(BusinessLimitExceededException ex,
             HttpServletRequest req) {

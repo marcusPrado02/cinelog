@@ -1,93 +1,104 @@
 package com.cine.cinelog.features.auth.web.controller;
 
+import com.cine.cinelog.features.auth.service.AuthService;
+import com.cine.cinelog.features.auth.web.dto.AuthResponse;
 import com.cine.cinelog.features.auth.web.dto.LoginRequest;
-import com.cine.cinelog.features.auth.web.dto.LoginResponse;
+import com.cine.cinelog.features.auth.web.dto.RefreshTokenRequest;
 import com.cine.cinelog.features.auth.web.dto.RegisterRequest;
-import com.cine.cinelog.features.users.persistence.entity.UserEntity;
-import com.cine.cinelog.features.users.repository.UserJpaRepository;
-import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
-import com.cine.cinelog.shared.security.JwtTokenService;
+import com.cine.cinelog.shared.security.CinelogUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-
+/**
+ * A07:2025 — Controller de autenticação (thin layer).
+ *
+ * <p>
+ * Delega toda lógica ao {@link AuthService}, responsável por integrar
+ * lockout, anti-enumeração, política de senha e refresh token rotation.
+ * </p>
+ */
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Autenticação")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtTokenService jwtTokenService;
-    private final PasswordEncoder passwordEncoder;
-    private final UserJpaRepository userRepository;
-    private final BusinessMetricsService metricsService;
+    private final AuthService authService;
 
-    public AuthController(AuthenticationManager authenticationManager,
-            JwtTokenService jwtTokenService,
-            PasswordEncoder passwordEncoder,
-            UserJpaRepository userRepository,
-            BusinessMetricsService metricsService) {
-        this.authenticationManager = authenticationManager;
-        this.jwtTokenService = jwtTokenService;
-        this.passwordEncoder = passwordEncoder;
-        this.userRepository = userRepository;
-        this.metricsService = metricsService;
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Realiza login e retorna um token JWT")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            Authentication auth = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+    @Operation(summary = "Realiza login e retorna access + refresh tokens")
+    @ApiResponse(responseCode = "200", description = "Login bem-sucedido")
+    @ApiResponse(responseCode = "401", description = "Credenciais inválidas")
+    @ApiResponse(responseCode = "423", description = "Conta bloqueada por excesso de tentativas")
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
 
-            String token = jwtTokenService.generateToken(request.email());
+        String clientIp = extractClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
 
-            // Métrica de negócio: login bem-sucedido
-            metricsService.incrementLogin(true);
-
-            return ResponseEntity.ok(new LoginResponse(token));
-        } catch (BadCredentialsException e) {
-            // Métricas de negócio: login falhou
-            metricsService.incrementLogin(false);
-            metricsService.incrementLoginFailed();
-
-            return ResponseEntity.status(401).build();
-        }
+        AuthResponse response = authService.login(request, clientIp, userAgent);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Registra um novo usuário e retorna um token JWT")
-    public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+    @Operation(summary = "Registra novo usuário e retorna access + refresh tokens")
+    @ApiResponse(responseCode = "200", description = "Registro bem-sucedido")
+    @ApiResponse(responseCode = "400", description = "Senha não atende à política de segurança")
+    @ApiResponse(responseCode = "409", description = "Erro no processamento do registro")
+    public ResponseEntity<AuthResponse> register(
+            @Valid @RequestBody RegisterRequest request,
+            HttpServletRequest httpRequest) {
 
-        // Criar a entidade com todos os campos necessários
-        UserEntity entity = new UserEntity();
-        entity.setName(request.name());
-        entity.setEmail(request.email());
-        entity.setPasswordHash(passwordEncoder.encode(request.password()));
-        entity.setRole("USER");
-        entity.setEnabled(true);
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setVersion(0L);
+        String clientIp = extractClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
 
-        // Salvar a entidade
-        UserEntity saved = userRepository.save(entity);
+        AuthResponse response = authService.register(request, clientIp, userAgent);
+        return ResponseEntity.ok(response);
+    }
 
-        // Gera token para já logar o usuário
-        String token = jwtTokenService.generateToken(saved.getEmail());
+    @PostMapping("/refresh")
+    @Operation(summary = "Renova tokens via refresh token rotation")
+    @ApiResponse(responseCode = "200", description = "Tokens renovados")
+    @ApiResponse(responseCode = "401", description = "Refresh token inválido, expirado ou reutilizado")
+    public ResponseEntity<AuthResponse> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request,
+            HttpServletRequest httpRequest) {
 
-        // Métrica de negócio: novo usuário registrado
-        metricsService.incrementUserRegistered();
+        String clientIp = extractClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
 
-        return ResponseEntity.ok(new LoginResponse(token));
+        AuthResponse response = authService.refreshTokens(
+                request.refreshToken(), clientIp, userAgent);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout — revoga todos os refresh tokens do usuário")
+    @ApiResponse(responseCode = "204", description = "Logout realizado")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal CinelogUserDetails user) {
+        authService.logout(user.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Extrai IP do cliente considerando proxy reverso (X-Forwarded-For).
+     */
+    private String extractClientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            // Pega apenas o primeiro IP (cliente real)
+            return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

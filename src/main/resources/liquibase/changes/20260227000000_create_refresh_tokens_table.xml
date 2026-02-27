@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd">
+
+    <!-- A07:2025 — Tabela de refresh tokens com suporte a rotation e reuse detection -->
+    <changeSet id="20260227000000-1" author="cinelog">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="refresh_tokens" />
+            </not>
+        </preConditions>
+
+        <createTable tableName="refresh_tokens"
+            remarks="A07:2025 — Refresh tokens com rotation e family-based reuse detection">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="token" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"
+                    uniqueConstraintName="uk_refresh_tokens_token" />
+            </column>
+            <column name="token_family" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" />
+            </column>
+            <column name="user_email" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="revoked" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false" />
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+            <column name="expires_at" type="TIMESTAMP">
+                <constraints nullable="false" />
+            </column>
+            <column name="revoked_at" type="TIMESTAMP" />
+            <column name="replaced_by" type="VARCHAR(255)" />
+            <column name="client_ip" type="VARCHAR(45)" />
+            <column name="user_agent" type="VARCHAR(500)" />
+        </createTable>
+
+        <!-- Índices para queries frequentes -->
+        <createIndex indexName="idx_refresh_tokens_token_family" tableName="refresh_tokens">
+            <column name="token_family" />
+        </createIndex>
+
+        <createIndex indexName="idx_refresh_tokens_user_id" tableName="refresh_tokens">
+            <column name="user_id" />
+        </createIndex>
+
+        <createIndex indexName="idx_refresh_tokens_expires_at" tableName="refresh_tokens">
+            <column name="expires_at" />
+        </createIndex>
+
+        <!-- FK para tabela users -->
+        <addForeignKeyConstraint
+            baseTableName="refresh_tokens"
+            baseColumnNames="user_id"
+            constraintName="fk_refresh_tokens_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="CASCADE" />
+    </changeSet>
+
+</databaseChangeLog>

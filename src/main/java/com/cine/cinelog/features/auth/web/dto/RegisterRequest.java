@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 
 /**
  * DTO de requisição para registro de novo usuário no sistema.
- * 
+ *
  * <p>
  * Contém os dados necessários para criar uma nova conta:
  * <ul>
@@ -15,11 +15,11 @@ import jakarta.validation.constraints.Size;
  * <li>password: senha com mínimo de 6 caracteres (será armazenada como
  * hash)</li>
  * </ul>
- * 
+ *
  * @since 1.0
  */
 public record RegisterRequest(
-                @NotBlank @Size(max = 120) String name,
-                @NotBlank @Email @Size(max = 255) String email,
-                @NotBlank @Size(min = 6, max = 100) String password) {
+        @NotBlank @Size(max = 120) String name,
+        @NotBlank @Email @Size(max = 255) String email,
+        @NotBlank @Size(min = 8, max = 100) String password) {
 }

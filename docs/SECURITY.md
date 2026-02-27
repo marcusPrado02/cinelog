@@ -1942,24 +1942,480 @@ log.warn("Acesso negado para usuário={}", safeUser);
 
 ## A07:2025 (OWASP) — Authentication Failures
 
-> **Status:** parcialmente implementado.
+> **Status:** ✅ implementado.
 >
-> Esta categoria foca em falhas de autenticação: credenciais fracas, falta de MFA,
-> sessões mal gerenciadas e mecanismos de recuperação de senha inseguros.
-> Parte das proteções já existe na seção Autenticação (JWT, BCrypt) e em
-> A01:2025 (controle de acesso) e A06:2025 (anti-enumeração).
+> Esta categoria foca em **falhas de autenticação**: credenciais fracas, ausência de proteção
+> contra brute-force, sessões mal gerenciadas, ausência de refresh token rotation, e
+> mecanismos de recuperação de senha inseguros.
 
-### Pontos a implementar
+### O que são Authentication Failures?
 
-- [x] JWT com validação de assinatura e expiração
+Authentication Failures referem-se a qualquer fraqueza no processo de autenticação que
+permita a um atacante:
+
+1. **Adivinhar credenciais** por brute-force ou credential stuffing
+2. **Reutilizar tokens roubados** por ausência de rotation
+3. **Explorar senhas fracas** por falta de política de complexidade
+4. **Enumerar usuários** por diferenças em respostas de erro
+5. **Manter sessões ativas indefinidamente** sem mecanismo de revogação
+
+### Cenários de ataque reais
+
+| Cenário                 | Ataque                                   | Sem proteção                     | Com proteção (CineLog)                     |
+| ----------------------- | ---------------------------------------- | -------------------------------- | ------------------------------------------ |
+| **Brute-force**         | Bot tenta 10.000 senhas/minuto           | Conta comprometida               | Bloqueio após 5 tentativas + rate limiting |
+| **Credential stuffing** | Credenciais vazadas de outro site        | Login com senha reutilizada      | Política de senha + lista de comprometidas |
+| **Token theft**         | Refresh token interceptado               | Acesso permanente                | Rotation detecta reuso e revoga família    |
+| **Enumeração**          | "Email não encontrado" vs "Senha errada" | Atacante descobre emails válidos | Mensagem genérica: "Credenciais inválidas" |
+| **Senha fraca**         | Senha "123456"                           | Aceita pelo sistema              | Rejeitada pela política de complexidade    |
+
+### Proteções implementadas no CineLog
+
+#### 1. Política de complexidade de senha (`PasswordPolicyValidator`)
+
+Validamos senhas contra múltiplas regras ANTES de aceitar o registro:
+
+```
+📁 shared/security/PasswordPolicyValidator.java
+```
+
+**Regras aplicadas:**
+
+| Regra              | Requisito                                         | Motivação                     |
+| ------------------ | ------------------------------------------------- | ----------------------------- |
+| Comprimento mínimo | ≥ 8 caracteres                                    | NIST SP 800-63B recomenda ≥ 8 |
+| Letra maiúscula    | ≥ 1                                               | Aumenta espaço de busca       |
+| Letra minúscula    | ≥ 1                                               | Aumenta espaço de busca       |
+| Dígito             | ≥ 1                                               | Aumenta espaço de busca       |
+| Caractere especial | ≥ 1 (de `@#$%^&+=!?*()-_`)                        | Aumenta espaço de busca       |
+| Senha comprometida | Não pode estar na lista de 70+ senhas mais comuns | Previne credential stuffing   |
+| Partes do email    | Não pode conter o local-part do email             | Previne senhas previsíveis    |
+
+**Por que isso protege?**
+
+Um atacante com brute-force offline contra BCrypt(12) precisa de:
+
+- Senha "123456" (6 chars, só dígitos): ~1 segundo
+- Senha "P@ssw0rd!" (9 chars, todas as classes): ~centenas de anos
+
+**Como a validação funciona:**
+
+```java
+@Component
+public class PasswordPolicyValidator {
+
+    public List<String> validate(String password, String email) {
+        List<String> violations = new ArrayList<>();
+
+        if (password.length() < MIN_LENGTH)
+            violations.add("Senha deve ter no mínimo " + MIN_LENGTH + " caracteres");
+
+        // ... verifica maiúsculas, minúsculas, dígitos, especiais
+
+        if (COMPROMISED_PASSWORDS.contains(password.toLowerCase()))
+            violations.add("Esta senha é muito comum e foi comprometida");
+
+        // Verifica se contém partes do email
+        if (email != null) {
+            String localPart = email.split("@")[0].toLowerCase();
+            if (localPart.length() >= 3 && password.toLowerCase().contains(localPart))
+                violations.add("Senha não pode conter partes do seu email");
+        }
+
+        return violations; // vazio = senha OK
+    }
+}
+```
+
+**Resposta ao usuário quando senha falha (RFC 7807):**
+
+```json
+{
+    "type": "https://api.cinelog.com/errors/validation",
+    "title": "Password Policy Violation",
+    "status": 400,
+    "detail": "Senha não atende à política de segurança.",
+    "violations": [
+        "Senha deve conter ao menos uma letra maiúscula",
+        "Senha deve conter ao menos um caractere especial (@#$%^&+=!?*()-_)"
+    ]
+}
+```
+
+#### 2. Account lockout por brute-force (`LoginAttemptService`)
+
+Após **5 tentativas falhas** consecutivas, a conta é temporariamente bloqueada por **15 minutos**.
+
+```
+📁 shared/security/LoginAttemptService.java
+```
+
+**Como funciona o bloqueio:**
+
+```
+Tentativa 1: ❌ falha → contador = 1 (4 restantes)
+Tentativa 2: ❌ falha → contador = 2 (3 restantes)
+Tentativa 3: ❌ falha → contador = 3 (2 restantes)
+Tentativa 4: ❌ falha → contador = 4 (1 restante)
+Tentativa 5: ❌ falha → contador = 5 → 🔒 BLOQUEIO 15min
+Tentativa 6: ⛔ rejeitada imediatamente (sem verificar credenciais)
+...15 minutos depois...
+Tentativa 7: ✅ sucesso → 🔓 contador resetado
+```
+
+**Detalhes de implementação:**
+
+| Aspecto             | Decisão                          | Motivação                                        |
+| ------------------- | -------------------------------- | ------------------------------------------------ |
+| Storage             | `ConcurrentHashMap` in-memory    | Sem dependência externa, thread-safe             |
+| Chave de bloqueio   | Email + IP (dual-key)            | Bloqueia tanto a conta quanto o IP atacante      |
+| Max tentativas      | 5 (configurável)                 | Equilíbrio entre segurança e usabilidade         |
+| Duração do bloqueio | 900s = 15min (configurável)      | Previne brute-force sem bloquear permanentemente |
+| Reset automático    | Após período de bloqueio expirar | Sem intervenção manual necessária                |
+| Logs                | Hash do email (nunca plaintext)  | Protege PII em logs                              |
+
+**Configuração em `application.yml`:**
+
+```yaml
+cinelog:
+    security:
+        auth:
+            max-login-attempts: 5 # Máximo de tentativas antes do bloqueio
+            lock-duration-seconds: 900 # 15 minutos de bloqueio
+```
+
+**Resposta HTTP quando conta está bloqueada (423 Locked):**
+
+```json
+{
+    "type": "https://api.cinelog.com/errors/account-locked",
+    "title": "Account Locked",
+    "status": 423,
+    "detail": "Conta temporariamente bloqueada por excesso de tentativas.",
+    "retryAfterSeconds": 847
+}
+```
+
+**Dual-key blocking — por que bloqueamos por email E por IP?**
+
+- **Só por email:** atacante muda de IP e continua o brute-force
+- **Só por IP:** atacante usa botnet com milhares de IPs
+- **Por email + IP:** atacante precisa de milhares de IPs E conhecer emails válidos
+
+```java
+// No AuthService.login():
+if (loginAttemptService.isBlocked(email)) {
+    throw new AccountLockedException(retryAfter);
+}
+if (loginAttemptService.isBlocked(clientIp)) {
+    throw new AccountLockedException(retryAfter);
+}
+
+// Em caso de falha, registra AMBOS:
+loginAttemptService.recordFailedAttempt(email);
+loginAttemptService.recordFailedAttempt(clientIp);
+```
+
+#### 3. Refresh token rotation com reuse detection (`RefreshTokenService`)
+
+Implementamos o padrão **refresh token rotation** com **family-based reuse detection**,
+que é recomendado pelo [OAuth 2.0 Security Best Current Practice (RFC 9700)](https://www.rfc-editor.org/rfc/rfc9700).
+
+```
+📁 features/auth/service/RefreshTokenService.java
+📁 features/auth/persistence/entity/RefreshTokenEntity.java
+📁 features/auth/persistence/repository/RefreshTokenRepository.java
+```
+
+**O que é refresh token rotation?**
+
+Em vez de um refresh token valer para sempre, cada uso gera um **novo** refresh token
+e invalida o anterior. Se alguém tentar usar um token já usado, toda a "família" de
+tokens é revogada.
+
+**Fluxo normal (sem ataque):**
+
+```
+Login → AccessToken(1h) + RefreshToken_A
+        │
+        ▼ (após 1h)
+/refresh com RefreshToken_A
+        │
+        ▼
+RefreshToken_A → REVOGADO
+AccessToken(1h) + RefreshToken_B ← NOVO
+        │
+        ▼ (após 1h)
+/refresh com RefreshToken_B
+        │
+        ▼
+RefreshToken_B → REVOGADO
+AccessToken(1h) + RefreshToken_C ← NOVO
+```
+
+**Fluxo com ataque (reuse detection):**
+
+```
+Login → AccessToken(1h) + RefreshToken_A
+        │
+        ├── Usuário legítimo usa RefreshToken_A → OK → AccessToken + RefreshToken_B
+        │
+        └── 🔴 Atacante usa RefreshToken_A (roubado) → REUSE DETECTED!
+            │
+            ▼
+            TODA A FAMÍLIA REVOGADA (RefreshToken_A, RefreshToken_B, ...)
+            Usuário e atacante precisam fazer login novamente
+```
+
+**Por que revogar toda a família?**
+
+Se um token revogado é apresentado, sabemos que:
+
+1. O atacante tem uma cópia do token
+2. Não sabemos se o último token emitido está com o usuário ou com o atacante
+3. A opção mais segura é revogar **tudo** e forçar re-autenticação
+
+**Entidade `RefreshTokenEntity` — campos importantes:**
+
+| Campo         | Tipo         | Propósito                                            |
+| ------------- | ------------ | ---------------------------------------------------- |
+| `token`       | UUID, unique | Identificador do token (opaco, não-JWT)              |
+| `tokenFamily` | UUID         | Agrupa tokens de uma mesma "cadeia" de rotation      |
+| `userId`      | BIGINT, FK   | Dono do token                                        |
+| `revoked`     | boolean      | Se foi revogado (rotation normal ou reuse detection) |
+| `expiresAt`   | TIMESTAMP    | Expiração absoluta (padrão 7 dias)                   |
+| `replacedBy`  | VARCHAR      | UUID do token que o substituiu                       |
+| `clientIp`    | VARCHAR(45)  | IP do cliente (auditoria)                            |
+| `userAgent`   | VARCHAR(500) | User-Agent do cliente (auditoria)                    |
+
+**Limpeza automática:**
+
+Tokens expirados são removidos automaticamente por um `@Scheduled` job:
+
+```java
+@Scheduled(cron = "0 0 2 * * ?")  // Todo dia às 02:00
+@Transactional
+public void cleanupExpiredTokens() {
+    int deleted = repository.deleteExpiredBefore(Instant.now());
+    log.info("Cleanup: {} refresh tokens expirados removidos", deleted);
+}
+```
+
+**Configuração:**
+
+```yaml
+cinelog:
+    security:
+        auth:
+            refresh-token-expiration-seconds: 604800 # 7 dias
+```
+
+#### 4. Serviço de autenticação centralizado (`AuthService`)
+
+Todo o fluxo de autenticação passa por um serviço centralizado que integra TODAS as
+proteções de A07:2025:
+
+```
+📁 features/auth/service/AuthService.java
+```
+
+**Endpoints disponíveis:**
+
+| Método | Endpoint             | Descrição                    | Auth?     |
+| ------ | -------------------- | ---------------------------- | --------- |
+| POST   | `/api/auth/login`    | Login com email/senha        | Não       |
+| POST   | `/api/auth/register` | Registro de novo usuário     | Não       |
+| POST   | `/api/auth/refresh`  | Renovação de tokens          | Não       |
+| POST   | `/api/auth/logout`   | Revogação de todos os tokens | Sim (JWT) |
+
+**Fluxo de login — integração de proteções:**
+
+```
+POST /api/auth/login
+    │
+    ├── 1. LoginAttemptService.isBlocked(email)? → 423 Locked
+    ├── 2. LoginAttemptService.isBlocked(clientIp)? → 423 Locked
+    ├── 3. AuthenticationManager.authenticate()
+    │       └── BCrypt(12) verifica senha
+    │
+    ├── ✅ Sucesso:
+    │       ├── loginAttemptService.recordSuccessfulLogin()
+    │       ├── Gerar AccessToken JWT (1h)
+    │       ├── Gerar RefreshToken (7d, rotation)
+    │       └── return AuthResponse { accessToken, refreshToken, expiresIn }
+    │
+    └── ❌ Falha:
+            ├── loginAttemptService.recordFailedAttempt(email)
+            ├── loginAttemptService.recordFailedAttempt(clientIp)
+            ├── antiEnumerationService.addTimingNoise() ← timing constante
+            └── throw BadCredentials("Credenciais inválidas.") ← msg genérica
+```
+
+**Fluxo de registro — validações:**
+
+```
+POST /api/auth/register
+    │
+    ├── 1. PasswordPolicyValidator.validate() → 400 se falhar
+    ├── 2. userRepository.existsByEmail()? → 409 (sem revelar email)
+    ├── 3. Criar UserEntity + BCrypt(12)
+    ├── 4. Gerar AccessToken + RefreshToken
+    └── return AuthResponse
+```
+
+**Resposta de sucesso (`AuthResponse`):**
+
+```json
+{
+    "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+    "refreshToken": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "tokenType": "Bearer",
+    "expiresIn": 3600
+}
+```
+
+#### 5. Password hashing — BCrypt fator 12
+
+Já implementado desde a configuração inicial de segurança:
+
+```java
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder(12);
+}
+```
+
+| Fator            | Tempo p/ hash | Tempo p/ brute-force (10^8 hashes/s) |
+| ---------------- | ------------- | ------------------------------------ |
+| 10 (padrão)      | ~100ms        | ~3 anos para 8 chars                 |
+| **12 (CineLog)** | ~400ms        | ~12 anos para 8 chars                |
+| 14               | ~1.6s         | ~48 anos para 8 chars                |
+
+#### 6. Anti-enumeração de usuários
+
+Integrado desde A06:2025, agora **wired** no `AuthService`:
+
+```java
+// Em caso de falha, SEMPRE:
+antiEnumerationService.addTimingNoise(); // Timing constante
+throw new BadCredentialsException("Credenciais inválidas."); // Msg genérica
+```
+
+- **Timing constante:** `addTimingNoise()` adiciona delay aleatório para que
+  respostas de "email não existe" e "senha errada" levem o mesmo tempo
+- **Mensagem genérica:** nunca diferencia entre "email não encontrado" e "senha incorreta"
+
+#### 7. Migração de banco de dados (Liquibase)
+
+A tabela `refresh_tokens` é criada via Liquibase:
+
+```
+📁 liquibase/changes/20260227000000_create_refresh_tokens_table.xml
+```
+
+**Estrutura da tabela:**
+
+```sql
+CREATE TABLE refresh_tokens (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    token       VARCHAR(255) NOT NULL UNIQUE,
+    token_family VARCHAR(255) NOT NULL,
+    user_id     BIGINT NOT NULL,
+    user_email  VARCHAR(255) NOT NULL,
+    revoked     BOOLEAN DEFAULT FALSE NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expires_at  TIMESTAMP NOT NULL,
+    revoked_at  TIMESTAMP NULL,
+    replaced_by VARCHAR(255) NULL,
+    client_ip   VARCHAR(45) NULL,
+    user_agent  VARCHAR(500) NULL,
+
+    INDEX idx_refresh_tokens_token_family (token_family),
+    INDEX idx_refresh_tokens_user_id (user_id),
+    INDEX idx_refresh_tokens_expires_at (expires_at),
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+### Configuração completa em `application.yml`
+
+```yaml
+cinelog:
+    security:
+        jwt:
+            secret: ${CINELOG_SECURITY_JWT_SECRET:...}
+            expiration-seconds: 3600 # Access token: 1 hora
+        auth:
+            max-login-attempts: 5 # Bloqueio após 5 falhas
+            lock-duration-seconds: 900 # 15 minutos de bloqueio
+            refresh-token-expiration-seconds: 604800 # Refresh token: 7 dias
+```
+
+### Diagrama: fluxo de autenticação completo
+
+```
+┌──────────┐       ┌──────────────┐       ┌──────────────────┐
+│  Cliente  │──────▷│ AuthController│──────▷│   AuthService    │
+└──────────┘       └──────────────┘       │                  │
+     │                                     │  ┌─────────────┐│
+     │  POST /api/auth/login               │  │LoginAttempt  ││
+     │  {email, password}                  │  │  Service     ││
+     │                                     │  └──────┬──────┘│
+     │                                     │         │       │
+     │                                     │  ┌──────▽──────┐│
+     │                                     │  │   AuthMgr   ││
+     │                                     │  │ (BCrypt 12) ││
+     │                                     │  └──────┬──────┘│
+     │                                     │         │       │
+     │                                     │  ┌──────▽──────┐│
+     │                                     │  │ JwtToken    ││
+     │  ◁──── AuthResponse ───────────────│  │  Service    ││
+     │  {accessToken, refreshToken,        │  └─────────────┘│
+     │   tokenType, expiresIn}             │  ┌─────────────┐│
+     │                                     │  │RefreshToken ││
+     │                                     │  │  Service    ││
+     │                                     │  └─────────────┘│
+     │                                     │  ┌─────────────┐│
+     │                                     │  │AntiEnum     ││
+     │                                     │  │  Service    ││
+     │                                     │  └─────────────┘│
+     │                                     └──────────────────┘
+     │
+     │  POST /api/auth/refresh
+     │  {refreshToken: "a1b2c3d4..."}
+     │         │
+     │         ▼
+     │  RefreshTokenService.rotateRefreshToken()
+     │    ├── Token válido? → novo AccessToken + novo RefreshToken
+     │    └── Token revogado? → 🔴 REUSE DETECTED → revoga toda família
+     │
+     │  POST /api/auth/logout
+     │  Authorization: Bearer {accessToken}
+     │         │
+     │         ▼
+     │  RefreshTokenService.revokeAllUserTokens(userId)
+```
+
+### Checklist de proteções A07:2025
+
+- [x] JWT com validação de assinatura HMAC-SHA e expiração (1h)
 - [x] BCrypt fator 12 para hashing de senhas
-- [x] Anti-enumeração de usuários (A06:2025)
-- [x] Rate limiting em endpoints de auth (A06:2025)
-- [ ] Multi-Factor Authentication (MFA/2FA) — **pendente**
-- [ ] Política de complexidade de senha mais rigorosa — **pendente**
-- [ ] Detecção de credenciais comprometidas (HaveIBeenPwned API) — **pendente**
-- [ ] Refresh token rotation — **pendente**
-- [ ] Bloqueio de conta após N tentativas falhas — **pendente**
+- [x] Política de complexidade de senha (≥8 chars, maiúscula, minúscula, dígito, especial)
+- [x] Verificação contra lista de senhas comprometidas (70+ entradas)
+- [x] Rejeição de senhas que contenham partes do email
+- [x] Account lockout após 5 tentativas falhas (15min de bloqueio)
+- [x] Bloqueio dual-key (por email E por IP)
+- [x] Refresh token rotation com family-based reuse detection
+- [x] Revogação automática de toda família ao detectar reuso
+- [x] Limpeza automática de tokens expirados (@Scheduled diário)
+- [x] Anti-enumeração de usuários (timing constante + mensagem genérica)
+- [x] Endpoint de logout com revogação de todos os tokens
+- [x] Tabela `refresh_tokens` com índices e FK (Liquibase)
+- [x] Configuração externalizável via environment variables
+- [x] Rate limiting em endpoints de auth (via RateLimitFilter — A06:2025)
+- [ ] Multi-Factor Authentication (MFA/2FA) — **roadmap futuro**
+- [ ] Integração com HaveIBeenPwned API para verificação online — **roadmap futuro**
 
 ---
 
