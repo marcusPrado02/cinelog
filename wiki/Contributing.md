@@ -16,11 +16,11 @@
 ## Pré-requisitos
 
 | Ferramenta | Versão |
-|---|---|
-| Java | 21+ |
-| Maven | 3.9+ |
-| Docker | 24+ |
-| Git | 2.x |
+| ---------- | ------ |
+| Java       | 21+    |
+| Maven      | 3.9+   |
+| Docker     | 24+    |
+| Git        | 2.x    |
 
 ---
 
@@ -49,14 +49,14 @@ docker compose up -d db redis kafka
 <tipo>/<descricao-curta>
 ```
 
-| Tipo | Uso | Exemplo |
-|---|---|---|
-| `feature/` | Nova funcionalidade | `feature/add-watchlist-export` |
-| `fix/` | Correção de bug | `fix/jwt-token-expiration` |
-| `docs/` | Documentação | `docs/update-api-guide` |
-| `refactor/` | Refatoração | `refactor/media-service-split` |
-| `test/` | Testes | `test/add-integration-tests-media` |
-| `chore/` | Manutenção | `chore/update-dependencies` |
+| Tipo        | Uso                 | Exemplo                            |
+| ----------- | ------------------- | ---------------------------------- |
+| `feature/`  | Nova funcionalidade | `feature/add-watchlist-export`     |
+| `fix/`      | Correção de bug     | `fix/jwt-token-expiration`         |
+| `docs/`     | Documentação        | `docs/update-api-guide`            |
+| `refactor/` | Refatoração         | `refactor/media-service-split`     |
+| `test/`     | Testes              | `test/add-integration-tests-media` |
+| `chore/`    | Manutenção          | `chore/update-dependencies`        |
 
 ---
 
@@ -74,17 +74,17 @@ Seguimos a especificação [Conventional Commits](https://www.conventionalcommit
 
 ### Tipos
 
-| Tipo | Quando usar |
-|---|---|
-| `feat` | Nova feature |
-| `fix` | Correção de bug |
-| `docs` | Documentação |
-| `style` | Formatação (sem mudança de lógica) |
-| `refactor` | Refatoração |
-| `test` | Adição/correção de testes |
-| `chore` | Tarefas de build/dependências |
-| `perf` | Melhorias de performance |
-| `ci` | Configuração de CI/CD |
+| Tipo       | Quando usar                        |
+| ---------- | ---------------------------------- |
+| `feat`     | Nova feature                       |
+| `fix`      | Correção de bug                    |
+| `docs`     | Documentação                       |
+| `style`    | Formatação (sem mudança de lógica) |
+| `refactor` | Refatoração                        |
+| `test`     | Adição/correção de testes          |
+| `chore`    | Tarefas de build/dependências      |
+| `perf`     | Melhorias de performance           |
+| `ci`       | Configuração de CI/CD              |
 
 ### Exemplos
 
@@ -120,15 +120,18 @@ Antes de abrir o PR, verifique:
 
 ```markdown
 ## Descrição
+
 Breve descrição do que foi feito.
 
 ## Tipo de Mudança
+
 - [ ] Bug fix
 - [ ] Nova feature
 - [ ] Breaking change
 - [ ] Documentação
 
 ## Como Testar
+
 1. Passo 1
 2. Passo 2
 3. Verificar resultado
@@ -136,6 +139,7 @@ Breve descrição do que foi feito.
 ## Screenshots (se aplicável)
 
 ## Checklist
+
 - [ ] Testes passando
 - [ ] Cobertura mantida
 - [ ] Sem warnings de compilação
@@ -147,14 +151,14 @@ Breve descrição do que foi feito.
 
 ### O que revisar
 
-| Aspecto | O que verificar |
-|---|---|
-| **Funcionalidade** | Código faz o que propõe? |
-| **Testes** | Cenários cobertos? Edge cases? |
-| **Arquitetura** | Segue hexagonal? Ports & Adapters? |
-| **Segurança** | Input validation? Sem dados sensíveis? |
-| **Performance** | N+1 queries? Cache adequado? |
-| **Naming** | Nomes claros e consistentes? |
+| Aspecto            | O que verificar                        |
+| ------------------ | -------------------------------------- |
+| **Funcionalidade** | Código faz o que propõe?               |
+| **Testes**         | Cenários cobertos? Edge cases?         |
+| **Arquitetura**    | Segue hexagonal? Ports & Adapters?     |
+| **Segurança**      | Input validation? Sem dados sensíveis? |
+| **Performance**    | N+1 queries? Cache adequado?           |
+| **Naming**         | Nomes claros e consistentes?           |
 
 ### Convenções no Review
 
@@ -169,15 +173,16 @@ Breve descrição do que foi feito.
 
 O projeto usa análise estática integrada ao build:
 
-| Ferramenta | Arquivo de Config | Objetivo |
-|---|---|---|
-| **Checkstyle** | `config/checkstyle.xml` | Estilo de código |
-| **PMD** | `config/pmd-rules.xml` | Bugs e más práticas |
-| **SpotBugs** | `config/spotbugs-exclude.xml` | Bugs potenciais |
-| **JaCoCo** | pom.xml (plugin) | Cobertura de testes |
-| **OWASP Dependency-Check** | pom.xml (plugin) | CVEs em dependências |
+| Ferramenta                 | Arquivo de Config             | Objetivo             |
+| -------------------------- | ----------------------------- | -------------------- |
+| **Checkstyle**             | `config/checkstyle.xml`       | Estilo de código     |
+| **PMD**                    | `config/pmd-rules.xml`        | Bugs e más práticas  |
+| **SpotBugs**               | `config/spotbugs-exclude.xml` | Bugs potenciais      |
+| **JaCoCo**                 | pom.xml (plugin)              | Cobertura de testes  |
+| **OWASP Dependency-Check** | pom.xml (plugin)              | CVEs em dependências |
 
 Rodar todas as verificações:
+
 ```bash
 ./mvnw clean verify
 ```

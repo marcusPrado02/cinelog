@@ -26,6 +26,7 @@ graph LR
 ## 1. Strategy Pattern — Recomendações
 
 ### Problema
+
 Diferentes algoritmos de recomendação de mídia: por gênero, por popularidade, por usuários similares.
 
 ### Solução
@@ -119,6 +120,7 @@ public class RecommendationService {
 ```
 
 ### Benefícios
+
 - ✅ **Open/Closed**: Adicionar nova estratégia = nova classe, sem alterar existente
 - ✅ **Testável**: cada estratégia testada isoladamente
 - ✅ **Spring IoC**: injeção automática de todas as implementações
@@ -128,6 +130,7 @@ public class RecommendationService {
 ## 2. State Pattern — Ciclo de Vida de WatchEntry
 
 ### Problema
+
 Um `WatchEntry` passa por estados (PLANNING → WATCHING → COMPLETED/DROPPED) com regras de transição.
 
 ### Diagrama de Estados
@@ -208,6 +211,7 @@ public class WatchEntry {
 ```
 
 ### Benefícios
+
 - ✅ **Sem if/switch**: transições encapsuladas nos estados
 - ✅ **Regras claras**: cada estado sabe suas transições válidas
 - ✅ **Extensível**: novo estado = nova classe
@@ -217,6 +221,7 @@ public class WatchEntry {
 ## 3. Template Method — Validação de Mídia
 
 ### Problema
+
 Validação de filmes e séries compartilha passos comuns, mas com especificidades.
 
 ### Código
@@ -280,6 +285,7 @@ public class SeriesValidator extends AbstractMediaValidator {
 ```
 
 ### Benefícios
+
 - ✅ **DRY**: lógica comum centralizada na classe abstrata
 - ✅ **Extensível**: novo tipo de mídia = nova subclasse
 - ✅ **Consistente**: ordem de validação sempre mantida
@@ -289,6 +295,7 @@ public class SeriesValidator extends AbstractMediaValidator {
 ## 4. Adapter Pattern — Integração TMDb
 
 ### Problema
+
 A aplicação não deve depender diretamente da API do TMDb.
 
 ### Código
@@ -332,6 +339,7 @@ public class TmdbClientAdapter implements TmdbPort {
 ## 5. Observer Pattern — Domain Events
 
 ### Problema
+
 Ações de domínio (criar mídia, completar watch entry) devem disparar efeitos colaterais sem acoplamento direto.
 
 ### Código
@@ -374,13 +382,13 @@ public class MediaCreatedListener {
 
 ## Resumo
 
-| Padrão | Onde | Princípio SOLID |
-|---|---|---|
-| **Strategy** | Recomendações | Open/Closed, DIP |
-| **State** | WatchEntry lifecycle | Single Responsibility, OCP |
-| **Template Method** | Validação de mídia | DRY, OCP |
-| **Adapter** | TMDb integration | DIP, ISP |
-| **Observer** | Domain Events | SRP, OCP |
+| Padrão              | Onde                 | Princípio SOLID            |
+| ------------------- | -------------------- | -------------------------- |
+| **Strategy**        | Recomendações        | Open/Closed, DIP           |
+| **State**           | WatchEntry lifecycle | Single Responsibility, OCP |
+| **Template Method** | Validação de mídia   | DRY, OCP                   |
+| **Adapter**         | TMDb integration     | DIP, ISP                   |
+| **Observer**        | Domain Events        | SRP, OCP                   |
 
 ---
 

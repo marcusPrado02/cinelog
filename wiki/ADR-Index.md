@@ -30,18 +30,18 @@ Impactos positivos e negativos da decisão.
 
 ## Índice de ADRs
 
-| # | Título | Status | Data |
-|---|---|---|---|
+| #                   | Título                                   | Status      | Data    |
+| ------------------- | ---------------------------------------- | ----------- | ------- |
 | [ADR-001](#adr-001) | Arquitetura Hexagonal (Ports & Adapters) | ✅ Accepted | 2025-01 |
-| [ADR-002](#adr-002) | Spring Boot 3.x + Java 21 | ✅ Accepted | 2025-01 |
-| [ADR-003](#adr-003) | Liquibase para Migrações de Banco | ✅ Accepted | 2025-01 |
-| [ADR-004](#adr-004) | MapStruct para Mapeamento de Objetos | ✅ Accepted | 2025-01 |
-| [ADR-005](#adr-005) | JWT para Autenticação | ✅ Accepted | 2025-01 |
-| [ADR-006](#adr-006) | Kafka + Outbox + Idempotent Consumer | ✅ Accepted | 2025-01 |
-| [ADR-007](#adr-007) | Redis para Cache Distribuído | ✅ Accepted | 2025-01 |
-| [ADR-008](#adr-008) | Implementação de Design Patterns | ✅ Accepted | 2025-01 |
-| [ADR-009](#adr-009) | Event Envelope + Versionamento | ✅ Accepted | 2025-01 |
-| [ADR-010](#adr-010) | Estrutura Monorepo | ✅ Accepted | 2025-01 |
+| [ADR-002](#adr-002) | Spring Boot 3.x + Java 21                | ✅ Accepted | 2025-01 |
+| [ADR-003](#adr-003) | Liquibase para Migrações de Banco        | ✅ Accepted | 2025-01 |
+| [ADR-004](#adr-004) | MapStruct para Mapeamento de Objetos     | ✅ Accepted | 2025-01 |
+| [ADR-005](#adr-005) | JWT para Autenticação                    | ✅ Accepted | 2025-01 |
+| [ADR-006](#adr-006) | Kafka + Outbox + Idempotent Consumer     | ✅ Accepted | 2025-01 |
+| [ADR-007](#adr-007) | Redis para Cache Distribuído             | ✅ Accepted | 2025-01 |
+| [ADR-008](#adr-008) | Implementação de Design Patterns         | ✅ Accepted | 2025-01 |
+| [ADR-009](#adr-009) | Event Envelope + Versionamento           | ✅ Accepted | 2025-01 |
+| [ADR-010](#adr-010) | Estrutura Monorepo                       | ✅ Accepted | 2025-01 |
 
 ---
 

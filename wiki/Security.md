@@ -10,33 +10,33 @@ O CineLog implementa **todos os 10 itens** do OWASP Top 10:2025 como camada de s
 
 ### Stack de Segurança
 
-| Componente | Tecnologia |
-|---|---|
-| **Autenticação** | JWT (HMAC-SHA256) via jjwt 0.12.6 |
-| **Autorização** | Spring Security 6.x + `@PreAuthorize` |
-| **Hashing** | BCrypt (cost factor 12) |
-| **Sessions** | STATELESS (sem sessões) |
-| **CORS** | Configuração por profile |
-| **Rate Limiting** | Filtro customizado (Bucket4j pattern) |
-| **Supply Chain** | OWASP Dependency-Check + CycloneDX SBOM |
-| **Resiliência** | Resilience4j (Circuit Breaker, Retry, Bulkhead) |
+| Componente        | Tecnologia                                      |
+| ----------------- | ----------------------------------------------- |
+| **Autenticação**  | JWT (HMAC-SHA256) via jjwt 0.12.6               |
+| **Autorização**   | Spring Security 6.x + `@PreAuthorize`           |
+| **Hashing**       | BCrypt (cost factor 12)                         |
+| **Sessions**      | STATELESS (sem sessões)                         |
+| **CORS**          | Configuração por profile                        |
+| **Rate Limiting** | Filtro customizado (Bucket4j pattern)           |
+| **Supply Chain**  | OWASP Dependency-Check + CycloneDX SBOM         |
+| **Resiliência**   | Resilience4j (Circuit Breaker, Retry, Bulkhead) |
 
 ---
 
 ## OWASP Top 10:2025 — Status
 
-| # | Categoria | Status | Resumo |
-|---|---|---|---|
-| **A01** | Broken Access Control | ✅ | `@PreAuthorize`, ownership checks, CORS strict |
-| **A02** | Security Misconfiguration | ✅ | Headers seguros, stack traces suprimidos, actuator restrito |
-| **A03** | Software Supply Chain Failures | ✅ | Dependency-Check, CycloneDX SBOM, Enforcer, CVE fixes |
-| **A04** | Cryptographic Failures | ✅ | BCrypt(12), JWT HMAC-SHA, TLS, sem dados sensíveis em logs |
-| **A05** | Injection | ✅ | JPA prepared statements, SQLi filter, input validation |
-| **A06** | Insecure Design | ✅ | Rate limiting, anti-enumeration, business limits, Secure-by-Design |
-| **A07** | Authentication Failures | ✅ | Account lockout, password policy, refresh token rotation |
-| **A08** | Software or Data Integrity Failures | ✅ | HMAC integrity check, optimistic locking, secure action tokens |
-| **A09** | Security Logging and Alerting | ✅ | SecurityEventLogger, alerting service, dedicated SECURITY appender |
-| **A10** | Mishandling of Exceptional Conditions | ✅ | Circuit breaker, fallbacks, health indicators, JVM safety hooks |
+| #       | Categoria                             | Status | Resumo                                                             |
+| ------- | ------------------------------------- | ------ | ------------------------------------------------------------------ |
+| **A01** | Broken Access Control                 | ✅     | `@PreAuthorize`, ownership checks, CORS strict                     |
+| **A02** | Security Misconfiguration             | ✅     | Headers seguros, stack traces suprimidos, actuator restrito        |
+| **A03** | Software Supply Chain Failures        | ✅     | Dependency-Check, CycloneDX SBOM, Enforcer, CVE fixes              |
+| **A04** | Cryptographic Failures                | ✅     | BCrypt(12), JWT HMAC-SHA, TLS, sem dados sensíveis em logs         |
+| **A05** | Injection                             | ✅     | JPA prepared statements, SQLi filter, input validation             |
+| **A06** | Insecure Design                       | ✅     | Rate limiting, anti-enumeration, business limits, Secure-by-Design |
+| **A07** | Authentication Failures               | ✅     | Account lockout, password policy, refresh token rotation           |
+| **A08** | Software or Data Integrity Failures   | ✅     | HMAC integrity check, optimistic locking, secure action tokens     |
+| **A09** | Security Logging and Alerting         | ✅     | SecurityEventLogger, alerting service, dedicated SECURITY appender |
+| **A10** | Mishandling of Exceptional Conditions | ✅     | Circuit breaker, fallbacks, health indicators, JVM safety hooks    |
 
 ---
 

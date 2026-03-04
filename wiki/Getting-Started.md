@@ -6,13 +6,13 @@
 
 ## Pré-requisitos
 
-| Ferramenta | Versão Mínima | Verificação |
-|---|---|---|
-| **Java (JDK)** | 21 | `java -version` |
-| **Maven** | 3.9+ | `mvn -version` |
-| **Docker** | 24+ | `docker --version` |
-| **Docker Compose** | v2+ | `docker compose version` |
-| **Git** | 2.40+ | `git --version` |
+| Ferramenta         | Versão Mínima | Verificação              |
+| ------------------ | ------------- | ------------------------ |
+| **Java (JDK)**     | 21            | `java -version`          |
+| **Maven**          | 3.9+          | `mvn -version`           |
+| **Docker**         | 24+           | `docker --version`       |
+| **Docker Compose** | v2+           | `docker compose version` |
+| **Git**            | 2.40+         | `git --version`          |
 
 > 💡 O projeto inclui o **Maven Wrapper** (`./mvnw`), portanto você não precisa instalar o Maven globalmente.
 
@@ -35,18 +35,18 @@ docker compose up -d
 
 Isso inicia os seguintes serviços:
 
-| Serviço | Porta | Descrição |
-|---|---|---|
-| **MySQL 8** | 3306 | Banco de dados principal |
-| **Redis 7** | 6379 | Cache (AOF persistence) |
-| **Prometheus** | 9090 | Coleta de métricas |
-| **Grafana** | 3000 | Dashboards (admin/admin) |
-| **Tempo** | 3200 | Tracing distribuído |
-| **OTEL Collector** | 4317/4318 | Coletor OpenTelemetry |
-| **Jaeger** | 16686 | UI de tracing |
-| **Elasticsearch** | 9200 | Armazenamento de logs |
-| **Kibana** | 5601 | Visualização de logs |
-| **Logstash** | 5000 | Processamento de logs |
+| Serviço            | Porta     | Descrição                |
+| ------------------ | --------- | ------------------------ |
+| **MySQL 8**        | 3306      | Banco de dados principal |
+| **Redis 7**        | 6379      | Cache (AOF persistence)  |
+| **Prometheus**     | 9090      | Coleta de métricas       |
+| **Grafana**        | 3000      | Dashboards (admin/admin) |
+| **Tempo**          | 3200      | Tracing distribuído      |
+| **OTEL Collector** | 4317/4318 | Coletor OpenTelemetry    |
+| **Jaeger**         | 16686     | UI de tracing            |
+| **Elasticsearch**  | 9200      | Armazenamento de logs    |
+| **Kibana**         | 5601      | Visualização de logs     |
+| **Logstash**       | 5000      | Processamento de logs    |
 
 ---
 
@@ -168,13 +168,13 @@ curl -X POST http://localhost:8080/api/v1/watch-entries \
 
 ## Spring Profiles
 
-| Profile | Uso | Comando |
-|---|---|---|
-| **dev** (padrão) | Desenvolvimento local | `./mvnw spring-boot:run` |
-| **test** | Testes automatizados | `./mvnw test` |
-| **docker** | Docker Compose | Variável `SPRING_PROFILES_ACTIVE=docker` |
-| **perf** | Testes de performance | K6 + profile perf |
-| **prod** | Produção | Variável `SPRING_PROFILES_ACTIVE=prod` |
+| Profile          | Uso                   | Comando                                  |
+| ---------------- | --------------------- | ---------------------------------------- |
+| **dev** (padrão) | Desenvolvimento local | `./mvnw spring-boot:run`                 |
+| **test**         | Testes automatizados  | `./mvnw test`                            |
+| **docker**       | Docker Compose        | Variável `SPRING_PROFILES_ACTIVE=docker` |
+| **perf**         | Testes de performance | K6 + profile perf                        |
+| **prod**         | Produção              | Variável `SPRING_PROFILES_ACTIVE=prod`   |
 
 ---
 
@@ -210,14 +210,14 @@ open target/site/jacoco/index.html
 
 ## Troubleshooting
 
-| Problema | Solução |
-|---|---|
-| **Porta 3306 em uso** | `docker compose down` antes de subir novamente |
+| Problema                     | Solução                                                       |
+| ---------------------------- | ------------------------------------------------------------- |
+| **Porta 3306 em uso**        | `docker compose down` antes de subir novamente                |
 | **MySQL connection refused** | Espere ~10s após `docker compose up` para o MySQL inicializar |
-| **OutOfMemoryError** | Aumente heap: `JAVA_OPTS=-Xmx512m` |
-| **TMDb 401 Unauthorized** | Verifique a variável `TMDB_API_KEY` no `.env` |
-| **Testes falhando** | Certifique-se de que Docker está rodando (Testcontainers) |
-| **Build lento** | Use `-DskipTests` para compilação rápida |
+| **OutOfMemoryError**         | Aumente heap: `JAVA_OPTS=-Xmx512m`                            |
+| **TMDb 401 Unauthorized**    | Verifique a variável `TMDB_API_KEY` no `.env`                 |
+| **Testes falhando**          | Certifique-se de que Docker está rodando (Testcontainers)     |
+| **Build lento**              | Use `-DskipTests` para compilação rápida                      |
 
 ---
 

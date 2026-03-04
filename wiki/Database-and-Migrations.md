@@ -6,12 +6,12 @@
 
 ## Stack de Dados
 
-| Tecnologia | Uso | Porta |
-|---|---|---|
-| **MySQL 8.0** | Banco relacional principal | 3306 |
-| **Redis 7** | Cache distribuído | 6379 |
-| **Liquibase 5.0** | Migrações de schema | — |
-| **HikariCP** | Pool de conexões | — |
+| Tecnologia        | Uso                        | Porta |
+| ----------------- | -------------------------- | ----- |
+| **MySQL 8.0**     | Banco relacional principal | 3306  |
+| **Redis 7**       | Cache distribuído          | 6379  |
+| **Liquibase 5.0** | Migrações de schema        | —     |
+| **HikariCP**      | Pool de conexões           | —     |
 
 ---
 
@@ -141,30 +141,31 @@ erDiagram
 
 ```yaml
 spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/cinelog
-    username: cinelog
-    password: cinelog
-    hikari:
-      minimum-idle: 2
-      maximum-pool-size: 10
-      connection-timeout: 5000
-      idle-timeout: 300000
-      max-lifetime: 600000
-      transaction-isolation: TRANSACTION_READ_COMMITTED
+    datasource:
+        url: jdbc:mysql://localhost:3306/cinelog
+        username: cinelog
+        password: cinelog
+        hikari:
+            minimum-idle: 2
+            maximum-pool-size: 10
+            connection-timeout: 5000
+            idle-timeout: 300000
+            max-lifetime: 600000
+            transaction-isolation: TRANSACTION_READ_COMMITTED
 
-  jpa:
-    hibernate:
-      ddl-auto: none  # Liquibase gerencia o schema
-    open-in-view: false  # Evitar N+1 queries
-    properties:
-      hibernate.format_sql: false
-      hibernate.generate_statistics: false
+    jpa:
+        hibernate:
+            ddl-auto: none # Liquibase gerencia o schema
+        open-in-view: false # Evitar N+1 queries
+        properties:
+            hibernate.format_sql: false
+            hibernate.generate_statistics: false
 ```
 
 ### Por que `ddl-auto: none`?
 
 O Hibernate **nunca** deve modificar o schema em produção. Todas as alterações são feitas via **Liquibase migrations**, garantindo:
+
 - Versionamento do schema
 - Rollback controlado
 - Auditoria de mudanças
@@ -231,13 +232,13 @@ Exemplo: `20250115103000_add_tmdb_id_to_media.xml`
 
 ### Boas Práticas
 
-| Prática | Motivo |
-|---|---|
-| Um changeSet por alteração | Permite rollback granular |
-| Sempre adicione `author` | Rastreabilidade |
-| Nunca edite changeSets existentes | Liquibase usa checksums |
-| Use `rollback` tag | Para alterações reversíveis |
-| Teste com `./mvnw liquibase:update` | Antes de mergear |
+| Prática                             | Motivo                      |
+| ----------------------------------- | --------------------------- |
+| Um changeSet por alteração          | Permite rollback granular   |
+| Sempre adicione `author`            | Rastreabilidade             |
+| Nunca edite changeSets existentes   | Liquibase usa checksums     |
+| Use `rollback` tag                  | Para alterações reversíveis |
+| Teste com `./mvnw liquibase:update` | Antes de mergear            |
 
 ---
 
@@ -247,26 +248,26 @@ Exemplo: `20250115103000_add_tmdb_id_to_media.xml`
 
 ```yaml
 spring:
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      database: 0
-      timeout: 2000ms
-  cache:
-    type: redis
+    data:
+        redis:
+            host: localhost
+            port: 6379
+            database: 0
+            timeout: 2000ms
+    cache:
+        type: redis
 ```
 
 ### Estratégia de Cache
 
-| Cache | TTL | Uso |
-|---|---|---|
-| `tmdb` | 24h | Dados do TMDb (detalhes, gêneros, config) |
-| `media` | 1h | Mídias mais acessadas |
-| `genres` | 24h | Lista de gêneros |
-| `popularity` | 30min | Rankings de popularidade |
-| `recommendations` | 1h | Recomendações por usuário |
-| `user-insights` | 15min | Estatísticas de consumo |
+| Cache             | TTL   | Uso                                       |
+| ----------------- | ----- | ----------------------------------------- |
+| `tmdb`            | 24h   | Dados do TMDb (detalhes, gêneros, config) |
+| `media`           | 1h    | Mídias mais acessadas                     |
+| `genres`          | 24h   | Lista de gêneros                          |
+| `popularity`      | 30min | Rankings de popularidade                  |
+| `recommendations` | 1h    | Recomendações por usuário                 |
+| `user-insights`   | 15min | Estatísticas de consumo                   |
 
 ### Invalidação
 
@@ -288,17 +289,17 @@ public void update(Long id, UpdateMediaRequest request) { ... }
 
 As migrações incluem índices para as queries mais comuns:
 
-| Tabela | Índice | Colunas |
-|---|---|---|
-| `media` | `idx_media_type` | `type` |
-| `media` | `idx_media_tmdb_id` | `tmdb_id` |
-| `media` | `idx_media_title` | `title` |
-| `watch_entry` | `idx_we_user_id` | `user_id` |
-| `watch_entry` | `idx_we_media_id` | `media_id` |
-| `watch_entry` | `idx_we_status` | `status` |
-| `outbox_event` | `idx_outbox_status` | `status` |
-| `refresh_token` | `idx_rt_user_id` | `user_id` |
-| `refresh_token` | `idx_rt_token` | `token` |
+| Tabela          | Índice              | Colunas    |
+| --------------- | ------------------- | ---------- |
+| `media`         | `idx_media_type`    | `type`     |
+| `media`         | `idx_media_tmdb_id` | `tmdb_id`  |
+| `media`         | `idx_media_title`   | `title`    |
+| `watch_entry`   | `idx_we_user_id`    | `user_id`  |
+| `watch_entry`   | `idx_we_media_id`   | `media_id` |
+| `watch_entry`   | `idx_we_status`     | `status`   |
+| `outbox_event`  | `idx_outbox_status` | `status`   |
+| `refresh_token` | `idx_rt_user_id`    | `user_id`  |
+| `refresh_token` | `idx_rt_token`      | `token`    |
 
 ---
 
@@ -306,18 +307,18 @@ As migrações incluem índices para as queries mais comuns:
 
 ```yaml
 services:
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: cinelog
-      MYSQL_USER: cinelog
-      MYSQL_PASSWORD: cinelog
-    ports:
-      - "3306:3306"
-    volumes:
-      - dbdata:/var/lib/mysql
-      - ./docker/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
+    db:
+        image: mysql:8.0
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: cinelog
+            MYSQL_USER: cinelog
+            MYSQL_PASSWORD: cinelog
+        ports:
+            - "3306:3306"
+        volumes:
+            - dbdata:/var/lib/mysql
+            - ./docker/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
 ```
 
 ---

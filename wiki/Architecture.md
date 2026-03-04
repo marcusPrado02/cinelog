@@ -6,13 +6,13 @@
 
 ## Princípios Fundamentais
 
-| Princípio | Aplicação no CineLog |
-|---|---|
-| **Separation of Concerns** | Cada camada tem responsabilidade única |
-| **Dependency Inversion** | Domínio não depende de frameworks |
-| **Open/Closed** | Extensível via ports/adapters sem alterar o core |
-| **Single Responsibility** | Classes pequenas e focadas |
-| **YAGNI + DRY** | Sem abstrações prematuras, sem duplicação |
+| Princípio                  | Aplicação no CineLog                             |
+| -------------------------- | ------------------------------------------------ |
+| **Separation of Concerns** | Cada camada tem responsabilidade única           |
+| **Dependency Inversion**   | Domínio não depende de frameworks                |
+| **Open/Closed**            | Extensível via ports/adapters sem alterar o core |
+| **Single Responsibility**  | Classes pequenas e focadas                       |
+| **YAGNI + DRY**            | Sem abstrações prematuras, sem duplicação        |
 
 ---
 
@@ -83,6 +83,7 @@ graph LR
 ### Ports (Interfaces no domínio)
 
 **Input Ports** — definem o que a aplicação faz:
+
 ```java
 public interface CreateMediaUseCase {
     MediaResponse execute(CreateMediaRequest request);
@@ -90,6 +91,7 @@ public interface CreateMediaUseCase {
 ```
 
 **Output Ports** — definem o que a aplicação precisa:
+
 ```java
 public interface MediaRepositoryPort {
     Optional<Media> findById(Long id);
@@ -104,6 +106,7 @@ public interface TmdbClientPort {
 ### Adapters (Implementações concretas)
 
 **Driving Adapter** (REST Controller):
+
 ```java
 @RestController
 @RequestMapping("/api/v1/media")
@@ -113,6 +116,7 @@ public class MediaController {
 ```
 
 **Driven Adapter** (JPA Repository):
+
 ```java
 @Component
 public class MediaRepositoryAdapter implements MediaRepositoryPort {
@@ -202,11 +206,11 @@ graph TB
 
 ### Entidades vs Value Objects
 
-| Tipo | Exemplos | Identidade |
-|---|---|---|
-| **Entity** | Media, User, WatchEntry | Tem ID único |
-| **Value Object** | Rating, DateRange, TMDB ID | Definido por atributos |
-| **Aggregate Root** | Media (root de Season/Episode) | Controla consistência |
+| Tipo               | Exemplos                       | Identidade             |
+| ------------------ | ------------------------------ | ---------------------- |
+| **Entity**         | Media, User, WatchEntry        | Tem ID único           |
+| **Value Object**   | Rating, DateRange, TMDB ID     | Definido por atributos |
+| **Aggregate Root** | Media (root de Season/Episode) | Controla consistência  |
 
 ---
 
@@ -246,17 +250,17 @@ sequenceDiagram
 
 ## Design Patterns Aplicados
 
-| Padrão | Onde | Propósito |
-|---|---|---|
-| **Repository** | `*RepositoryPort` + `*RepositoryAdapter` | Abstrai persistência |
-| **Mapper** | MapStruct `*Mapper` | Conversão Entity ↔ DTO |
-| **Strategy** | `RecommendationStrategy` | Algoritmos intercambiáveis |
-| **State** | `WatchEntryState` | Ciclo de vida de WatchEntry |
-| **Template Method** | `AbstractMediaValidator` | Validação extensível |
-| **Factory** | `WatchStateFactory` | Criação de estados |
-| **Observer** | Outbox + Kafka Events | Eventos assíncronos |
-| **Adapter** | `TmdbClientAdapter` | Integração com API externa |
-| **Circuit Breaker** | Resilience4j no TMDb | Resiliência a falhas |
+| Padrão              | Onde                                     | Propósito                   |
+| ------------------- | ---------------------------------------- | --------------------------- |
+| **Repository**      | `*RepositoryPort` + `*RepositoryAdapter` | Abstrai persistência        |
+| **Mapper**          | MapStruct `*Mapper`                      | Conversão Entity ↔ DTO      |
+| **Strategy**        | `RecommendationStrategy`                 | Algoritmos intercambiáveis  |
+| **State**           | `WatchEntryState`                        | Ciclo de vida de WatchEntry |
+| **Template Method** | `AbstractMediaValidator`                 | Validação extensível        |
+| **Factory**         | `WatchStateFactory`                      | Criação de estados          |
+| **Observer**        | Outbox + Kafka Events                    | Eventos assíncronos         |
+| **Adapter**         | `TmdbClientAdapter`                      | Integração com API externa  |
+| **Circuit Breaker** | Resilience4j no TMDb                     | Resiliência a falhas        |
 
 👉 **Ver detalhes**: [Design Patterns](Design-Patterns)
 
@@ -271,7 +275,7 @@ graph TB
     User["👤 Usuário<br/>(Web/Mobile App)"]
     CineLog["🎬 CineLog API<br/>(Spring Boot)"]
     TMDb["🎥 TMDb API<br/>(The Movie Database)"]
-    
+
     User -->|"REST API<br/>JSON/HTTPS"| CineLog
     CineLog -->|"REST API<br/>JSON/HTTPS"| TMDb
 ```
@@ -286,7 +290,7 @@ graph TB
         CACHE["⚡ Redis 7<br/>Cache"]
         KAFKA["📨 Kafka<br/>Event Broker"]
     end
-    
+
     MON["📊 Prometheus + Grafana<br/>Monitoring"]
     TRACE["🔍 Tempo<br/>Distributed Tracing"]
     LOGS["📝 ELK Stack<br/>Log Aggregation"]

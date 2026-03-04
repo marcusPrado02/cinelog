@@ -38,38 +38,38 @@ Todos os eventos seguem o formato **EventEnvelope** padronizado:
 
 ```json
 {
-  "event_id": "550e8400-e29b-41d4-a716-446655440000",
-  "type": "watch_entry_created",
-  "version": 1,
-  "occurred_at": "2025-01-15T10:30:00.123Z",
-  "producer": "cinelog-api",
-  "metadata": {
-    "correlationId": "req-abc123",
-    "causationId": "cmd-def456",
-    "traceparent": "00-abc123-def456-01",
-    "userId": "42"
-  },
-  "payload": {
-    "watchEntryId": 1,
-    "userId": 42,
-    "mediaId": 100,
-    "status": "COMPLETED",
-    "rating": 9.5
-  }
+    "event_id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "watch_entry_created",
+    "version": 1,
+    "occurred_at": "2025-01-15T10:30:00.123Z",
+    "producer": "cinelog-api",
+    "metadata": {
+        "correlationId": "req-abc123",
+        "causationId": "cmd-def456",
+        "traceparent": "00-abc123-def456-01",
+        "userId": "42"
+    },
+    "payload": {
+        "watchEntryId": 1,
+        "userId": 42,
+        "mediaId": 100,
+        "status": "COMPLETED",
+        "rating": 9.5
+    }
 }
 ```
 
 ### Campos do Envelope
 
-| Campo | Tipo | Descrição |
-|---|---|---|
-| `event_id` | UUID | Identificador único (idempotência) |
-| `type` | string | Tipo do evento (snake_case) |
-| `version` | int | Versão do schema do payload |
-| `occurred_at` | ISO-8601 | Quando o evento ocorreu |
-| `producer` | string | Serviço que gerou o evento |
-| `metadata` | object | Contexto de rastreamento |
-| `payload` | object | Dados do evento (varia por tipo) |
+| Campo         | Tipo     | Descrição                          |
+| ------------- | -------- | ---------------------------------- |
+| `event_id`    | UUID     | Identificador único (idempotência) |
+| `type`        | string   | Tipo do evento (snake_case)        |
+| `version`     | int      | Versão do schema do payload        |
+| `occurred_at` | ISO-8601 | Quando o evento ocorreu            |
+| `producer`    | string   | Serviço que gerou o evento         |
+| `metadata`    | object   | Contexto de rastreamento           |
+| `payload`     | object   | Dados do evento (varia por tipo)   |
 
 ---
 
@@ -77,23 +77,23 @@ Todos os eventos seguem o formato **EventEnvelope** padronizado:
 
 ### Eventos de Watch Entry
 
-| Tipo | Tópico Kafka | Trigger |
-|---|---|---|
-| `watch_entry_created` | `cinelog.watch-entry.created` | Novo registro de mídia assistida |
+| Tipo                  | Tópico Kafka                  | Trigger                                 |
+| --------------------- | ----------------------------- | --------------------------------------- |
+| `watch_entry_created` | `cinelog.watch-entry.created` | Novo registro de mídia assistida        |
 | `watch_entry_updated` | `cinelog.watch-entry.updated` | Atualização de status, rating ou review |
-| `watch_entry_deleted` | `cinelog.watch-entry.deleted` | Remoção de registro |
+| `watch_entry_deleted` | `cinelog.watch-entry.deleted` | Remoção de registro                     |
 
 ### Eventos de Media
 
-| Tipo | Tópico Kafka | Trigger |
-|---|---|---|
-| `media_created` | `cinelog.media.created` | Nova mídia cadastrada |
+| Tipo            | Tópico Kafka            | Trigger                       |
+| --------------- | ----------------------- | ----------------------------- |
+| `media_created` | `cinelog.media.created` | Nova mídia cadastrada         |
 | `media_updated` | `cinelog.media.updated` | Atualização de dados da mídia |
 
 ### Eventos de User
 
-| Tipo | Tópico Kafka | Trigger |
-|---|---|---|
+| Tipo              | Tópico Kafka              | Trigger                 |
+| ----------------- | ------------------------- | ----------------------- |
 | `user_registered` | `cinelog.user.registered` | Novo usuário registrado |
 
 ---
@@ -151,14 +151,14 @@ sequenceDiagram
 
 ```yaml
 outbox:
-  publisher:
-    enabled: true
-    fixed-rate-ms: 5000      # Polling a cada 5s
-    initial-delay-ms: 10000  # Espera 10s após startup
-    batch-size: 100           # Até 100 eventos por batch
-    retention-days: 7         # Remove SENT após 7 dias
-  housekeeping:
-    cron: 0 0 1 * * ?         # Cleanup diário às 01:00
+    publisher:
+        enabled: true
+        fixed-rate-ms: 5000 # Polling a cada 5s
+        initial-delay-ms: 10000 # Espera 10s após startup
+        batch-size: 100 # Até 100 eventos por batch
+        retention-days: 7 # Remove SENT após 7 dias
+    housekeeping:
+        cron: 0 0 1 * * ? # Cleanup diário às 01:00
 ```
 
 ---
@@ -212,22 +212,22 @@ var errorHandler = new DefaultErrorHandler(deadLetterPublisher, backOff);
 
 ```yaml
 spring.kafka.producer:
-  acks: all             # Aguarda confirmação de todas as réplicas
-  retries: 3            # Retenta até 3x
-  properties:
-    enable.idempotence: true  # Exatamente uma vez (exactly-once)
+    acks: all # Aguarda confirmação de todas as réplicas
+    retries: 3 # Retenta até 3x
+    properties:
+        enable.idempotence: true # Exatamente uma vez (exactly-once)
 ```
 
 ---
 
 ## Convenções de Nomenclatura
 
-| Elemento | Formato | Exemplo |
-|---|---|---|
-| **Event type** | snake_case | `watch_entry_created` |
-| **Topic name** | kebab-case | `cinelog.watch-entry.created` |
-| **Payload fields** | camelCase | `watchEntryId`, `userId` |
-| **Topic prefix** | `cinelog.` | `cinelog.media.created` |
+| Elemento           | Formato    | Exemplo                       |
+| ------------------ | ---------- | ----------------------------- |
+| **Event type**     | snake_case | `watch_entry_created`         |
+| **Topic name**     | kebab-case | `cinelog.watch-entry.created` |
+| **Payload fields** | camelCase  | `watchEntryId`, `userId`      |
+| **Topic prefix**   | `cinelog.` | `cinelog.media.created`       |
 
 ---
 
