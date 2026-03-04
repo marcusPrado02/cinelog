@@ -377,12 +377,81 @@ Negativas:
 
 ---
 
+### ADR-011: Estratégia de Autenticação
+
+**Status**: Aceito
+
+**Data**: 2026-03-03
+
+**Contexto**: Formalizar a estratégia completa de autenticação — TLS, JWT, BCrypt, Rate Limiting e Anti-Enumeração.
+
+**Decisão**: Autenticação stateless com JWT (HS256, ≥256 bits), BCrypt fator 12, `RateLimitFilter` e `AntiEnumerationService`.
+
+**Consequências**:
+
+Positivas:
+
+-   ✅ Stateless: escala horizontal sem session store
+-   ✅ Conformidade OWASP A02/A04/A07
+
+Negativas:
+
+-   ❌ JWT não pode ser revogado antes da expiração
+
+---
+
+### ADR-012: Modelo de Autorização (RBAC + Method Security)
+
+**Status**: Aceito
+
+**Data**: 2026-03-03
+
+**Contexto**: Controlar quem pode fazer o quê com dupla defesa: URL filter + anotações `@PreAuthorize`/`@PostAuthorize`.
+
+**Decisão**: RBAC com roles `USER`, `ADMIN`, `OPS`; `@EnableMethodSecurity` + anotações nos controllers.
+
+**Consequências**:
+
+Positivas:
+
+-   ✅ Defense-in-depth: URL + método
+-   ✅ Alinhado a OWASP A01:2021 Broken Access Control
+
+Negativas:
+
+-   ❌ `@PostAuthorize` executa o UseCase antes da checagem de autorização
+
+---
+
+### ADR-013: Estratégia de Versionamento de API
+
+**Status**: Aceito
+
+**Data**: 2026-03-03
+
+**Contexto**: Garantir retrocompatibilidade de clientes quando breaking changes são necessárias.
+
+**Decisão**: Path versioning (`/api/vN/recurso`) com ciclo `CURRENT → DEPRECATED (6m) → SUNSET`.
+
+**Consequências**:
+
+Positivas:
+
+-   ✅ Explícito, cacheável e fácil de rotear/monitorar
+
+Negativas:
+
+-   ❌ Manutenção simultânea de múltiplas versões
+
+---
+
 ## Como Criar um Novo ADR
 
 ### 1. Crie um Arquivo
 
 ```bash
 # Formato: ADR-XXX-título-da-decisão.md
+```
 touch docs/adr/ADR-011-grpc-para-comunicacao-interna.md
 ```
 
@@ -471,4 +540,4 @@ Proposto
 
 ---
 
-**Última atualização**: Dezembro 2025
+**Última atualização**: Março 2026

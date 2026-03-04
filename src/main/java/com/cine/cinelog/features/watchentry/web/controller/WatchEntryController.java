@@ -17,6 +17,7 @@ import com.cine.cinelog.shared.web.dto.PageResponseMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -102,6 +103,7 @@ public class WatchEntryController {
     @Operation(summary = "Lista registros do usuário (paginado)")
     @GetMapping
     @Measured("cinelog.controller.watchentry.list")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
     public ResponseEntity<PageResponse<WatchEntryResponse>> list(
             @RequestParam Long userId,
             @RequestParam(required = false) Long mediaId,

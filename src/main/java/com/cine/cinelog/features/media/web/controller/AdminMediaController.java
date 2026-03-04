@@ -1,6 +1,7 @@
 package com.cine.cinelog.features.media.web.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +24,7 @@ import java.util.Map;
 @Tag(name = "Admin Media", description = "Gerenciamento de mídia para administradores")
 @Validated
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 /**
  * Controlador REST responsável por gerenciar operações de AdminMedia.
  * Fornece endpoints para criar, atualizar, buscar, listar e remover adminmedia.

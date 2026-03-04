@@ -34,6 +34,14 @@ updates:
                   - "org.springframework.boot*"
                   - "org.springframework.cloud*"
                   - "org.springframework.security*"
+          # Dependências críticas de segurança agrupadas — CVEs monitoradas de perto
+          security-critical:
+              patterns:
+                  - "io.jsonwebtoken*"
+                  - "org.bitbucket.b_c*"
+                  - "commons-beanutils*"
+                  - "org.apache.commons:commons-compress*"
+                  - "org.lz4*"
           testing:
               patterns:
                   - "org.junit*"
@@ -43,6 +51,13 @@ updates:
               patterns:
                   - "io.micrometer*"
                   - "io.opentelemetry*"
+      ignore:
+          # Major versions do Spring Boot requerem ADR + validação completa
+          - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+            update-types: ["version-update:semver-major"]
+          # Major do Liquibase requer revisão dos scripts de migração
+          - dependency-name: "org.liquibase:liquibase-core"
+            update-types: ["version-update:semver-major"]
 
     # ── GitHub Actions (workflows) ──
     - package-ecosystem: "github-actions"

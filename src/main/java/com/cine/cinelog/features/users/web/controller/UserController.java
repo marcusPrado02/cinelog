@@ -22,6 +22,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.prepost.PostAuthorize;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +108,7 @@ public class UserController {
     @Operation(summary = "Atualiza um usuário")
     @PutMapping("/{id}")
     @Measured("cinelog.controller.user.update")
+    @PreAuthorize("hasRole('ADMIN') or @springSecurityCurrentUserProvider.getCurrentUser().map(u -> u.id().equals(#id)).orElse(false)")
     public ResponseEntity<UserResponse> update(@PathVariable Long id,
             @Valid @RequestBody UserUpdateRequest req) {
         log.debug("Iniciando update. Parâmetros: {}", Map.of("id", id, "name", req.name()));
@@ -127,6 +130,7 @@ public class UserController {
     @Operation(summary = "Busca usuário por id")
     @GetMapping("/{id}")
     @Measured("cinelog.controller.user.get")
+    @PostAuthorize("hasRole('ADMIN') or returnObject.body.email == authentication.name")
     public ResponseEntity<UserResponse> getById(@PathVariable Long id) {
         log.debug("Iniciando getById. Parâmetros: {}", Map.of("id", id));
 
@@ -143,6 +147,7 @@ public class UserController {
     @Operation(summary = "Lista usuários")
     @GetMapping
     @Measured("cinelog.controller.user.list")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PageResponse<UserResponse>> list(@PageableDefault(size = 20, sort = "id") Pageable pageable) {
         log.debug("Iniciando list. Parâmetros: {}",
                 Map.of("page", pageable.getPageNumber(), "size", pageable.getPageSize()));
@@ -164,6 +169,7 @@ public class UserController {
     @DeleteMapping("/{id}")
     @Measured("cinelog.controller.user.delete")
     @SecureOperation(module = "USER", value = "USER_ADMIN")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         log.debug("Iniciando delete. Parâmetros: {}", Map.of("id", id));
 
