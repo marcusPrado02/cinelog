@@ -55,7 +55,7 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain chain) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
+        String path = sanitizeForLog(request.getRequestURI());
 
         // Ignore Prometheus e Actuator Health
         if (path.startsWith("/actuator/prometheus")
@@ -71,7 +71,7 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String query = request.getQueryString();
         String ua = mask(piSafe(request.getHeader("User-Agent")));
-        String ip = clientIp(request);
+        String ip = sanitizeForLog(clientIp(request));
 
         long startNs = System.nanoTime();
 
@@ -113,6 +113,26 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
         }
         String realIp = req.getHeader("X-Real-IP");
         return realIp != null ? realIp : req.getRemoteAddr();
+    }
+
+    /**
+     * Remove quebras de linha e caracteres de controle para evitar injeção em logs.
+     */
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            // remove \r, \n e outros caracteres de controle abaixo de espaço,
+            // exceto tabulação (opcional manter)
+            if (c == '\r' || c == '\n' || (c < 0x20 && c != '\t')) {
+                continue;
+            }
+            sb.append(c);
+        }
+        return sb.toString();
     }
 
     /**
