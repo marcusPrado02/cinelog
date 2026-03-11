@@ -83,6 +83,20 @@
                 <artifactId>commons-compress</artifactId>
                 <version>1.27.1</version>
             </dependency>
+            <!-- jackson-bom: async parser DoS (GHSA-72hv-8253-57qq) — 2.19.4 afetado, fix em 2.20.x -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>2.20.2</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- commons-lang3: uncontrolled recursion (GHSA-j288-q9x7-2f5v) — fix >= 3.18.0 -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.18.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

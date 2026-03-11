@@ -21,6 +21,19 @@ import java.util.stream.Collectors;
 @Component
 public class SpringSecurityCurrentUserProvider implements CurrentUserProvider {
 
+    /**
+     * Verifica se o usuário autenticado possui o ID informado.
+     * Projetado para uso em expressões SpEL de {@code @PreAuthorize}.
+     *
+     * @param id ID do usuário a comparar
+     * @return {@code true} se o usuário logado tem o mesmo ID
+     */
+    public boolean isCurrentUser(Long id) {
+        return getCurrentUser()
+                .map(u -> u.id().equals(id))
+                .orElse(false);
+    }
+
     @Override
     public Optional<AuthenticatedUser> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

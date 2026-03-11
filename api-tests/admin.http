@@ -1,0 +1,169 @@
+# =============================================================================
+# CineLog API – Administração                                   [admin.http]
+# =============================================================================
+# Cobre:
+#   /api/v1/admin/media  – Criação de mídia privilegiada (role ADMIN)
+#   /admin/dlq           – Gerenciamento de dead-letter queue (role ADMIN/OPS)
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ Todas as requisições deste arquivo requerem privilégios elevados.       │
+# │ Use @adminToken ou @opsToken (cole os valores após login).             │
+# └─────────────────────────────────────────────────────────────────────────┘
+#
+# DlqStatus: PENDING_REPLAY | REPLAYED | IGNORED
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl = http://localhost:8080
+@adminToken = REPLACE_AFTER_ADMIN_LOGIN
+@opsToken = REPLACE_AFTER_OPS_LOGIN
+@token = REPLACE_AFTER_LOGIN
+@dlqMessageId = 1
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ADMIN MEDIA – /api/v1/admin/media  (role ADMIN)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name adminCreateMedia
+# Criação de mídia via endpoint admin. Ignora restrições normais.
+# → 201 Created (corpo: MediaResponse)
+# → 403 Forbidden (se token != ADMIN)
+POST {{baseUrl}}/api/v1/admin/media
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "Oppenheimer",
+  "type": "MOVIE",
+  "releaseYear": 2023,
+  "originalTitle": "Oppenheimer",
+  "originalLanguage": "en",
+  "posterUrl": "https://example.com/posters/oppenheimer.jpg",
+  "backdropUrl": "https://example.com/backdrops/oppenheimer.jpg",
+  "overview": "A história do cientista americano J. Robert Oppenheimer e seu papel no desenvolvimento da bomba atômica.",
+  "tmdbId": 872585
+}
+
+
+###
+# @name adminCreateMediaSeries
+# Criação de uma SERIES via admin.
+# → 201 Created
+POST {{baseUrl}}/api/v1/admin/media
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "Breaking Bad",
+  "type": "SERIES",
+  "releaseYear": 2008,
+  "originalTitle": "Breaking Bad",
+  "originalLanguage": "en",
+  "posterUrl": "https://example.com/posters/breaking-bad.jpg",
+  "backdropUrl": "https://example.com/backdrops/breaking-bad.jpg",
+  "overview": "Um professor de química do ensino médio se torna produtor de metanfetamina.",
+  "tmdbId": 1396
+}
+
+
+###
+# @name adminCreateMediaForbidden
+# Tentativa de criação com token USER (não-admin).
+# → 403 Forbidden
+POST {{baseUrl}}/api/v1/admin/media
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Test Forbidden",
+  "type": "MOVIE",
+  "releaseYear": 2024
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DEAD LETTER QUEUE – /admin/dlq  (role ADMIN / OPS)
+# Gerencia mensagens Kafka que falharam no processamento.
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name listDlqMessages
+# Lista mensagens da DLQ com paginação.
+# → 200 OK (corpo: PageResponse<DlqMessageResponse>)
+GET {{baseUrl}}/admin/dlq?page=0&size=20
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name listDlqByStatus
+# Filtra mensagens da DLQ por status.
+# status: PENDING_REPLAY | REPLAYED | IGNORED
+# → 200 OK
+GET {{baseUrl}}/admin/dlq?status=PENDING_REPLAY&page=0&size=20
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name listDlqByTopic
+# Filtra mensagens da DLQ por tópico Kafka.
+# → 200 OK
+GET {{baseUrl}}/admin/dlq?topic=media.created&page=0&size=20
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name listDlqByStatusAndTopic
+# Filtra por status + tópico combinados.
+# → 200 OK
+GET {{baseUrl}}/admin/dlq?status=PENDING_REPLAY&topic=media.created&page=0&size=20
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name getDlqMessageById
+# Detalha uma mensagem da DLQ pelo ID.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/admin/dlq/{{dlqMessageId}}
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name replayDlqMessage
+# Reenvia (replay) uma mensagem da DLQ para reprocessamento.
+# → 200 OK | 404 Not Found
+POST {{baseUrl}}/admin/dlq/{{dlqMessageId}}/replay
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name ignoreDlqMessage
+# Marca uma mensagem da DLQ como intencionalmente ignorada.
+# → 200 OK | 404 Not Found
+POST {{baseUrl}}/admin/dlq/{{dlqMessageId}}/ignore
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name getDlqStats
+# Estatísticas agregadas da dead-letter queue
+# (contagens por status, breakdown por tópico, etc.).
+# → 200 OK
+GET {{baseUrl}}/admin/dlq/stats
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name getDlqTopics
+# Lista todos os tópicos Kafka que possuem mensagens na DLQ.
+# → 200 OK
+GET {{baseUrl}}/admin/dlq/topics
+Authorization: Bearer {{opsToken}}
+
+
+###
+# @name getDlqStatsAsAdmin
+# Acesso às stats com token ADMIN (deve funcionar também).
+# → 200 OK
+GET {{baseUrl}}/admin/dlq/stats
+Authorization: Bearer {{adminToken}}

@@ -1,0 +1,201 @@
+# =============================================================================
+# CineLog API – Descoberta                                  [discovery.http]
+# =============================================================================
+# Cobre:
+#   /api/media/search            – Busca facetada (público, sem auth)
+#   /api/media/search/text       – Busca textual simples (público)
+#   /api/media/top-rated         – Mídias mais bem avaliadas (público)
+#   /api/media/trending          – Mídias em alta (público)
+#   /api/media/most-watched      – Mídias mais assistidas (público)
+#   /api/users/{id}/recommendations           – Recomendações (autenticado)
+#   /api/users/{id}/recommendations/{strategy} – Recomendações por estratégia
+#   /api/users/{id}/recommendations/strategies – Estratégias disponíveis
+#   /api/users/{id}/insights     – Insights de visualização (autenticado)
+#   /api/users/{id}/insights/exists – Verifica existência de insights
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ Os endpoints de busca e popularidade são PÚBLICOS (sem token).          │
+# │ Recomendações e insights requerem autenticação.                         │
+# └─────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl = http://localhost:8080
+@token = REPLACE_AFTER_LOGIN
+@userId = 1
+
+# ═════════════════════════════════════════════════════════════════════════════
+# BUSCA DE MÍDIA – /api/media  (público, sem autenticação)
+# Parâmetros: text, type (MOVIE|SERIES), yearMin, yearMax, ratingMin,
+#             ratingMax, genreIds (lista), page, size, sort, direction
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name searchMediaFaceted
+# Busca facetada com todos os filtros opcionais.
+# Remova qualquer parâmetro para ampliar a busca.
+# → 200 OK (corpo: PageResponse<MediaResponse>)
+GET {{baseUrl}}/api/media/search?text=inception&type=MOVIE&yearMin=2000&yearMax=2023&ratingMin=6.0&ratingMax=10.0&genreIds=1&genreIds=2&page=0&size=20&sort=id&direction=ASC
+
+
+###
+# @name searchByTitleOnly
+# Busca apenas por título.
+# → 200 OK
+GET {{baseUrl}}/api/media/search?text=the+dark+knight&page=0&size=10
+
+
+###
+# @name searchOnlySeries
+# Lista todas as SERIES (sem filtro de texto).
+# → 200 OK
+GET {{baseUrl}}/api/media/search?type=SERIES&page=0&size=20
+
+
+###
+# @name searchByDecade
+# Filtra filmes de uma década específica.
+# → 200 OK
+GET {{baseUrl}}/api/media/search?type=MOVIE&yearMin=1990&yearMax=1999&page=0&size=20
+
+
+###
+# @name searchByGenres
+# Filtra por múltiplos gêneros (AND entre eles).
+# → 200 OK
+GET {{baseUrl}}/api/media/search?genreIds=1&genreIds=3&page=0&size=20
+
+
+###
+# @name searchByHighRating
+# Filtra mídias com nota alta (8+).
+# → 200 OK
+GET {{baseUrl}}/api/media/search?ratingMin=8.0&page=0&size=20&sort=id&direction=DESC
+
+
+###
+# @name searchMediaText
+# Busca textual simples por query string.
+# → 200 OK
+GET {{baseUrl}}/api/media/search/text?q=nolan
+
+
+###
+# @name searchMediaTextBrazil
+# Busca textual com termo em português.
+# → 200 OK
+GET {{baseUrl}}/api/media/search/text?q=vingadores
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# POPULARIDADE – /api/media  (público, sem autenticação)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name topRatedMedia
+# Mídias mais bem avaliadas (por nota média).
+# → 200 OK
+GET {{baseUrl}}/api/media/top-rated?limit=10
+
+
+###
+# @name topRateLimited
+# Top rated com limite reduzido.
+# → 200 OK
+GET {{baseUrl}}/api/media/top-rated?limit=5
+
+
+###
+# @name trendingMediaWeek
+# Mídias em alta na última semana.
+# period: DAY | WEEK | MONTH
+# → 200 OK
+GET {{baseUrl}}/api/media/trending?period=WEEK&limit=10
+
+
+###
+# @name trendingMediaDay
+# Mídias em alta no último dia.
+# → 200 OK
+GET {{baseUrl}}/api/media/trending?period=DAY&limit=10
+
+
+###
+# @name trendingMediaMonth
+# Mídias em alta no último mês.
+# → 200 OK
+GET {{baseUrl}}/api/media/trending?period=MONTH&limit=20
+
+
+###
+# @name mostWatchedMedia
+# Mídias mais assistidas (por quantidade de watch entries).
+# → 200 OK
+GET {{baseUrl}}/api/media/most-watched?limit=10
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# RECOMENDAÇÕES – /api/users/{userId}/recommendations  (autenticado)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name getRecommendations
+# Recomendações personalizadas (estratégia padrão).
+# → 200 OK
+GET {{baseUrl}}/api/users/{{userId}}/recommendations?limit=10
+Authorization: Bearer {{token}}
+
+
+###
+# @name getRecommendationsGenreBased
+# Recomendações usando estratégia baseada em gêneros.
+# Estratégias possíveis: GENRE_BASED, COLLABORATIVE, POPULAR, HYBRID
+# → 200 OK
+GET {{baseUrl}}/api/users/{{userId}}/recommendations/GENRE_BASED?limit=10
+Authorization: Bearer {{token}}
+
+
+###
+# @name getRecommendationsCollaborative
+# Recomendações usando filtragem colaborativa.
+# → 200 OK
+GET {{baseUrl}}/api/users/{{userId}}/recommendations/COLLABORATIVE?limit=10
+Authorization: Bearer {{token}}
+
+
+###
+# @name getRecommendationsPopular
+# Recomendações baseadas em popularidade.
+# → 200 OK
+GET {{baseUrl}}/api/users/{{userId}}/recommendations/POPULAR?limit=10
+Authorization: Bearer {{token}}
+
+
+###
+# @name getRecommendationStrategies
+# Lista todas as estratégias de recomendação disponíveis.
+# → 200 OK (corpo: lista de strings)
+GET {{baseUrl}}/api/users/{{userId}}/recommendations/strategies
+Authorization: Bearer {{token}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INSIGHTS DO USUÁRIO – /api/users/{userId}/insights  (autenticado)
+# Análises detalhadas dos hábitos de visualização.
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name getUserInsights
+# Insights detalhados de visualização do usuário.
+# Inclui gêneros favoritos, nota média, períodos mais ativos, etc.
+# → 200 OK (corpo: UserInsightsResponse)
+GET {{baseUrl}}/api/users/{{userId}}/insights
+Authorization: Bearer {{token}}
+
+
+###
+# @name checkUserInsightsExist
+# Verifica se existem dados de insight para o usuário (probe leve).
+# → 200 OK (corpo: { exists: true/false })
+GET {{baseUrl}}/api/users/{{userId}}/insights/exists
+Authorization: Bearer {{token}}

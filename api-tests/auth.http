@@ -1,0 +1,190 @@
+# =============================================================================
+# CineLog API – Autenticação                                      [auth.http]
+# =============================================================================
+# Endpoints:
+#   POST /api/auth/register  → Cadastro de novo usuário
+#   POST /api/auth/login     → Login (retorna accessToken + refreshToken)
+#   POST /api/auth/refresh   → Renovar accessToken via refreshToken
+#   POST /api/auth/logout    → Invalidar sessão
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ WORKFLOW                                                                │
+# │  1. Execute "register" para criar o usuário                             │
+# │  2. Execute "login" para receber o token                                │
+# │  3. O @token é capturado automaticamente (veja variável abaixo)         │
+# │  4. Copie o accessToken retornado e cole em @token abaixo                │
+# │  5. Todos os outros .http também possuem @token – atualize-os           │
+# └─────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl = http://localhost:8080
+@token = REPLACE_AFTER_LOGIN
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# REGISTER
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name register
+# Cadastra um novo usuário. Role atribuído automaticamente: USER
+# → 201 Created  (corpo: { id, name, email })
+# → 409 Conflict (e-mail já cadastrado)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Alice Exemplo",
+  "email": "alice@example.com",
+  "password": "SecurePass123!"
+}
+
+
+###
+# @name registerSecondUser
+# Cadastra outro usuário para testes de isolamento / permissões
+# → 201 Created
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Bob Teste",
+  "email": "bob@example.com",
+  "password": "BobPass456!"
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LOGIN
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name login
+# Autentica e retorna { accessToken, refreshToken }.
+# Copie accessToken → rest-client.env.json campo "token"
+# → 200 OK   (corpo: { accessToken, refreshToken })
+# → 401 Unauthorized (credenciais inválidas)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "SecurePass123!"
+}
+
+
+###
+# @name loginAdmin
+# Login com conta ADMIN.
+# Copie accessToken → rest-client.env.json campo "adminToken"
+# → 200 OK
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@cinelog.com",
+  "password": "AdminPass123!"
+}
+
+
+###
+# @name loginOps
+# Login com conta OPS (operações).
+# Copie accessToken → rest-client.env.json campo "opsToken"
+# → 200 OK
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ops@cinelog.com",
+  "password": "OpsPass123!"
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# REFRESH TOKEN
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name refresh
+# Renova o accessToken usando o refreshToken obtido no login.
+# → 200 OK   (corpo: { accessToken, refreshToken })
+# → 401 Unauthorized (refresh token inválido/expirado)
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "COLE_REFRESH_TOKEN_AQUI"
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LOGOUT
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name logout
+# Invalida a sessão corrente. Requer token válido.
+# → 200 OK / 204 No Content
+# → 401 Unauthorized (token ausente/inválido)
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{token}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CENÁRIOS DE ERRO – úteis para testar a segurança
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name loginInvalidPassword
+# Tentativa de login com senha errada.
+# → 401 Unauthorized
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "SenhaErrada999"
+}
+
+
+###
+# @name loginNonExistentUser
+# Tentativa de login com e-mail inexistente (anti-enumeração).
+# → 401 Unauthorized (mesma mensagem genérica)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "naoexiste@example.com",
+  "password": "QualquerCoisaAqui"
+}
+
+
+###
+# @name registerDuplicateEmail
+# Tentativa de cadastro com e-mail já existente.
+# → 409 Conflict
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Alice Duplicada",
+  "email": "alice@example.com",
+  "password": "OutraSenha123!"
+}
+
+
+###
+# @name registerWeakPassword
+# Tentativa de cadastro com senha fraca (< 8 chars).
+# → 400 Bad Request (validação)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Senha Fraca",
+  "email": "fraca@example.com",
+  "password": "123"
+}

@@ -1,0 +1,244 @@
+# =============================================================================
+# CineLog API – Atividade do Usuário                          [activity.http]
+# =============================================================================
+# Cobre:
+#   /api/v1/watch-entries           – CRUD de registros de visualização
+#   /api/v1/watchlist               – Gerenciamento da watchlist (quero assistir)
+#   /api/watchentries/{id}/progress – Progresso de séries
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ WORKFLOW SUGERIDO                                                       │
+# │  1. Crie uma mídia em media.http (pegue o mediaId)                      │
+# │  2. Adicione à watchlist (addToWatchlist)                               │
+# │  3. Assista e registre (createWatchEntry)                               │
+# │  4. Se for série, atualize o progresso (saveWatchProgress)              │
+# └─────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl = http://localhost:8080
+@token = REPLACE_AFTER_LOGIN
+@userId = 1
+@mediaId = 1
+@episodeId = 1
+@watchEntryId = 1
+
+# ═════════════════════════════════════════════════════════════════════════════
+# WATCH ENTRIES – /api/v1/watch-entries
+# Registra que um usuário assistiu a um filme ou episódio.
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name createWatchEntry
+# Registra visualização de um filme.
+# DTO: WatchEntryCreateRequest { userId, mediaId?, episodeId?, rating?, comment?, watchedAt? }
+# → 201 Created (corpo: WatchEntryResponse com id gerado)
+# → 400 Bad Request (userId nulo)
+POST {{baseUrl}}/api/v1/watch-entries
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": {{userId}},
+  "mediaId": {{mediaId}},
+  "episodeId": null,
+  "rating": 9,
+  "comment": "Absolutamente surpreendente. Um dos melhores filmes da década.",
+  "watchedAt": "2025-06-15"
+}
+
+
+###
+# @name createWatchEntryEpisode
+# Registra visualização de um episódio específico.
+# → 201 Created
+POST {{baseUrl}}/api/v1/watch-entries
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": {{userId}},
+  "mediaId": null,
+  "episodeId": {{episodeId}},
+  "rating": 8,
+  "comment": "Ótimo episódio piloto!",
+  "watchedAt": "2025-06-20"
+}
+
+
+###
+# @name createWatchEntryNoRating
+# Registra visualização sem nota nem comentário (apenas "assisti").
+# → 201 Created
+POST {{baseUrl}}/api/v1/watch-entries
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": {{userId}},
+  "mediaId": {{mediaId}},
+  "episodeId": null,
+  "rating": null,
+  "comment": null,
+  "watchedAt": "2025-07-10"
+}
+
+
+###
+# @name listWatchEntries
+# Lista registros do usuário com paginação.
+# userId é obrigatório; demais filtros são opcionais.
+# → 200 OK (corpo: PageResponse<WatchEntryResponse>)
+# → 403 Forbidden (se userId != usuário logado e não for ADMIN)
+GET {{baseUrl}}/api/v1/watch-entries?userId={{userId}}&page=0&size=20
+Authorization: Bearer {{token}}
+
+
+###
+# @name listWatchEntriesByMedia
+# Filtra registros para uma mídia específica.
+# → 200 OK
+GET {{baseUrl}}/api/v1/watch-entries?userId={{userId}}&mediaId={{mediaId}}&page=0&size=20
+Authorization: Bearer {{token}}
+
+
+###
+# @name listWatchEntriesByEpisode
+# Filtra registros para um episódio específico.
+# → 200 OK
+GET {{baseUrl}}/api/v1/watch-entries?userId={{userId}}&episodeId={{episodeId}}&page=0&size=20
+Authorization: Bearer {{token}}
+
+
+###
+# @name listWatchEntriesFiltered
+# Filtra por nota mínima e intervalo de datas.
+# → 200 OK
+GET {{baseUrl}}/api/v1/watch-entries?userId={{userId}}&minRating=7&from=2025-01-01&to=2025-12-31&page=0&size=20
+Authorization: Bearer {{token}}
+
+
+###
+# @name getWatchEntryById
+# Busca um registro de visualização pelo ID.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/api/v1/watch-entries/{{watchEntryId}}
+Authorization: Bearer {{token}}
+
+
+###
+# @name updateWatchEntry
+# Atualiza um registro existente (nota, comentário, data).
+# ⚠️  O update usa o mesmo DTO do create: WatchEntryCreateRequest
+# → 200 OK | 404 Not Found
+PUT {{baseUrl}}/api/v1/watch-entries/{{watchEntryId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": {{userId}},
+  "mediaId": {{mediaId}},
+  "episodeId": null,
+  "rating": 10,
+  "comment": "Reassisti – ainda melhor na segunda vez.",
+  "watchedAt": "2025-07-01"
+}
+
+
+###
+# @name deleteWatchEntry
+# Remove um registro de visualização.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/v1/watch-entries/{{watchEntryId}}
+Authorization: Bearer {{token}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# WATCHLIST – /api/v1/watchlist
+# Lista de mídias que o usuário quer assistir futuramente.
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name addToWatchlist
+# Adiciona uma mídia à watchlist do usuário autenticado.
+# DTO: WatchlistAddRequest { mediaId }
+# → 201 Created
+# → 409 Conflict (já está na watchlist)
+POST {{baseUrl}}/api/v1/watchlist
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "mediaId": {{mediaId}}
+}
+
+
+###
+# @name getWatchlist
+# Lista a watchlist do usuário autenticado com paginação.
+# → 200 OK (corpo: PageResponse)
+GET {{baseUrl}}/api/v1/watchlist?page=0&size=20&sort=id,asc
+Authorization: Bearer {{token}}
+
+
+###
+# @name removeFromWatchlist
+# Remove uma mídia da watchlist pelo ID da mídia.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/v1/watchlist/{{mediaId}}
+Authorization: Bearer {{token}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PROGRESSO DE SÉRIE – /api/watchentries/{id}/progress
+# Rastreia posição (temporada/episódio) e tempo assistido.
+# Use com um watch entry que referencia uma mídia SERIES.
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name saveWatchProgress
+# Salva ou atualiza o progresso de uma série.
+# DTO: UpdateProgressRequest { currentSeason, currentEpisode,
+#                               watchedDurationSeconds, totalDurationSeconds }
+# → 200 OK (corpo: WatchProgressResponse)
+POST {{baseUrl}}/api/watchentries/{{watchEntryId}}/progress
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "currentSeason": 2,
+  "currentEpisode": 5,
+  "watchedDurationSeconds": 930,
+  "totalDurationSeconds": 2700
+}
+
+
+###
+# @name updateWatchProgress
+# Atualiza o progresso (episódio seguinte).
+POST {{baseUrl}}/api/watchentries/{{watchEntryId}}/progress
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "currentSeason": 2,
+  "currentEpisode": 6,
+  "watchedDurationSeconds": 1800,
+  "totalDurationSeconds": 2700
+}
+
+
+###
+# @name getWatchProgress
+# Consulta o progresso atual de uma série.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/api/watchentries/{{watchEntryId}}/progress
+Authorization: Bearer {{token}}
+
+
+###
+# @name deleteWatchProgress
+# Remove o registro de progresso de uma série.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/watchentries/{{watchEntryId}}/progress
+Authorization: Bearer {{token}}

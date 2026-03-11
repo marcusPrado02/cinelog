@@ -1,0 +1,121 @@
+# =============================================================================
+# CineLog API – Usuários                                         [users.http]
+# =============================================================================
+# Base path: /api/v1/users
+#
+# Controle de acesso:
+#   POST   (create)  → ADMIN only
+#   GET    (list)    → ADMIN only
+#   GET    (getById) → ADMIN ou própria conta (@PostAuthorize por e-mail)
+#   PUT    (update)  → ADMIN ou própria conta (match por id)
+#   DELETE (delete)  → ADMIN only
+#   GET /me/stats    → qualquer usuário autenticado (retorna stats próprias)
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ PRÉ-REQUISITO: Execute login em auth.http e cole os tokens abaixo      │
+# │ @adminToken para operações ADMIN, @token para usuário comum             │
+# └─────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl = http://localhost:8080
+@token = REPLACE_AFTER_LOGIN
+@adminToken = REPLACE_AFTER_ADMIN_LOGIN
+@userId = 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CRUD – /api/v1/users
+# ─────────────────────────────────────────────────────────────────────────────
+
+###
+# @name createUser
+# Cria um novo usuário via ADMIN (bypassa self-registration).
+# → 201 Created (corpo: UserResponse)
+# → 403 Forbidden (se token != ADMIN)
+POST {{baseUrl}}/api/v1/users
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Bob Smith",
+  "email": "bob@example.com"
+}
+
+
+###
+# @name listUsers
+# Lista todos os usuários com paginação. Requer role ADMIN.
+# → 200 OK (corpo: PageResponse<UserResponse>)
+# → 403 Forbidden (se token != ADMIN)
+GET {{baseUrl}}/api/v1/users?page=0&size=20&sort=id,asc
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name getUserById
+# Busca usuário por ID. ADMIN vê qualquer; usuário comum só o próprio.
+# → 200 OK (corpo: UserResponse)
+# → 403 Forbidden (@PostAuthorize falha se email não corresponde)
+# → 404 Not Found
+GET {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{token}}
+
+
+###
+# @name updateUser
+# Atualiza o nome do usuário. ADMIN pode atualizar qualquer;
+# usuário comum só a própria conta (match por id).
+# → 200 OK (corpo: UserResponse atualizado)
+# → 403 Forbidden (se tentar atualizar outro usuário sem ser ADMIN)
+PUT {{baseUrl}}/api/v1/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Alice Nome Atualizado"
+}
+
+
+###
+# @name deleteUser
+# Remove uma conta de usuário. Requer role ADMIN.
+# → 204 No Content
+# → 403 Forbidden (se token != ADMIN)
+# → 404 Not Found
+DELETE {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ESTATÍSTICAS – /api/v1/users/me/stats
+# Retorna estatísticas de assistidos do usuário autenticado.
+# Não recebe userId na URL – usa o token para identificar o usuário.
+# ─────────────────────────────────────────────────────────────────────────────
+
+###
+# @name getMyStats
+# Estatísticas de visualização do usuário logado.
+# → 200 OK (corpo: UserStatsResponse)
+# → 401 Unauthorized (token ausente/inválido)
+GET {{baseUrl}}/api/v1/users/me/stats
+Authorization: Bearer {{token}}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CENÁRIOS DE ERRO
+# ─────────────────────────────────────────────────────────────────────────────
+
+###
+# @name listUsersAsRegularUser
+# Tentativa de listar usuários com token de USER (não-admin).
+# → 403 Forbidden
+GET {{baseUrl}}/api/v1/users?page=0&size=10
+Authorization: Bearer {{token}}
+
+
+###
+# @name deleteUserAsRegularUser
+# Tentativa de excluir usuário com token de USER.
+# → 403 Forbidden
+DELETE {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{token}}

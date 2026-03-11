@@ -1,0 +1,210 @@
+# =============================================================================
+# CineLog API – Saúde & Observabilidade                        [health.http]
+# =============================================================================
+# Cobre:
+#   /actuator/health                    – Probes de vida/prontidão
+#   /actuator/info                      – Metadados da aplicação
+#   /actuator/metrics                   – Índice de métricas Micrometer
+#   /actuator/metrics/{name}            – Métrica individual
+#   /actuator/prometheus                – Scrape endpoint Prometheus
+#   /actuator/loggers                   – Gerenciamento de log levels (ADMIN)
+#   /actuator/caches                    – Inspeção de caches Redis (ADMIN)
+#   /v3/api-docs                        – Especificação OpenAPI JSON
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ Endpoints de health são públicos.                                       │
+# │ Loggers, caches e env requerem @adminToken.                              │
+# │ Swagger UI deve ser aberto no navegador, não no REST Client.            │
+# └─────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl = http://localhost:8080
+@adminToken = REPLACE_AFTER_ADMIN_LOGIN
+
+# ═════════════════════════════════════════════════════════════════════════════
+# HEALTH
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name health
+# Status geral de saúde da aplicação (público).
+# → 200 OK (corpo: { status: "UP", components: { db, redis, kafka, ... } })
+GET {{baseUrl}}/actuator/health
+
+
+###
+# @name healthLiveness
+# Probe de liveness para Kubernetes.
+# → 200 OK (corpo: { status: "UP" })
+GET {{baseUrl}}/actuator/health/liveness
+
+
+###
+# @name healthReadiness
+# Probe de readiness para Kubernetes.
+# → 200 OK (corpo: { status: "UP" })
+GET {{baseUrl}}/actuator/health/readiness
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INFO
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name info
+# Informações de build, commit git, versão Java, etc.
+# → 200 OK
+GET {{baseUrl}}/actuator/info
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MÉTRICAS  (Micrometer / Prometheus)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name metricsIndex
+# Lista todos os nomes de métricas disponíveis.
+# → 200 OK (corpo: { names: ["jvm.memory.used", ...] })
+GET {{baseUrl}}/actuator/metrics
+
+
+###
+# @name metricJvmMemory
+# Memória heap JVM usada.
+# → 200 OK
+GET {{baseUrl}}/actuator/metrics/jvm.memory.used
+
+
+###
+# @name metricJvmThreads
+# Número de threads ativas da JVM.
+# → 200 OK
+GET {{baseUrl}}/actuator/metrics/jvm.threads.live
+
+
+###
+# @name metricHttpServerRequests
+# Contagens e latências de requisições HTTP.
+# → 200 OK
+GET {{baseUrl}}/actuator/metrics/http.server.requests
+
+
+###
+# @name metricProcessCpu
+# Uso de CPU do processo (0.0 – 1.0).
+# → 200 OK
+GET {{baseUrl}}/actuator/metrics/process.cpu.usage
+
+
+###
+# @name metricProcessUptime
+# Tempo de atividade do processo (em segundos).
+# → 200 OK
+GET {{baseUrl}}/actuator/metrics/process.uptime
+
+
+###
+# @name metricCinelogCustom
+# Exemplo de métrica customizada do CineLog (se existir).
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/actuator/metrics/cinelog.controller.watchentry.create
+
+
+###
+# @name prometheusEndpoint
+# Endpoint de scrape Prometheus (formato text/plain para Prometheus/Grafana).
+# → 200 OK (text/plain)
+GET {{baseUrl}}/actuator/prometheus
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LOGGERS  (requer credenciais admin por segurança do actuator)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name listLoggers
+# Lista todos os loggers e seus níveis.
+# → 200 OK
+GET {{baseUrl}}/actuator/loggers
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name getSpecificLogger
+# Consulta o nível de um logger específico.
+# → 200 OK
+GET {{baseUrl}}/actuator/loggers/com.cine.cinelog
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name setLogLevelDebug
+# Altera dinamicamente o nível do logger para DEBUG.
+# Níveis: TRACE, DEBUG, INFO, WARN, ERROR, OFF
+# → 204 No Content
+POST {{baseUrl}}/actuator/loggers/com.cine.cinelog
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "configuredLevel": "DEBUG"
+}
+
+
+###
+# @name resetLogLevel
+# Reseta um logger para o nível padrão (null = herda do pai).
+# → 204 No Content
+POST {{baseUrl}}/actuator/loggers/com.cine.cinelog
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "configuredLevel": null
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CACHES  (Redis)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name listCaches
+# Lista todos os caches da aplicação e suas estatísticas.
+# → 200 OK
+GET {{baseUrl}}/actuator/caches
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name evictAllCaches
+# Invalida TODAS as entradas de cache. ⚠️ Use com cuidado em produção!
+# → 204 No Content
+DELETE {{baseUrl}}/actuator/caches
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DOCUMENTAÇÃO DA API
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name openApiJson
+# Especificação OpenAPI 3.0 em JSON (para importar em Postman, Insomnia, etc.).
+# → 200 OK (application/json)
+GET {{baseUrl}}/v3/api-docs
+
+
+###
+# @name openApiYaml
+# Especificação OpenAPI 3.0 em YAML.
+# → 200 OK (text/yaml)
+GET {{baseUrl}}/v3/api-docs.yaml
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Swagger UI (abrir no navegador, não no REST Client):
+#   {{baseUrl}}/swagger-ui.html
+#   {{baseUrl}}/swagger-ui/index.html
+# ─────────────────────────────────────────────────────────────────────────────

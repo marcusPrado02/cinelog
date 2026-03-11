@@ -1,0 +1,391 @@
+# =============================================================================
+# CineLog API – Catálogo                                       [catalog.http]
+# =============================================================================
+# Cobre:
+#   /api/v1/genres   – CRUD de gêneros
+#   /api/v1/people   – CRUD de pessoas (atores, diretores, etc.)
+#   /api/v1/credits  – CRUD de créditos (vincula Pessoa → Mídia com papel)
+#   /api/v1/seasons  – CRUD de temporadas (vinculadas a mídia tipo SERIES)
+#   /api/v1/episodes – CRUD de episódios (vinculados a uma temporada)
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ WORKFLOW SUGERIDO                                                       │
+# │  1. Crie um gênero (createGenre)                                        │
+# │  2. Crie uma pessoa (createPerson)                                      │
+# │  3. Crie uma mídia tipo SERIES em media.http                            │
+# │  4. Crie um crédito vinculando pessoa ↔ mídia (createCredit)            │
+# │  5. Crie uma temporada (createSeason) → use o mediaId da série          │
+# │  6. Crie um episódio (createEpisode) → use o seasonId retornado         │
+# └─────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl = http://localhost:8080
+@token = REPLACE_AFTER_LOGIN
+@adminToken = REPLACE_AFTER_ADMIN_LOGIN
+@mediaId = 1
+@genreId = 1
+@personId = 1
+@creditId = 1
+@seasonId = 1
+@episodeId = 1
+
+# ═════════════════════════════════════════════════════════════════════════════
+# GÊNEROS – /api/v1/genres
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name createGenre
+# Cria um novo gênero.
+# → 201 Created (corpo: GenreResponse)
+# → 400 Bad Request (nome em branco ou > 100 chars)
+POST {{baseUrl}}/api/v1/genres
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Ação"
+}
+
+
+###
+# @name createGenre2
+# Cria outro gênero para testes de filtro.
+POST {{baseUrl}}/api/v1/genres
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Ficção Científica"
+}
+
+
+###
+# @name listGenres
+# Lista gêneros com paginação.
+# → 200 OK (corpo: PageResponse<GenreResponse>)
+GET {{baseUrl}}/api/v1/genres?page=0&size=20&sort=id,asc
+Authorization: Bearer {{token}}
+
+
+###
+# @name getGenreById
+# Busca um gênero pelo ID.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/api/v1/genres/{{genreId}}
+Authorization: Bearer {{token}}
+
+
+###
+# @name updateGenre
+# Atualiza o nome de um gênero.
+# DTO: GenreUpdateRequest { name }
+# → 200 OK | 404 Not Found
+PUT {{baseUrl}}/api/v1/genres/{{genreId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Ação & Aventura"
+}
+
+
+###
+# @name deleteGenre
+# Remove um gênero pelo ID.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/v1/genres/{{genreId}}
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PESSOAS – /api/v1/people
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name createPerson
+# Cria uma nova pessoa (ator, diretor, etc.).
+# → 201 Created (corpo: PersonResponse)
+POST {{baseUrl}}/api/v1/people
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Christopher Nolan",
+  "birthDate": "1970-07-30",
+  "placeOfBirth": "Westminster, London, England, UK"
+}
+
+
+###
+# @name createPerson2
+# Cria outra pessoa para testes de crédito.
+POST {{baseUrl}}/api/v1/people
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Leonardo DiCaprio",
+  "birthDate": "1974-11-11",
+  "placeOfBirth": "Hollywood, Los Angeles, California, USA"
+}
+
+
+###
+# @name listPeople
+# Lista pessoas com paginação.
+# → 200 OK (corpo: PageResponse<PersonResponse>)
+GET {{baseUrl}}/api/v1/people?page=0&size=20&sort=id,asc
+Authorization: Bearer {{token}}
+
+
+###
+# @name getPersonById
+# Busca uma pessoa pelo ID.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/api/v1/people/{{personId}}
+Authorization: Bearer {{token}}
+
+
+###
+# @name updatePerson
+# Atualiza dados de uma pessoa.
+# DTO: PersonUpdateRequest { name, birthDate?, placeOfBirth? }
+# → 200 OK | 404 Not Found
+PUT {{baseUrl}}/api/v1/people/{{personId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Christopher Edward Nolan",
+  "birthDate": "1970-07-30",
+  "placeOfBirth": "London, England, UK"
+}
+
+
+###
+# @name deletePerson
+# Remove uma pessoa pelo ID.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/v1/people/{{personId}}
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CRÉDITOS – /api/v1/credits
+# Vincula uma Pessoa a uma Mídia com um papel específico (diretor, ator, etc.)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name createCreditDirector
+# Cria um crédito de DIRETOR (pessoa → mídia).
+# → 201 Created (corpo: CreditResponse)
+POST {{baseUrl}}/api/v1/credits
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "mediaId": {{mediaId}},
+  "personId": {{personId}},
+  "role": "DIRECTOR",
+  "characterName": null,
+  "orderIndex": 0
+}
+
+
+###
+# @name createCreditActor
+# Cria um crédito de ATOR (pessoa → mídia, com nome do personagem).
+# → 201 Created
+POST {{baseUrl}}/api/v1/credits
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "mediaId": {{mediaId}},
+  "personId": {{personId}},
+  "role": "ACTOR",
+  "characterName": "Dom Cobb",
+  "orderIndex": 1
+}
+
+
+###
+# @name listCredits
+# Lista créditos com paginação.
+# → 200 OK (corpo: PageResponse<CreditResponse>)
+GET {{baseUrl}}/api/v1/credits?page=0&size=20&sort=id,asc
+Authorization: Bearer {{token}}
+
+
+###
+# @name getCreditById
+# Busca um crédito pelo ID.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/api/v1/credits/{{creditId}}
+Authorization: Bearer {{token}}
+
+
+###
+# @name updateCredit
+# Atualiza um crédito existente.
+# ⚠️  CreditUpdateRequest NÃO possui mediaId/personId — esses são imutáveis.
+# DTO: CreditUpdateRequest { role, characterName?, orderIndex? }
+# → 200 OK | 404 Not Found
+PUT {{baseUrl}}/api/v1/credits/{{creditId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "role": "ACTOR",
+  "characterName": "Dom Cobb (Updated)",
+  "orderIndex": 2
+}
+
+
+###
+# @name deleteCredit
+# Remove um crédito pelo ID.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/v1/credits/{{creditId}}
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TEMPORADAS – /api/v1/seasons
+# Requer que já exista uma mídia do tipo SERIES.
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name createSeason
+# Cria uma nova temporada vinculada a uma mídia SERIES.
+# → 201 Created (corpo: SeasonResponse)
+# → 400 Bad Request (mediaId nulo, seasonNumber nulo)
+POST {{baseUrl}}/api/v1/seasons
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "mediaId": {{mediaId}},
+  "seasonNumber": 1,
+  "name": "Temporada 1",
+  "airDate": "2011-04-17"
+}
+
+
+###
+# @name listSeasons
+# Lista temporadas com paginação.
+# → 200 OK (corpo: PageResponse<SeasonResponse>)
+GET {{baseUrl}}/api/v1/seasons?page=0&size=20&sort=id,asc
+Authorization: Bearer {{token}}
+
+
+###
+# @name getSeasonById
+# Busca uma temporada pelo ID.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/api/v1/seasons/{{seasonId}}
+Authorization: Bearer {{token}}
+
+
+###
+# @name updateSeason
+# Atualiza uma temporada existente.
+# ⚠️  SeasonUpdateRequest NÃO possui mediaId — o vínculo com a mídia é imutável.
+# DTO: SeasonUpdateRequest { seasonNumber, name?, airDate? }
+# → 200 OK | 404 Not Found
+PUT {{baseUrl}}/api/v1/seasons/{{seasonId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "seasonNumber": 1,
+  "name": "Temporada 1 – Remasterizada",
+  "airDate": "2011-04-17"
+}
+
+
+###
+# @name deleteSeason
+# Remove uma temporada pelo ID.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/v1/seasons/{{seasonId}}
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# EPISÓDIOS – /api/v1/episodes
+# Vinculados a uma temporada existente.
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name createEpisode
+# Cria um novo episódio vinculado a uma temporada.
+# → 201 Created (corpo: EpisodeResponse)
+POST {{baseUrl}}/api/v1/episodes
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "seasonId": {{seasonId}},
+  "episodeNumber": 1,
+  "name": "Piloto",
+  "airDate": "2011-04-17"
+}
+
+
+###
+# @name createEpisode2
+# Cria outro episódio para testes de listagem.
+POST {{baseUrl}}/api/v1/episodes
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "seasonId": {{seasonId}},
+  "episodeNumber": 2,
+  "name": "O Caminho Real",
+  "airDate": "2011-04-24"
+}
+
+
+###
+# @name listEpisodes
+# Lista episódios com paginação.
+# → 200 OK (corpo: PageResponse<EpisodeResponse>)
+GET {{baseUrl}}/api/v1/episodes?page=0&size=20&sort=id,asc
+Authorization: Bearer {{token}}
+
+
+###
+# @name getEpisodeById
+# Busca um episódio pelo ID.
+# → 200 OK | 404 Not Found
+GET {{baseUrl}}/api/v1/episodes/{{episodeId}}
+Authorization: Bearer {{token}}
+
+
+###
+# @name updateEpisode
+# Atualiza um episódio existente.
+# ⚠️  EpisodeUpdateRequest NÃO possui seasonId — o vínculo com a temporada é imutável.
+# DTO: EpisodeUpdateRequest { episodeNumber, name?, airDate? }
+# → 200 OK | 404 Not Found
+PUT {{baseUrl}}/api/v1/episodes/{{episodeId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "episodeNumber": 1,
+  "name": "Piloto (Director's Cut)",
+  "airDate": "2011-04-17"
+}
+
+
+###
+# @name deleteEpisode
+# Remove um episódio pelo ID.
+# → 204 No Content | 404 Not Found
+DELETE {{baseUrl}}/api/v1/episodes/{{episodeId}}
+Authorization: Bearer {{adminToken}}

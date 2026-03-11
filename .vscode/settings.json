@@ -8,5 +8,56 @@
     "java.debug.settings.console": "integratedTerminal",
     "java.debug.settings.onBuildFailureProceed": true,
     "java.debug.settings.forceBuildBeforeLaunch": true,
-    "java.debug.settings.vmArgs": "-Dspring.profiles.active=dev"
+    "java.debug.settings.vmArgs": "-Dspring.profiles.active=dev",
+    "rest-client.environmentVariables": {
+        "$shared": {},
+        "local": {
+            "baseUrl": "http://localhost:8080",
+            "token": "REPLACE_AFTER_LOGIN",
+            "adminToken": "REPLACE_AFTER_ADMIN_LOGIN",
+            "opsToken": "REPLACE_AFTER_OPS_LOGIN",
+            "userId": "1",
+            "adminUserId": "2",
+            "mediaId": "1",
+            "genreId": "1",
+            "personId": "1",
+            "seasonId": "1",
+            "episodeId": "1",
+            "creditId": "1",
+            "watchEntryId": "1",
+            "dlqMessageId": "1"
+        },
+        "docker": {
+            "baseUrl": "http://localhost:8080",
+            "token": "REPLACE_AFTER_LOGIN",
+            "adminToken": "REPLACE_AFTER_ADMIN_LOGIN",
+            "opsToken": "REPLACE_AFTER_OPS_LOGIN",
+            "userId": "1",
+            "adminUserId": "2",
+            "mediaId": "1",
+            "genreId": "1",
+            "personId": "1",
+            "seasonId": "1",
+            "episodeId": "1",
+            "creditId": "1",
+            "watchEntryId": "1",
+            "dlqMessageId": "1"
+        },
+        "staging": {
+            "baseUrl": "https://cinelog-staging.example.com",
+            "token": "REPLACE_AFTER_LOGIN",
+            "adminToken": "REPLACE_AFTER_ADMIN_LOGIN",
+            "opsToken": "REPLACE_AFTER_OPS_LOGIN",
+            "userId": "1",
+            "adminUserId": "2",
+            "mediaId": "1",
+            "genreId": "1",
+            "personId": "1",
+            "seasonId": "1",
+            "episodeId": "1",
+            "creditId": "1",
+            "watchEntryId": "1",
+            "dlqMessageId": "1"
+        }
+    }
 }

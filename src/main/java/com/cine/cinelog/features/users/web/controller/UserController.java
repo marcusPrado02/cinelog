@@ -108,7 +108,7 @@ public class UserController {
     @Operation(summary = "Atualiza um usuário")
     @PutMapping("/{id}")
     @Measured("cinelog.controller.user.update")
-    @PreAuthorize("hasRole('ADMIN') or @springSecurityCurrentUserProvider.getCurrentUser().map(u -> u.id().equals(#id)).orElse(false)")
+    @PreAuthorize("hasRole('ADMIN') or @springSecurityCurrentUserProvider.isCurrentUser(#id)")
     public ResponseEntity<UserResponse> update(@PathVariable Long id,
             @Valid @RequestBody UserUpdateRequest req) {
         log.debug("Iniciando update. Parâmetros: {}", Map.of("id", id, "name", req.name()));
