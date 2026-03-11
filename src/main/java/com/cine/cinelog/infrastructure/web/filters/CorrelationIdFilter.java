@@ -130,14 +130,25 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
 
     /**
      * Sanitize a value before using it in logs or MDC.
-     * Removes control characters (including new lines) and limits length to avoid log injection.
+     * Removes line breaks and other control characters, restricts to a safe character set,
+     * and limits length to avoid log injection.
      */
     private String sanitizeForLogging(String value) {
         if (value == null) {
             return null;
         }
-        // Remove all control characters (such as \r, \n, etc.)
-        String sanitized = value.replaceAll("\\p{Cntrl}", "").trim();
+        // First, explicitly remove CR/LF to prevent multi-line log entries
+        String sanitized = value.replace("\r", "").replace("\n", "");
+
+        // Remove all other control characters
+        sanitized = sanitized.replaceAll("\\p{Cntrl}", "");
+
+        // Optionally restrict to a conservative set of characters for correlation IDs
+        // (alphanumeric, dash, underscore). Anything else is stripped.
+        sanitized = sanitized.replaceAll("[^A-Za-z0-9-_]", "");
+
+        sanitized = sanitized.trim();
+
         // Limit length to a reasonable maximum to avoid overly long log entries
         int maxLength = 128;
         if (sanitized.length() > maxLength) {
