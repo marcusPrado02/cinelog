@@ -69,7 +69,9 @@ public class HttpLoggingFilter extends OncePerRequestFilter {
         MDC.put("request_id", requestId);
 
         String method = request.getMethod();
-        String query = request.getQueryString();
+        // Sanitize query string to prevent log injection (CWE-117)
+        String rawQuery = request.getQueryString();
+        String query = rawQuery != null ? sanitizeForLog(rawQuery) : null;
         String ua = mask(piSafe(request.getHeader("User-Agent")));
         String ip = sanitizeForLog(clientIp(request));
 
