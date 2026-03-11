@@ -62,6 +62,19 @@ public class RefreshTokenService {
     }
 
     /**
+     * Sanitiza valores antes de logar para evitar log injection (quebra de linha, etc).
+     */
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        // Remove quebras de linha e caracteres de controle que poderiam quebrar o formato do log
+        return value
+                .replace('\n', ' ')
+                .replace('\r', ' ');
+    }
+
+    /**
      * Cria um novo refresh token para o usuário (usado no login e no registro).
      *
      * @param userId    ID do usuário
@@ -109,7 +122,7 @@ public class RefreshTokenService {
         if (existing.isRevoked()) {
             log.error("A07:2025 — REFRESH TOKEN REUSE DETECTED! "
                     + "userId={}, ip={}. Revogando toda a família.",
-                    existing.getUserId(), clientIp);
+                    existing.getUserId(), sanitizeForLog(clientIp));
             // Revogar TODA a família — ataque em andamento
             refreshTokenRepository.revokeAllByFamily(existing.getTokenFamily(), Instant.now());
             throw new RefreshTokenException(
