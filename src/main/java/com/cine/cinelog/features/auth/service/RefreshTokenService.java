@@ -87,7 +87,7 @@ public class RefreshTokenService {
 
         refreshTokenRepository.save(entity);
 
-        log.debug("Refresh token criado: userId={}, family={}", userId, family);
+        log.debug("Refresh token criado: userId={}", userId);
         return token;
     }
 
@@ -108,8 +108,8 @@ public class RefreshTokenService {
         // ⚠️ DETECÇÃO DE REUSO: token já revogado = comprometimento
         if (existing.isRevoked()) {
             log.error("A07:2025 — REFRESH TOKEN REUSE DETECTED! "
-                    + "family={}, userId={}, ip={}. Revogando toda a família.",
-                    existing.getTokenFamily(), existing.getUserId(), clientIp);
+                    + "userId={}, ip={}. Revogando toda a família.",
+                    existing.getUserId(), clientIp);
             // Revogar TODA a família — ataque em andamento
             refreshTokenRepository.revokeAllByFamily(existing.getTokenFamily(), Instant.now());
             throw new RefreshTokenException(
