@@ -102,11 +102,22 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
         String headerValue = request.getHeader(CORRELATION_ID_HEADER);
 
         if (headerValue != null && !headerValue.isBlank()) {
-            // Use existing correlation ID from client/upstream
-            if (log.isTraceEnabled()) {
-                log.trace("Using existing correlationId from header: {}", headerValue);
+            // Sanitize existing correlation ID from client/upstream to prevent log injection
+            String sanitized = sanitizeForLogging(headerValue);
+
+            if (sanitized == null || sanitized.isBlank()) {
+                // If sanitization removes all characters, fall back to generating a new ID
+                String newId = UUID.randomUUID().toString();
+                if (log.isTraceEnabled()) {
+                    log.trace("CorrelationId header was invalid after sanitization; generated new correlationId: {}", newId);
+                }
+                return newId;
             }
-            return headerValue.trim();
+
+            if (log.isTraceEnabled()) {
+                log.trace("Using existing correlationId from header: {}", sanitized);
+            }
+            return sanitized;
         } else {
             // Generate new correlation ID
             String newId = UUID.randomUUID().toString();
@@ -115,6 +126,24 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             }
             return newId;
         }
+    }
+
+    /**
+     * Sanitize a value before using it in logs or MDC.
+     * Removes control characters (including new lines) and limits length to avoid log injection.
+     */
+    private String sanitizeForLogging(String value) {
+        if (value == null) {
+            return null;
+        }
+        // Remove all control characters (such as \r, \n, etc.)
+        String sanitized = value.replaceAll("\\p{Cntrl}", "").trim();
+        // Limit length to a reasonable maximum to avoid overly long log entries
+        int maxLength = 128;
+        if (sanitized.length() > maxLength) {
+            sanitized = sanitized.substring(0, maxLength);
+        }
+        return sanitized;
     }
 
     /**
