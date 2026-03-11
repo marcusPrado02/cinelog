@@ -51,6 +51,8 @@
         <dependency-check-maven.version>11.1.1</dependency-check-maven.version>
         <cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
         <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+        <!-- IAM – Semana 2 -->
+        <testcontainers-keycloak.version>3.4.0</testcontainers-keycloak.version>
     </properties>
 
     <!-- ═════════════════════════════════════════════════════════════
@@ -303,6 +305,44 @@
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════
+             IAM / SEMANA 2 — OAuth2 + Keycloak + SAML2
+             ═══════════════════════════════════════════════════ -->
+
+        <!-- OAuth2 Resource Server: valida Bearer tokens emitidos pelo Keycloak
+             (RS256 / JWKS) sem precisar conhecer o segredo local. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- OAuth2 Client: suporte a Authorization Code Flow (SSO) e
+             provedor Keycloak configurável via spring.security.oauth2.client.* -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+
+        <!-- SAML2 Service Provider — design definido (ADR-IAM-001).
+             NOTA: spring-security-saml2-service-provider requer OpenSAML 4.x
+             que está no repositório Shibboleth (não no Maven Central).
+             Para ativar, adicionar o repositório shibboleth e descomentar:
+             https://build.shibboleth.net/nexus/content/repositories/releases/
+             A implementação SAML está documentada em SamlIntegrationPreparation.java.
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-saml2-service-provider</artifactId>
+        </dependency>
+        -->
+
+        <!-- Testcontainers Keycloak: testes de integração OAuth2 sem mocks. -->
+        <dependency>
+            <groupId>com.github.dasniko</groupId>
+            <artifactId>testcontainers-keycloak</artifactId>
+            <version>${testcontainers-keycloak.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

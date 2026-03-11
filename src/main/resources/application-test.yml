@@ -1,0 +1,22 @@
+# ═══════════════════════════════════════════════════════════════════
+# Perfil TEST — usado por AbstractIntegrationTest e testes unitários.
+# ─  Keycloak OAuth2 NÃO é ativado aqui (sem issuer-uri).
+#    Testes que precisam do Keycloak usam KeycloakOAuth2IntegrationTest
+#    que injeta o issuer-uri dinamicamente via @DynamicPropertySource.
+# ═══════════════════════════════════════════════════════════════════
+
+cinelog:
+    security:
+        jwt:
+            # Secret para testes — valor fixo de 64 chars para HS512
+            # trunk-ignore(checkov/CKV_SECRET_6)
+            secret: test-jwt-secret-key-for-tests-only-must-be-at-least-32-chars-long
+            expiration-seconds: 3600
+        keycloak:
+            enabled: false
+
+logging:
+    level:
+        root: WARN
+        "com.cine.cinelog": INFO
+        "org.springframework.security": WARN

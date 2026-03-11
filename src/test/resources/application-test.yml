@@ -35,7 +35,7 @@ spring:
             key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
             value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
             properties:
-                spring.json.trusted.packages: "*" # Trust all packages in tests
+                "[spring.json.trusted.packages]": "*" # Trust all packages in tests
         producer:
             key-serializer: org.apache.kafka.common.serialization.StringSerializer
             value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -59,15 +59,35 @@ spring:
             name: test
             password: test
 
+# ========== CineLog Security (JWT + Keycloak) ==========
+cinelog:
+    security:
+        jwt:
+            # Secret fixo para testes — deve ter >= 32 chars
+            # trunk-ignore(checkov/CKV_SECRET_6)
+            secret: test-jwt-secret-key-for-integration-tests-only-32chars
+            expiration-seconds: 3600
+        keycloak:
+            # Keycloak NÃO é ativado por padrão no profile test.
+            # KeycloakOAuth2IntegrationTest injeta o issuer-uri dinamicamente
+            # via @DynamicPropertySource quando o container Keycloak está rodando.
+            issuer-uri: http://localhost:8180/realms/cinelog
+            client-id: cinelog-app
+        cors:
+            allowed-origins: "*"
+        auth:
+            max-login-attempts: 5
+            lock-duration-seconds: 900
+
 # ========== Logging ==========
 logging:
     level:
         root: INFO
-        com.cine.cinelog: DEBUG # Enable debug for our code
-        org.springframework.kafka: WARN # Reduce Kafka noise
-        org.testcontainers: INFO
-        org.hibernate.SQL: WARN
-        org.liquibase: WARN
+        "com.cine.cinelog": DEBUG # Enable debug for our code
+        "org.springframework.kafka": WARN # Reduce Kafka noise
+        "org.testcontainers": INFO
+        "org.hibernate.SQL": WARN
+        "org.liquibase": WARN
 
 # ========== Application Properties ==========
 app:
@@ -92,7 +112,7 @@ management:
         web:
             exposure:
                 include: health,info,metrics,prometheus
-    metrics:
-        export:
-            prometheus:
+    prometheus:
+        metrics:
+            export:
                 enabled: true

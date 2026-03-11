@@ -89,8 +89,8 @@ server:
 logging:
     level:
         root: INFO
-        org.springframework: INFO
-        org.hibernate.SQL: WARN
+        "org.springframework": INFO
+        "org.hibernate.SQL": WARN
     usecase:
         slow-threshold-ms: 800
         sample-rate: 1.0 # 1.0 = logar tudo; 0.1 = 10%
@@ -172,7 +172,6 @@ cinelog:
             allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
             max-age-seconds: 3600
         jwt:
-            # trunk-ignore(checkov/CKV_SECRET_6)
             secret: ${CINELOG_SECURITY_JWT_SECRET:MINHA_CHAVE_MEGA_SECRETA_DE_NO_MINIMO_32_CHARS}
             expiration-seconds: ${CINELOG_SECURITY_JWT_EXPIRATION_SECONDS:3600}
         auth:
@@ -189,6 +188,18 @@ cinelog:
             threshold-sqli: ${CINELOG_SECURITY_ALERTING_THRESHOLD_SQLI:3}
             threshold-rate-limit: ${CINELOG_SECURITY_ALERTING_THRESHOLD_RATE_LIMIT:50}
             threshold-tamper: ${CINELOG_SECURITY_ALERTING_THRESHOLD_TAMPER:1}
+        keycloak:
+            # Issuer URI do realm Keycloak. Usado pelo OpenApiConfig (Swagger SSO)
+            # e pelo JwtAuthenticationFilter para detectar tokens Keycloak.
+            # Sobrescrito em application-dev.yml e via env var KEYCLOAK_ISSUER_URI.
+            issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/cinelog}
+            # ClientId do Keycloak para extração de resource_access roles
+            client-id: ${KEYCLOAK_CLIENT_ID:cinelog-app}
+        # Preparação SAML (ADR-IAM-001) – não ativo por padrão
+        saml:
+            enabled: false
+            # entity-id: https://cinelog.example.com/saml2/service-provider-metadata/azure-ad
+            # idp-metadata-url: https://login.microsoftonline.com/{tenant}/federationmetadata/2007-06/federationmetadata.xml
     tmdb:
         base-url: https://api.themoviedb.org/3
         api-key: ${TMDB_API_KEY:coloque_sua_key_aqui}
@@ -219,3 +230,9 @@ outbox:
     housekeeping:
         cron: 0 0 1 * * ? # Diariamente às 01:00
 
+
+# ═════════════════════════════════════════════════════════════════════
+# IAM – Semana 2: spring.security.oauth2.resourceserver.jwt.issuer-uri
+# NÃO é definida aqui (nível base). É ativada por profile (dev/docker)
+# para evitar falha no startup quando Keycloak não estiver disponível.
+# ═════════════════════════════════════════════════════════════════════

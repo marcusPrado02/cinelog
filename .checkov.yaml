@@ -1,0 +1,12 @@
+# Checkov configuration — see https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+#
+# CKV_SECRET_6 (Base64 High Entropy String) is suppressed for the Keycloak realm
+# import file because:
+#   1. JSON does not support inline comment-based suppressions (no // or # comments).
+#   2. The values flagged (e.g., "cinelog-backend-secret") are intentionally
+#      non-secret placeholder credentials used only in local dev/test environments.
+#   3. Production credentials are always injected via environment variables or
+#      a secrets manager — never stored in this file.
+skip-path:
+    - docker/keycloak/cinelog-realm.json
+    - src/test/resources/keycloak/cinelog-realm.json

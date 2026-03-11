@@ -164,6 +164,45 @@ services:
         depends_on:
             - elasticsearch
 
+    # ========= IAM: Keycloak (OAuth2 / SSO / MFA) =========
+    # Semana 2 — Authorization Server externo.
+    # UI Admin: http://localhost:8180/admin  (admin / admin)
+    # Realm de testes auto-importado na inicialização.
+    keycloak:
+        image: quay.io/keycloak/keycloak:26.1.0
+        container_name: cinelog-keycloak
+        command:
+            - start-dev
+            - --import-realm
+        environment:
+            # Admin credentials
+            KC_BOOTSTRAP_ADMIN_USERNAME: admin
+            KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+            # Database (usa H2 em modo dev — troque por MySQL em produção)
+            KC_DB: dev-mem
+            # Log level
+            KC_LOG_LEVEL: INFO
+            # Hostname (interno ao docker-compose; ajuste para seu domínio em prod)
+            KC_HOSTNAME: localhost
+            KC_HOSTNAME_PORT: 8180
+            KC_HOSTNAME_STRICT: "false"
+            KC_HTTP_ENABLED: "true"
+        ports:
+            - 8180:8080 # UI/API Keycloak
+        volumes:
+            # Realm importado automaticamente no primeiro start
+            - ./docker/keycloak:/opt/keycloak/data/import:ro
+        healthcheck:
+            test:
+                [
+                    CMD-SHELL,
+                    "curl -sf http://localhost:8080/health/ready || exit 1",
+                ]
+            interval: 15s
+            timeout: 10s
+            retries: 10
+            start_period: 60s
+
 volumes:
     dbdata:
     redis-data:

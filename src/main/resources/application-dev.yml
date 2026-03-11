@@ -13,6 +13,10 @@ server:
 springdoc:
     swagger-ui:
         enabled: true
+        # SSO via Keycloak: clientId público que o Swagger usa para Auth Code + PKCE
+        oauth:
+            client-id: cinelog-app
+            use-pkce-with-authorization-code-grant: true
     api-docs:
         enabled: true
 
@@ -40,3 +44,29 @@ logging:
         root: INFO
         org.springframework.security: DEBUG
         com.cine.cinelog: DEBUG
+
+# ─────────────────────────────────────────────────────────────────
+# IAM – Semana 2: Keycloak OAuth2 Resource Server (dev local)
+# Ativa validação de tokens RS256 do Keycloak. Quando esta prop estiver
+# definida, Spring Boot cria o JwtDecoder via JWKS automaticamente.
+# O JwtAuthenticationFilter detecta tokens Keycloak pelo claim `iss`
+# e os delega ao BearerTokenAuthenticationFilter.
+# ─────────────────────────────────────────────────────────────────
+spring:
+    security:
+        oauth2:
+            resourceserver:
+                jwt:
+                    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/cinelog}
+            client:
+                registration:
+                    keycloak:
+                        client-id: cinelog-app
+                        client-secret: ${KEYCLOAK_CLIENT_SECRET:cinelog-secret}
+                        authorization-grant-type: authorization_code
+                        redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+                        scope: openid,profile,email,roles
+                provider:
+                    keycloak:
+                        issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/cinelog}
+                        user-name-attribute: preferred_username

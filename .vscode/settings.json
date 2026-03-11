@@ -59,5 +59,6 @@
             "watchEntryId": "1",
             "dlqMessageId": "1"
         }
-    }
+    },
+    "codeQL.createQuery.qlPackLocation": "/home/maps/Projetos/cinelog/cinelog"
 }
