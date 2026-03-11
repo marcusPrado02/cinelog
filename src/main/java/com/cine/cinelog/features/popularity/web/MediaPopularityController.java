@@ -185,7 +185,18 @@ public class MediaPopularityController {
             case "30d", "month" -> TrendingPeriod.MONTH;
             case "all", "all_time" -> TrendingPeriod.ALL_TIME;
             default -> {
-                log.warn("Período inválido: {}. Usando default: WEEK", period);
+                String rawPeriod = period == null ? "null" : period;
+                StringBuilder sanitized = new StringBuilder(rawPeriod.length());
+                for (int i = 0; i < rawPeriod.length(); i++) {
+                    char ch = rawPeriod.charAt(i);
+                    if (ch == '\n' || ch == '\r' || Character.isISOControl(ch)) {
+                        sanitized.append('_');
+                    } else {
+                        sanitized.append(ch);
+                    }
+                }
+                String safePeriod = sanitized.toString();
+                log.warn("Período inválido: {}. Usando default: WEEK", safePeriod);
                 yield TrendingPeriod.WEEK;
             }
         };
