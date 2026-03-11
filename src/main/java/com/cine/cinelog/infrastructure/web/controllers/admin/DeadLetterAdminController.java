@@ -56,6 +56,13 @@ public class DeadLetterAdminController {
 
     private final DeadLetterService deadLetterService;
 
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replace('\n', ' ').replace('\r', ' ');
+    }
+
     /**
      * List DLQ events with optional filters.
      * <p>
@@ -84,7 +91,7 @@ public class DeadLetterAdminController {
 
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         log.info("Admin DLQ list request: status={}, topic={}, page={}, size={}",
-                status, topic, pageable.getPageNumber(), pageable.getPageSize());
+                status, sanitizeForLog(topic), pageable.getPageNumber(), pageable.getPageSize());
 
         Page<DeadLetterEventEntity> entities = deadLetterService.listEvents(status, topic, pageable);
         Page<DeadLetterEventResponse> response = entities.map(DeadLetterEventResponse::fromEntity);
