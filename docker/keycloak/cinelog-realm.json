@@ -152,7 +152,7 @@
             "credentials": [
                 {
                     "type": "password",
-                    "value": "alice123",
+                    "value": "Alice@CineLog2025!",
                     "temporary": false
                 }
             ],
@@ -169,7 +169,7 @@
             "credentials": [
                 {
                     "type": "password",
-                    "value": "admin123",
+                    "value": "Admin@CineLog2025!",
                     "temporary": false
                 }
             ],
@@ -186,7 +186,7 @@
             "credentials": [
                 {
                     "type": "password",
-                    "value": "alice123mfa",
+                    "value": "AliceMfa@CineLog2025!",
                     "temporary": false
                 }
             ],

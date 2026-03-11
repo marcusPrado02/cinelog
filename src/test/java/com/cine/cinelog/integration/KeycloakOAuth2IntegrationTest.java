@@ -51,239 +51,239 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("Keycloak OAuth2 Integration Tests")
 class KeycloakOAuth2IntegrationTest extends AbstractIntegrationTest {
 
-    // ─────────────────────────────────────────────────────────────
-    // Keycloak Testcontainer
-    // ─────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────
+        // Keycloak Testcontainer
+        // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Keycloak 25.0.4 com o realm cinelog importado.
-     * Realm path relativo ao classpath do projeto.
-     */
-    static final KeycloakContainer keycloakContainer;
+        /**
+         * Keycloak 25.0.4 com o realm cinelog importado.
+         * Realm path relativo ao classpath do projeto.
+         */
+        static final KeycloakContainer keycloakContainer;
 
-    static {
-        keycloakContainer = new KeycloakContainer("quay.io/keycloak/keycloak:25.0.4")
-                .withRealmImportFile("keycloak/cinelog-realm.json")
-                .withReuse(false); // false: garante realm limpo entre runs de CI
-        keycloakContainer.start();
-    }
-
-    @DynamicPropertySource
-    static void keycloakProperties(DynamicPropertyRegistry registry) {
-        String issuerUri = keycloakContainer.getAuthServerUrl() + "/realms/cinelog";
-
-        // Ativa o OAuth2 Resource Server com o Keycloak de teste
-        registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
-                () -> issuerUri);
-
-        // Informar ao JwtAuthenticationFilter qual é o issuer Keycloak
-        registry.add("cinelog.security.keycloak.issuer-uri", () -> issuerUri);
-    }
-
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    // ─────────────────────────────────────────────────────────────
-    // Helper: obter access token do Keycloak via ROPC
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * Obtém access token Keycloak via Resource Owner Password Credentials.
-     * <strong>Não usar em produção</strong> — apenas para testes de integração.
-     */
-    private String obtainKeycloakToken(String username, String password) {
-        String tokenUrl = keycloakContainer.getAuthServerUrl()
-                + "/realms/cinelog/protocol/openid-connect/token";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("grant_type", "password");
-        form.add("client_id", "cinelog-app");
-        form.add("username", username);
-        form.add("password", password);
-        form.add("scope", "openid profile email roles");
-
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(form, headers);
-
-        @SuppressWarnings("unchecked")
-        ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(
-                tokenUrl, request, (Class<Map<String, Object>>) (Class<?>) Map.class);
-
-        assertThat(response.getStatusCode()).as("Keycloak token endpoint deve retornar 200")
-                .isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).containsKey("access_token");
-
-        return (String) response.getBody().get("access_token");
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Testes: token válido Keycloak aceito pelo Resource Server
-    // ─────────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("Autenticação com token Keycloak")
-    class ComTokenKeycloak {
-
-        @Test
-        @DisplayName("deve aceitar Bearer token Keycloak em endpoint protegido")
-        void deveAceitarTokenKeycloak() {
-            String token = obtainKeycloakToken("alice", "alice123");
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-            // /actuator/health é permitAll em ActuatorSecurityConfig — usa /api/v1/users/me
-            // ou outro endpoint autenticado do domínio
-            ResponseEntity<String> response = restTemplate.exchange(
-                    getBaseUrl() + "/api/v1/users/me", HttpMethod.GET, entity, String.class);
-
-            assertThat(response.getStatusCode())
-                    .as("Token Keycloak válido deve resultar em 200 (ou 404 se rota não existe)")
-                    .isNotEqualTo(HttpStatus.UNAUTHORIZED)
-                    .isNotEqualTo(HttpStatus.FORBIDDEN);
+        static {
+                keycloakContainer = new KeycloakContainer("quay.io/keycloak/keycloak:25.0.4")
+                                .withRealmImportFile("keycloak/cinelog-realm.json")
+                                .withReuse(false); // false: garante realm limpo entre runs de CI
+                keycloakContainer.start();
         }
 
-        @Test
-        @DisplayName("deve rejeitar request sem token em endpoint protegido")
-        void deveRejeitarSemToken() {
-            ResponseEntity<String> response = restTemplate.getForEntity(
-                    getBaseUrl() + "/api/v1/users/me", String.class);
+        @DynamicPropertySource
+        static void keycloakProperties(DynamicPropertyRegistry registry) {
+                String issuerUri = keycloakContainer.getAuthServerUrl() + "/realms/cinelog";
 
-            assertThat(response.getStatusCode())
-                    .isEqualTo(HttpStatus.UNAUTHORIZED);
+                // Ativa o OAuth2 Resource Server com o Keycloak de teste
+                registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri",
+                                () -> issuerUri);
+
+                // Informar ao JwtAuthenticationFilter qual é o issuer Keycloak
+                registry.add("cinelog.security.keycloak.issuer-uri", () -> issuerUri);
         }
 
-        @Test
-        @DisplayName("deve rejeitar token Bearer inválido (assinatura errada)")
-        void deveRejeitarTokenInvalido() {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth("eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJmYWtlIn0.invalidsignature");
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+        @Autowired
+        private TestRestTemplate restTemplate;
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    getBaseUrl() + "/api/v1/users/me", HttpMethod.GET, entity, String.class);
+        // ─────────────────────────────────────────────────────────────
+        // Helper: obter access token do Keycloak via ROPC
+        // ─────────────────────────────────────────────────────────────
 
-            assertThat(response.getStatusCode())
-                    .isEqualTo(HttpStatus.UNAUTHORIZED);
-        }
-    }
+        /**
+         * Obtém access token Keycloak via Resource Owner Password Credentials.
+         * <strong>Não usar em produção</strong> — apenas para testes de integração.
+         */
+        private String obtainKeycloakToken(String username, String password) {
+                String tokenUrl = keycloakContainer.getAuthServerUrl()
+                                + "/realms/cinelog/protocol/openid-connect/token";
 
-    // ─────────────────────────────────────────────────────────────
-    // Testes: roles extraídas do Keycloak
-    // ─────────────────────────────────────────────────────────────
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-    @Nested
-    @DisplayName("Roles vindas do Keycloak IAM")
-    class RolesKeycloak {
+                MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+                form.add("grant_type", "password");
+                form.add("client_id", "cinelog-app");
+                form.add("username", username);
+                form.add("password", password);
+                form.add("scope", "openid profile email roles");
 
-        @Test
-        @DisplayName("usuário 'alice' (USER) não deve acessar endpoint ADMIN")
-        void userNaoDeveAcessarAdmin() {
-            String token = obtainKeycloakToken("alice", "alice123");
+                HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(form, headers);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+                @SuppressWarnings("unchecked")
+                ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(
+                                tokenUrl, request, (Class<Map<String, Object>>) (Class<?>) Map.class);
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    getBaseUrl() + "/api/v1/admin/users", HttpMethod.GET, entity, String.class);
+                assertThat(response.getStatusCode()).as("Keycloak token endpoint deve retornar 200")
+                                .isEqualTo(HttpStatus.OK);
+                assertThat(response.getBody()).containsKey("access_token");
 
-            assertThat(response.getStatusCode())
-                    .as("Role USER não deve acessar /api/v1/admin/**")
-                    .isEqualTo(HttpStatus.FORBIDDEN);
+                return (String) response.getBody().get("access_token");
         }
 
-        @Test
-        @DisplayName("usuário 'admin' (ADMIN) deve acessar endpoint ADMIN")
-        void adminDeveAcessarAdmin() {
-            String token = obtainKeycloakToken("admin", "admin123");
+        // ─────────────────────────────────────────────────────────────
+        // Testes: token válido Keycloak aceito pelo Resource Server
+        // ─────────────────────────────────────────────────────────────
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+        @Nested
+        @DisplayName("Autenticação com token Keycloak")
+        class ComTokenKeycloak {
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    getBaseUrl() + "/api/v1/admin/users", HttpMethod.GET, entity, String.class);
+                @Test
+                @DisplayName("deve aceitar Bearer token Keycloak em endpoint protegido")
+                void deveAceitarTokenKeycloak() {
+                        String token = obtainKeycloakToken("alice", "Alice@CineLog2025!");
 
-            assertThat(response.getStatusCode())
-                    .as("Role ADMIN deve ser reconhecida do Keycloak")
-                    .isNotEqualTo(HttpStatus.FORBIDDEN)
-                    .isNotEqualTo(HttpStatus.UNAUTHORIZED);
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                        // /actuator/health é permitAll em ActuatorSecurityConfig — usa /api/v1/users/me
+                        // ou outro endpoint autenticado do domínio
+                        ResponseEntity<String> response = restTemplate.exchange(
+                                        getBaseUrl() + "/api/v1/users/me", HttpMethod.GET, entity, String.class);
+
+                        assertThat(response.getStatusCode())
+                                        .as("Token Keycloak válido deve resultar em 200 (ou 404 se rota não existe)")
+                                        .isNotEqualTo(HttpStatus.UNAUTHORIZED)
+                                        .isNotEqualTo(HttpStatus.FORBIDDEN);
+                }
+
+                @Test
+                @DisplayName("deve rejeitar request sem token em endpoint protegido")
+                void deveRejeitarSemToken() {
+                        ResponseEntity<String> response = restTemplate.getForEntity(
+                                        getBaseUrl() + "/api/v1/users/me", String.class);
+
+                        assertThat(response.getStatusCode())
+                                        .isEqualTo(HttpStatus.UNAUTHORIZED);
+                }
+
+                @Test
+                @DisplayName("deve rejeitar token Bearer inválido (assinatura errada)")
+                void deveRejeitarTokenInvalido() {
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth("eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJmYWtlIn0.invalidsignature");
+                        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                        ResponseEntity<String> response = restTemplate.exchange(
+                                        getBaseUrl() + "/api/v1/users/me", HttpMethod.GET, entity, String.class);
+
+                        assertThat(response.getStatusCode())
+                                        .isEqualTo(HttpStatus.UNAUTHORIZED);
+                }
         }
-    }
 
-    // ─────────────────────────────────────────────────────────────
-    // Testes: SSO — endpoints públicos do Swagger acessíveis
-    // ─────────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────
+        // Testes: roles extraídas do Keycloak
+        // ─────────────────────────────────────────────────────────────
 
-    @Nested
-    @DisplayName("Swagger SSO — endpoints públicos")
-    class SwaggerSso {
+        @Nested
+        @DisplayName("Roles vindas do Keycloak IAM")
+        class RolesKeycloak {
 
-        @Test
-        @DisplayName("Swagger UI deve ser acessível sem autenticação")
-        void swaggerUiDeveSerAcessivel() {
-            ResponseEntity<String> response = restTemplate.getForEntity(
-                    getBaseUrl() + "/swagger-ui/index.html", String.class);
+                @Test
+                @DisplayName("usuário 'alice' (USER) não deve acessar endpoint ADMIN")
+                void userNaoDeveAcessarAdmin() {
+                        String token = obtainKeycloakToken("alice", "Alice@CineLog2025!");
 
-            assertThat(response.getStatusCode())
-                    .isEqualTo(HttpStatus.OK);
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                        ResponseEntity<String> response = restTemplate.exchange(
+                                        getBaseUrl() + "/api/v1/admin/users", HttpMethod.GET, entity, String.class);
+
+                        assertThat(response.getStatusCode())
+                                        .as("Role USER não deve acessar /api/v1/admin/**")
+                                        .isEqualTo(HttpStatus.FORBIDDEN);
+                }
+
+                @Test
+                @DisplayName("usuário 'admin' (ADMIN) deve acessar endpoint ADMIN")
+                void adminDeveAcessarAdmin() {
+                        String token = obtainKeycloakToken("admin", "Admin@CineLog2025!");
+
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setBearerAuth(token);
+                        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+                        ResponseEntity<String> response = restTemplate.exchange(
+                                        getBaseUrl() + "/api/v1/admin/users", HttpMethod.GET, entity, String.class);
+
+                        assertThat(response.getStatusCode())
+                                        .as("Role ADMIN deve ser reconhecida do Keycloak")
+                                        .isNotEqualTo(HttpStatus.FORBIDDEN)
+                                        .isNotEqualTo(HttpStatus.UNAUTHORIZED);
+                }
         }
 
-        @Test
-        @DisplayName("oauth2-redirect.html deve ser acessível para callback SSO")
-        void oauth2RedirectDeveSerAcessivel() {
-            ResponseEntity<String> response = restTemplate.getForEntity(
-                    getBaseUrl() + "/swagger-ui/oauth2-redirect.html", String.class);
+        // ─────────────────────────────────────────────────────────────
+        // Testes: SSO — endpoints públicos do Swagger acessíveis
+        // ─────────────────────────────────────────────────────────────
 
-            // 200 OK ou redirect — nunca 401/403
-            assertThat(response.getStatusCode().value())
-                    .as("oauth2-redirect.html deve ser acessível sem autenticação")
-                    .isNotIn(401, 403);
+        @Nested
+        @DisplayName("Swagger SSO — endpoints públicos")
+        class SwaggerSso {
+
+                @Test
+                @DisplayName("Swagger UI deve ser acessível sem autenticação")
+                void swaggerUiDeveSerAcessivel() {
+                        ResponseEntity<String> response = restTemplate.getForEntity(
+                                        getBaseUrl() + "/swagger-ui/index.html", String.class);
+
+                        assertThat(response.getStatusCode())
+                                        .isEqualTo(HttpStatus.OK);
+                }
+
+                @Test
+                @DisplayName("oauth2-redirect.html deve ser acessível para callback SSO")
+                void oauth2RedirectDeveSerAcessivel() {
+                        ResponseEntity<String> response = restTemplate.getForEntity(
+                                        getBaseUrl() + "/swagger-ui/oauth2-redirect.html", String.class);
+
+                        // 200 OK ou redirect — nunca 401/403
+                        assertThat(response.getStatusCode().value())
+                                        .as("oauth2-redirect.html deve ser acessível sem autenticação")
+                                        .isNotIn(401, 403);
+                }
+
+                @Test
+                @DisplayName("v3/api-docs deve retornar spec com esquema keycloak-sso")
+                void apiDocDeveTerEsquemaKeycloak() {
+                        ResponseEntity<String> response = restTemplate.getForEntity(
+                                        getBaseUrl() + "/v3/api-docs", String.class);
+
+                        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+                        assertThat(response.getBody())
+                                        .as("OpenAPI spec deve conter esquema keycloak-sso")
+                                        .contains("keycloak-sso");
+                }
         }
 
-        @Test
-        @DisplayName("v3/api-docs deve retornar spec com esquema keycloak-sso")
-        void apiDocDeveTerEsquemaKeycloak() {
-            ResponseEntity<String> response = restTemplate.getForEntity(
-                    getBaseUrl() + "/v3/api-docs", String.class);
+        // ─────────────────────────────────────────────────────────────
+        // Testes: autenticação local (JWT HMAC) coexiste com Keycloak
+        // ─────────────────────────────────────────────────────────────
 
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody())
-                    .as("OpenAPI spec deve conter esquema keycloak-sso")
-                    .contains("keycloak-sso");
+        @Nested
+        @DisplayName("Autenticação local (JWT) coexiste com Keycloak")
+        class AutenticacaoLocal {
+
+                @Test
+                @DisplayName("endpoint /api/auth/login deve permanecer acessível sem token")
+                void loginLocalDeveSerAcessivel() {
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setContentType(MediaType.APPLICATION_JSON);
+                        String body = """
+                                        {"email":"alice@cinelog.dev","password":"senha-invalida"}
+                                        """;
+                        HttpEntity<String> entity = new HttpEntity<>(body, headers);
+
+                        ResponseEntity<String> response = restTemplate.postForEntity(
+                                        getBaseUrl() + "/api/auth/login", entity, String.class);
+
+                        // Esperamos 401 (credenciais inválidas) — mas NÃO 404 ou 403
+                        assertThat(response.getStatusCode())
+                                        .as("Endpoint /api/auth/login deve estar acessível (não 404/403)")
+                                        .isNotEqualTo(HttpStatus.NOT_FOUND)
+                                        .isNotEqualTo(HttpStatus.FORBIDDEN);
+                }
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Testes: autenticação local (JWT HMAC) coexiste com Keycloak
-    // ─────────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("Autenticação local (JWT) coexiste com Keycloak")
-    class AutenticacaoLocal {
-
-        @Test
-        @DisplayName("endpoint /api/auth/login deve permanecer acessível sem token")
-        void loginLocalDeveSerAcessivel() {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            String body = """
-                    {"email":"alice@cinelog.dev","password":"senha-invalida"}
-                    """;
-            HttpEntity<String> entity = new HttpEntity<>(body, headers);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    getBaseUrl() + "/api/auth/login", entity, String.class);
-
-            // Esperamos 401 (credenciais inválidas) — mas NÃO 404 ou 403
-            assertThat(response.getStatusCode())
-                    .as("Endpoint /api/auth/login deve estar acessível (não 404/403)")
-                    .isNotEqualTo(HttpStatus.NOT_FOUND)
-                    .isNotEqualTo(HttpStatus.FORBIDDEN);
-        }
-    }
 }

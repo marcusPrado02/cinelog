@@ -22,7 +22,7 @@ spring:
     liquibase:
         enabled: true
         drop-first: false # Keep data between tests for performance
-        change-log: classpath:db/changelog/db.changelog-master.xml
+        change-log: classpath:liquibase/db.changelog-master.xml
 
     # ========== Kafka ==========
     kafka:

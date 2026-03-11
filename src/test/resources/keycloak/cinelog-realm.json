@@ -1,213 +1,217 @@
 {
-  "id": "cinelog",
-  "realm": "cinelog",
-  "displayName": "CineLog",
-  "enabled": true,
-  "sslRequired": "external",
-  "registrationAllowed": false,
-  "loginWithEmailAllowed": true,
-  "duplicateEmailsAllowed": false,
-  "resetPasswordAllowed": true,
-  "browserFlow": "browser",
-  "editUsernameAllowed": false,
+    "id": "cinelog",
+    "realm": "cinelog",
+    "displayName": "CineLog",
+    "enabled": true,
+    "sslRequired": "external",
+    "registrationAllowed": false,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": true,
+    "browserFlow": "browser",
+    "editUsernameAllowed": false,
 
-  "defaultSignatureAlgorithm": "RS256",
-  "accessTokenLifespan": 3600,
-  "refreshTokenMaxReuse": 0,
-  "revokeRefreshToken": true,
-  "ssoSessionMaxLifespan": 36000,
+    "defaultSignatureAlgorithm": "RS256",
+    "accessTokenLifespan": 3600,
+    "refreshTokenMaxReuse": 0,
+    "revokeRefreshToken": true,
+    "ssoSessionMaxLifespan": 36000,
 
-  "otpPolicyType": "totp",
-  "otpPolicyAlgorithm": "HmacSHA1",
-  "otpPolicyDigits": 6,
-  "otpPolicyPeriod": 30,
-  "otpSupportedApplications": ["totpAppGoogleName", "totpAppFreeOTPName", "totpAppMicrosoftAuthenticatorName"],
+    "otpPolicyType": "totp",
+    "otpPolicyAlgorithm": "HmacSHA1",
+    "otpPolicyDigits": 6,
+    "otpPolicyPeriod": 30,
+    "otpSupportedApplications": [
+        "totpAppGoogleName",
+        "totpAppFreeOTPName",
+        "totpAppMicrosoftAuthenticatorName"
+    ],
 
-  "roles": {
-    "realm": [
-      {
-        "name": "USER",
-        "description": "Usuário normal do CineLog",
-        "composite": false,
-        "clientRole": false
-      },
-      {
-        "name": "ADMIN",
-        "description": "Administrador do CineLog — acesso total",
-        "composite": false,
-        "clientRole": false
-      },
-      {
-        "name": "OPS",
-        "description": "Operações — acesso a painéis e actuator",
-        "composite": false,
-        "clientRole": false
-      }
-    ]
-  },
-
-  "defaultRoles": ["USER"],
-
-  "clients": [
-    {
-      "clientId": "cinelog-app",
-      "name": "CineLog Web/Swagger",
-      "description": "Cliente público para SPA, Swagger UI e aplicações nativas (Authorization Code + PKCE)",
-      "enabled": true,
-      "publicClient": true,
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
-      "protocol": "openid-connect",
-      "redirectUris": [
-        "http://localhost:8080/*",
-        "http://localhost:8080/swagger-ui/oauth2-redirect.html",
-        "http://localhost:3000/*",
-        "http://localhost:5173/*"
-      ],
-      "webOrigins": [
-        "http://localhost:8080",
-        "http://localhost:3000",
-        "http://localhost:5173"
-      ],
-      "attributes": {
-        "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:8080/*"
-      },
-      "defaultClientScopes": ["openid", "profile", "email", "roles"],
-      "optionalClientScopes": ["address", "phone", "offline_access"]
+    "roles": {
+        "realm": [
+            {
+                "name": "USER",
+                "description": "Usuário normal do CineLog",
+                "composite": false,
+                "clientRole": false
+            },
+            {
+                "name": "ADMIN",
+                "description": "Administrador do CineLog — acesso total",
+                "composite": false,
+                "clientRole": false
+            },
+            {
+                "name": "OPS",
+                "description": "Operações — acesso a painéis e actuator",
+                "composite": false,
+                "clientRole": false
+            }
+        ]
     },
-    {
-      "clientId": "cinelog-backend",
-      "name": "CineLog Backend (M2M)",
-      "description": "Cliente confidencial para comunicação machine-to-machine (Client Credentials)",
-      "enabled": true,
-      "publicClient": false,
-      "standardFlowEnabled": false,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": true,
-      "protocol": "openid-connect",
-      "secret": "cinelog-backend-secret",
-      "defaultClientScopes": ["openid", "profile", "email", "roles"],
-      "optionalClientScopes": []
-    }
-  ],
 
-  "clientScopes": [
-    {
-      "name": "roles",
-      "description": "OpenID Connect scope para mapeamento de roles do realm e do cliente",
-      "protocol": "openid-connect",
-      "attributes": {
-        "include.in.token.scope": "true",
-        "display.on.consent.screen": "true"
-      },
-      "protocolMappers": [
+    "defaultRoles": ["USER"],
+
+    "clients": [
         {
-          "name": "realm roles",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper",
-          "consentRequired": false,
-          "config": {
-            "multivalued": "true",
-            "user.attribute": "foo",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "realm_access.roles",
-            "jsonType.label": "String"
-          }
+            "clientId": "cinelog-app",
+            "name": "CineLog Web/Swagger",
+            "description": "Cliente público para SPA, Swagger UI e aplicações nativas (Authorization Code + PKCE)",
+            "enabled": true,
+            "publicClient": true,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": false,
+            "protocol": "openid-connect",
+            "redirectUris": [
+                "http://localhost:8080/*",
+                "http://localhost:8080/swagger-ui/oauth2-redirect.html",
+                "http://localhost:3000/*",
+                "http://localhost:5173/*"
+            ],
+            "webOrigins": [
+                "http://localhost:8080",
+                "http://localhost:3000",
+                "http://localhost:5173"
+            ],
+            "attributes": {
+                "pkce.code.challenge.method": "S256",
+                "post.logout.redirect.uris": "http://localhost:8080/*"
+            },
+            "defaultClientScopes": ["openid", "profile", "email", "roles"],
+            "optionalClientScopes": ["address", "phone", "offline_access"]
         },
         {
-          "name": "client roles",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-client-role-mapper",
-          "consentRequired": false,
-          "config": {
-            "multivalued": "true",
-            "user.attribute": "foo",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "resource_access.${client_id}.roles",
-            "jsonType.label": "String"
-          }
+            "clientId": "cinelog-backend",
+            "name": "CineLog Backend (M2M)",
+            "description": "Cliente confidencial para comunicação machine-to-machine (Client Credentials)",
+            "enabled": true,
+            "publicClient": false,
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "protocol": "openid-connect",
+            "secret": "cinelog-backend-secret",
+            "defaultClientScopes": ["openid", "profile", "email", "roles"],
+            "optionalClientScopes": []
         }
-      ]
-    }
-  ],
+    ],
 
-  "users": [
-    {
-      "username": "alice",
-      "email": "alice@cinelog.dev",
-      "firstName": "Alice",
-      "lastName": "User",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
+    "clientScopes": [
         {
-          "type": "password",
-          "value": "alice123",
-          "temporary": false
+            "name": "roles",
+            "description": "OpenID Connect scope para mapeamento de roles do realm e do cliente",
+            "protocol": "openid-connect",
+            "attributes": {
+                "include.in.token.scope": "true",
+                "display.on.consent.screen": "true"
+            },
+            "protocolMappers": [
+                {
+                    "name": "realm roles",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "multivalued": "true",
+                        "user.attribute": "foo",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "realm_access.roles",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "name": "client roles",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-client-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "multivalued": "true",
+                        "user.attribute": "foo",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "resource_access.${client_id}.roles",
+                        "jsonType.label": "String"
+                    }
+                }
+            ]
         }
-      ],
-      "realmRoles": ["USER"],
-      "requiredActions": []
+    ],
+
+    "users": [
+        {
+            "username": "alice",
+            "email": "alice@cinelog.dev",
+            "firstName": "Alice",
+            "lastName": "User",
+            "enabled": true,
+            "emailVerified": true,
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "Alice@CineLog2025!",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": ["USER"],
+            "requiredActions": []
+        },
+        {
+            "username": "admin",
+            "email": "admin@cinelog.dev",
+            "firstName": "Admin",
+            "lastName": "CineLog",
+            "enabled": true,
+            "emailVerified": true,
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "Admin@CineLog2025!",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": ["USER", "ADMIN"],
+            "requiredActions": []
+        },
+        {
+            "username": "alice-mfa",
+            "email": "alice.mfa@cinelog.dev",
+            "firstName": "Alice",
+            "lastName": "MFA",
+            "enabled": true,
+            "emailVerified": true,
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "AliceMfa@CineLog2025!",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": ["USER"],
+            "requiredActions": ["CONFIGURE_TOTP"]
+        }
+    ],
+
+    "_comment_mfa": "MFA via TOTP é opcional por padrão neste realm. Para tornar obrigatório, adicione 'CONFIGURE_TOTP' em requiredActions do usuário ou crie um browser flow com OTP obrigatório.",
+    "_comment_saml": "SAML2 SP: design definido em SamlIntegrationPreparation.java (ADR-IAM-001). Para habilitar: configure cinelog.security.saml.enabled=true e forneça os metadados do IdP.",
+
+    "browserSecurityHeaders": {
+        "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+        "xContentTypeOptions": "nosniff",
+        "xRobotsTag": "none",
+        "xFrameOptions": "SAMEORIGIN",
+        "xXSSProtection": "1; mode=block",
+        "strictTransportSecurity": "max-age=31536000; includeSubDomains"
     },
-    {
-      "username": "admin",
-      "email": "admin@cinelog.dev",
-      "firstName": "Admin",
-      "lastName": "CineLog",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "admin123",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["USER", "ADMIN"],
-      "requiredActions": []
-    },
-    {
-      "username": "alice-mfa",
-      "email": "alice.mfa@cinelog.dev",
-      "firstName": "Alice",
-      "lastName": "MFA",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "alice123mfa",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["USER"],
-      "requiredActions": ["CONFIGURE_TOTP"]
-    }
-  ],
 
-  "_comment_mfa": "MFA via TOTP é opcional por padrão neste realm. Para tornar obrigatório, adicione 'CONFIGURE_TOTP' em requiredActions do usuário ou crie um browser flow com OTP obrigatório.",
-  "_comment_saml": "SAML2 SP: design definido em SamlIntegrationPreparation.java (ADR-IAM-001). Para habilitar: configure cinelog.security.saml.enabled=true e forneça os metadados do IdP.",
+    "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername(undefined) and notEmail(undefined) and passwordHistory(5)",
 
-  "browserSecurityHeaders": {
-    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
-    "xContentTypeOptions": "nosniff",
-    "xRobotsTag": "none",
-    "xFrameOptions": "SAMEORIGIN",
-    "xXSSProtection": "1; mode=block",
-    "strictTransportSecurity": "max-age=31536000; includeSubDomains"
-  },
-
-  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername(undefined) and notEmail(undefined) and passwordHistory(5)",
-
-  "smtpServer": {},
-  "eventsEnabled": true,
-  "eventsListeners": ["jboss-logging"],
-  "adminEventsEnabled": true,
-  "adminEventsDetailsEnabled": true
+    "smtpServer": {},
+    "eventsEnabled": true,
+    "eventsListeners": ["jboss-logging"],
+    "adminEventsEnabled": true,
+    "adminEventsDetailsEnabled": true
 }

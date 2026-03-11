@@ -7,7 +7,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
-import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.List;
@@ -27,7 +26,7 @@ import java.util.stream.Stream;
  *
  * <p>
  * <strong>Exemplo de payload Keycloak:</strong>
- * 
+ *
  * <pre>
  * {
  *   "iss": "http://localhost:8180/realms/cinelog",
@@ -43,7 +42,6 @@ import java.util.stream.Stream;
  *
  * @since 2.0 (IAM – Semana 2)
  */
-@Component
 public class KeycloakJwtAuthenticationConverter
         implements Converter<Jwt, AbstractAuthenticationToken> {
 
