@@ -52,14 +52,18 @@
 ## 2. Subindo a Infraestrutura
 
 ```bash
-# Na raiz do projeto:
-docker compose up -d mysql redis kafka keycloak
+# Na raiz do projeto — serviços principais (MySQL usa key 'db', não 'mysql'):
+docker compose up -d db redis keycloak
+
+# Kafka + Zookeeper (definidos em arquivo separado):
+docker compose -f docker/docker-compose.dev.yml up -d zookeeper kafka
 ```
 
 Aguarde todos ficarem healthy:
 
 ```bash
 docker compose ps
+docker compose -f docker/docker-compose.dev.yml ps
 # Todos devem mostrar "healthy" ou "running"
 ```
 

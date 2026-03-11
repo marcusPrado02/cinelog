@@ -1,4 +1,4 @@
-version: 3.8
+version: "3.8"
 
 services:
     # MySQL Database
@@ -49,7 +49,7 @@ services:
         networks:
             - cinelog-network
         healthcheck:
-            test: [CMD, nc, -z, localhost, 2181]
+            test: [CMD, nc, -z, localhost, "2181"]
             interval: 10s
             timeout: 5s
             retries: 5
