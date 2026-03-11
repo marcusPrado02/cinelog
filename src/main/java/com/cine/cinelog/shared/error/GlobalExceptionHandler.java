@@ -86,8 +86,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
             HttpServletRequest req) {
+        String sanitizedPath = req.getRequestURI()
+                .replace('\n', ' ')
+                .replace('\r', ' ');
         log.warn("Erro de validação de payload. Path: {}, ErrorCount: {}",
-                req.getRequestURI(), ex.getBindingResult().getErrorCount());
+                sanitizedPath, ex.getBindingResult().getErrorCount());
 
         var status = HttpStatus.BAD_REQUEST;
 
