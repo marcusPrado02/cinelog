@@ -120,14 +120,16 @@ public class RecommendationService {
     public List<Media> getRecommendationsByStrategy(Long userId, String strategyName, Integer limit) {
         int validatedLimit = validateLimit(limit);
 
+        String safeStrategyName = sanitizeForLogging(strategyName);
+
         log.debug("Gerando recomendações para userId={}, strategy={}, limit={}",
-                userId, strategyName, validatedLimit);
+                userId, safeStrategyName, validatedLimit);
 
         RecommendationStrategy strategy = getStrategy(strategyName);
 
         if (!strategy.isApplicable(userId)) {
             log.warn("Estratégia {} não disponível para userId={}. Retornando lista vazia.",
-                    strategyName, userId);
+                    safeStrategyName, userId);
             return List.of();
         }
 
@@ -135,7 +137,7 @@ public class RecommendationService {
             return strategy.recommend(userId, validatedLimit);
         } catch (Exception e) {
             log.error("Erro ao gerar recomendações com estratégia {} para userId={}: {}",
-                    strategyName, userId, e.getMessage(), e);
+                    safeStrategyName, userId, e.getMessage(), e);
             return List.of();
         }
     }
@@ -205,4 +207,25 @@ public class RecommendationService {
                     ". Valores válidos: content-based, collaborative, hybrid");
         };
     }
+    /**
+     * Sanitiza valores para uso seguro em logs, removendo quebras de linha e caracteres de controle.
+     *
+     * @param input valor potencialmente fornecido pelo usuário
+     * @return valor sanitizado, seguro para logging
+     */
+    private String sanitizeForLogging(String input) {
+        if (input == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder(input.length());
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            // remove CR, LF e outros caracteres de controle que podem quebrar o formato do log
+            if (c >= 32 && c != 127) {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
 }
