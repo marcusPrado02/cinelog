@@ -119,7 +119,8 @@ public class MediaPopularityController {
             @Parameter(description = "Período (7d, 30d, all)", example = "7d") @RequestParam(defaultValue = "7d") String period,
             @Parameter(description = "Número máximo de resultados", example = "20") @RequestParam(defaultValue = "20") int limit) {
 
-        log.debug("GET /api/media/trending?period={}&limit={}", period, limit);
+        String safePeriod = period == null ? "null" : period.replace('\n', '_').replace('\r', '_');
+        log.debug("GET /api/media/trending?period={}&limit={}", safePeriod, limit);
 
         TrendingPeriod trendingPeriod = parsePeriod(period);
 
