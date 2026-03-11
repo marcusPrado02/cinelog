@@ -475,7 +475,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleBulkheadFull(BulkheadFullException ex,
             HttpServletRequest req) {
         log.warn("A10:2025 — Bulkhead cheio. Path: {}, Message: {}",
-                req.getRequestURI(), ex.getMessage());
+                sanitizeForLog(req.getRequestURI()), ex.getMessage());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
                 "Limite de chamadas concorrentes atingido. Tente novamente em instantes.");
@@ -483,6 +483,18 @@ public class GlobalExceptionHandler {
         pd.setType(TYPE_SERVICE_UNAVAILABLE);
         setCommon(pd, req, "BULKHEAD_FULL");
         return pd;
+    }
+
+    /**
+     * Sanitize potentially user-controlled strings before logging to prevent log
+     * injection (for example via CR/LF characters).
+     */
+    private static String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        // Replace CR and LF with spaces to avoid forging new log lines
+        return value.replace('\r', ' ').replace('\n', ' ');
     }
 
     // ===== A10:2025 — Tipo de argumento incompatível (ex.: String no lugar de
