@@ -78,6 +78,18 @@ public class AuthService {
     }
 
     /**
+     * Sanitiza valores controlados pelo usuário antes de registrá-los em logs,
+     * removendo quebras de linha que poderiam causar injeção de logs.
+     */
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        // Remove \r e \n para evitar criação de múltiplas linhas de log.
+        return value.replace('\r', ' ').replace('\n', ' ');
+    }
+
+    /**
      * Realiza login com proteções de A07:2025.
      *
      * @throws LockedException         se a conta está bloqueada por excesso de
@@ -100,7 +112,7 @@ public class AuthService {
         if (loginAttemptService.isBlocked(clientIp)) {
             long retryAfter = loginAttemptService.getSecondsUntilUnlock(clientIp);
             antiEnumerationService.addTimingNoise();
-            log.warn("A07:2025 — Login bloqueado por IP: ip={}", clientIp);
+            log.warn("A07:2025 — Login bloqueado por IP: ip={}", sanitizeForLog(clientIp));
             throw new AccountLockedException(retryAfter);
         }
 
