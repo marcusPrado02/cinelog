@@ -188,8 +188,9 @@ public class GlobalExceptionHandler {
         ErrorCode errorCode = ex.getErrorCode();
         HttpStatus status = resolveStatus(errorCode);
 
+        // Sanitize user-controlled request URI to prevent log injection (CWE-117)
         log.warn("Exceção de domínio. Path: {}, ErrorCode: {}, Status: {}, Message: {}",
-                req.getRequestURI(), errorCode, status, ex.getMessage());
+                sanitizeForLog(req.getRequestURI()), errorCode, status, ex.getMessage());
 
         var locale = LocaleContextHolder.getLocale();
 
@@ -349,7 +350,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleAccountLocked(AuthService.AccountLockedException ex,
             HttpServletRequest req) {
         log.warn("A07:2025 — Conta bloqueada. Path: {}, retryAfter: {}s",
-                req.getRequestURI(), ex.getRetryAfterSeconds());
+                sanitizeForLog(req.getRequestURI()), ex.getRetryAfterSeconds());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.LOCKED, ex.getMessage());
         pd.setTitle("Account Locked");
@@ -363,7 +364,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthService.PasswordPolicyException.class)
     public ProblemDetail handlePasswordPolicy(AuthService.PasswordPolicyException ex,
             HttpServletRequest req) {
-        log.info("A07:2025 — Senha rejeitada pela política. Path: {}", req.getRequestURI());
+        log.info("A07:2025 — Senha rejeitada pela política. Path: {}", sanitizeForLog(req.getRequestURI()));
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
                 "Senha não atende à política de segurança.");
@@ -379,7 +380,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleRefreshToken(RefreshTokenService.RefreshTokenException ex,
             HttpServletRequest req) {
         log.warn("A07:2025 — Refresh token inválido. Path: {}, Message: {}",
-                req.getRequestURI(), ex.getMessage());
+                sanitizeForLog(req.getRequestURI()), ex.getMessage());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
         pd.setTitle("Invalid Refresh Token");
@@ -406,7 +407,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleOptimisticLock(OptimisticLockException ex,
             HttpServletRequest req) {
         log.warn("A08:2025 — Conflito de concorrência (optimistic lock). Path: {}",
-                req.getRequestURI());
+                sanitizeForLog(req.getRequestURI()));
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "O registro foi modificado por outra operação. Tente novamente.");
@@ -421,7 +422,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleTamperDetected(IntegrityService.TamperDetectedException ex,
             HttpServletRequest req) {
         log.error("A08:2025 — ADULTERAÇÃO DETECTADA. Path: {}, Entity: {}#{}",
-                req.getRequestURI(), ex.getEntityType(), ex.getEntityId());
+                sanitizeForLog(req.getRequestURI()), ex.getEntityType(), ex.getEntityId());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
                 "Operação rejeitada por violação de integridade.");
@@ -435,7 +436,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SecureActionTokenService.InvalidActionTokenException.class)
     public ProblemDetail handleInvalidActionToken(SecureActionTokenService.InvalidActionTokenException ex,
             HttpServletRequest req) {
-        log.warn("A08:2025 — Token de ação inválido. Path: {}", req.getRequestURI());
+        log.warn("A08:2025 — Token de ação inválido. Path: {}", sanitizeForLog(req.getRequestURI()));
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         pd.setTitle("Invalid Action Token");
@@ -448,7 +449,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleBusinessLimitExceeded(BusinessLimitExceededException ex,
             HttpServletRequest req) {
         log.warn("Business limit excedido. Path: {}, Message: {}",
-                req.getRequestURI(), ex.getMessage());
+                sanitizeForLog(req.getRequestURI()), ex.getMessage());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
         pd.setTitle("Too Many Requests");
@@ -462,7 +463,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleCircuitBreakerOpen(CallNotPermittedException ex,
             HttpServletRequest req) {
         log.warn("A10:2025 — Circuit breaker OPEN. Path: {}, CB: {}",
-                req.getRequestURI(), ex.getCausingCircuitBreakerName());
+                sanitizeForLog(req.getRequestURI()), ex.getCausingCircuitBreakerName());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
                 "Serviço externo temporariamente indisponível. Tente novamente em alguns instantes.");
@@ -540,7 +541,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest req) {
         // A02: não expor detalhes do serviço externo (headers, body) ao cliente
         log.error("A10:2025 — Erro de serviço externo. Path: {}, StatusCode: {}, Message: {}",
-                req.getRequestURI(), ex.getStatusCode(), ex.getMessage());
+                sanitizeForLog(req.getRequestURI()), ex.getStatusCode(), ex.getMessage());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY,
                 "Erro na comunicação com serviço externo.");
@@ -556,7 +557,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest req) {
         // A02: não expor detalhes do banco (queries, schema, constraint) ao cliente
         log.error("A10:2025 — Erro de acesso a dados. Path: {}, ExceptionType: {}, Message: {}",
-                req.getRequestURI(), ex.getClass().getSimpleName(), ex.getMessage());
+                sanitizeForLog(req.getRequestURI()), ex.getClass().getSimpleName(), ex.getMessage());
 
         var pd = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Erro de acesso a dados. Tente novamente.");
@@ -570,7 +571,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnknown(Exception ex, HttpServletRequest req) {
         log.error("Erro inesperado não tratado. Path: {}, ExceptionType: {}, Message: {}",
-                req.getRequestURI(), ex.getClass().getSimpleName(), ex.getMessage(), ex);
+                sanitizeForLog(req.getRequestURI()), ex.getClass().getSimpleName(), ex.getMessage(), ex);
 
         var locale = LocaleContextHolder.getLocale();
         String detail = messageSource.getMessage(
