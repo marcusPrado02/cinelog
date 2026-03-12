@@ -86,6 +86,10 @@ public class AuthController {
     @Operation(summary = "Logout — revoga todos os refresh tokens do usuário")
     @ApiResponse(responseCode = "204", description = "Logout realizado")
     public ResponseEntity<Void> logout(@AuthenticationPrincipal CinelogUserDetails user) {
+        if (user == null) {
+            // Keycloak/external JWT — sem refresh tokens locais para revogar
+            return ResponseEntity.noContent().build();
+        }
         authService.logout(user.getUserId());
         return ResponseEntity.noContent().build();
     }

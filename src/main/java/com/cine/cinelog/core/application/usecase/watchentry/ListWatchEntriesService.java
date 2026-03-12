@@ -22,7 +22,7 @@ import java.util.Map;
 /**
  * Serviço responsável por listar entradas de visualização com filtros e
  * paginação.
- * 
+ *
  * <p>
  * Permite listar o histórico de visualizações de um usuário com os seguintes
  * filtros:
@@ -32,7 +32,7 @@ import java.util.Map;
  * <li>Rating mínimo</li>
  * <li>Período de datas (from/to)</li>
  * </ul>
- * 
+ *
  * @since 1.0
  * @see ListWatchEntriesUseCase
  * @see WatchEntryRepositoryPort
@@ -48,7 +48,7 @@ public class ListWatchEntriesService implements ListWatchEntriesUseCase {
 
     /**
      * Lista as entradas de visualização de um usuário com filtros opcionais.
-     * 
+     *
      * @param userId    o identificador do usuário (obrigatório)
      * @param mediaId   filtro opcional por mídia específica
      * @param episodeId filtro opcional por episódio específico
@@ -61,7 +61,7 @@ public class ListWatchEntriesService implements ListWatchEntriesUseCase {
      */
     @Override
     @Observed(name = "watchentry.list", contextualName = "list-watchentries-service")
-    @Cacheable(value = "watchEntriesPage", key = "#pageQuery.toString()")
+    @Cacheable(value = "watchEntriesPage", key = "#userId + '_' + #mediaId + '_' + #episodeId + '_' + #minRating + '_' + #from + '_' + #to + '_' + #pageable.pageNumber + '_' + #pageable.pageSize")
     @Measured("cinelog.service.watchentry.list")
     @AlertIfSlow(thresholdMs = 1000)
     public PageResult<WatchEntry> execute(Long userId, Long mediaId, Long episodeId, Integer minRating,

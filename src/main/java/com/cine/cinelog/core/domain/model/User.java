@@ -9,14 +9,14 @@ import lombok.Setter;
 
 /**
  * Representa um usuário no domínio do sistema.
- * 
+ *
  * <p>
  * Esta classe encapsula os conceitos e regras de negócio relacionados a
  * usuários,
  * incluindo informações básicas de identificação e autenticação.
  * Contém a lógica de domínio pura, independente de frameworks e infraestrutura.
  * </p>
- * 
+ *
  * @since 1.0
  */
 @Getter
@@ -29,8 +29,10 @@ public class User extends Auditable {
     private String email;
 
     public User updateFrom(User updated) {
-        this.name = updated.getName();
-        this.email = updated.getEmail();
+        if (updated.getName() != null)
+            this.name = updated.getName();
+        if (updated.getEmail() != null)
+            this.email = updated.getEmail();
         return this;
     }
 

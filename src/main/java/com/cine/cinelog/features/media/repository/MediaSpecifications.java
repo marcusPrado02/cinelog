@@ -8,12 +8,15 @@ import com.cine.cinelog.core.application.query.MediaSearchCriteria;
 import com.cine.cinelog.core.domain.enums.MediaType;
 import com.cine.cinelog.features.media.persistence.entity.MediaEntity;
 import jakarta.persistence.criteria.JoinType;
+
 /**
  * Classe de configuração Spring para gerenciamento de mediaspecifications.
- * 
- * <p>Define beans e configurações necessárias para o funcionamento
- * adequado da aplicação.</p>
- * 
+ *
+ * <p>
+ * Define beans e configurações necessárias para o funcionamento
+ * adequado da aplicação.
+ * </p>
+ *
  * @since 1.0
  */
 
@@ -38,10 +41,12 @@ public final class MediaSpecifications {
             if (text == null || text.isBlank()) {
                 return null;
             }
-            String like = "%" + text.toLowerCase() + "%";
+            // MySQL LIKE é case-insensitive por padrão; evitar cb.lower() no campo
+            // overview pois é @Lob/CLOB — lower() rejeita CLOB no Hibernate/MySQL.
+            String like = "%" + text + "%";
             return cb.or(
-                    cb.like(cb.lower(root.get("title")), like),
-                    cb.like(cb.lower(root.get("overview")), like));
+                    cb.like(root.get("title"), like),
+                    cb.like(root.get("overview"), like));
         };
     }
 

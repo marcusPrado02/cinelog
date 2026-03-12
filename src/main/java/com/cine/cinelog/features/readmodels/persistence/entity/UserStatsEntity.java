@@ -1,6 +1,8 @@
 package com.cine.cinelog.features.readmodels.persistence.entity;
 
 import jakarta.persistence.*;
+import java.io.Serial;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,7 +35,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "user_stats")
-public class UserStatsEntity {
+public class UserStatsEntity implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     @Id
     @Column(name = "user_id", nullable = false)

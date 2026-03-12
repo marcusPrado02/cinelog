@@ -2,8 +2,13 @@ package com.cine.cinelog.features.media.persistence.entity;
 
 import jakarta.persistence.*;
 
+import org.hibernate.annotations.Formula;
+
 import com.cine.cinelog.core.domain.enums.MediaType;
+import com.cine.cinelog.features.genres.persistence.entity.GenreEntity;
 import com.cine.cinelog.shared.persistence.AuditableEntity;
+
+import java.util.List;
 
 /**
  * Entidade JPA que representa a tabela "media" no banco de dados.
@@ -63,6 +68,13 @@ public class MediaEntity extends AuditableEntity {
 
     @Column(name = "tmdb_id")
     private Long tmdbId;
+
+    @Formula("(SELECT AVG(we.rating) FROM watch_entry we WHERE we.media_id = id)")
+    private Double averageRating;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "media_genres", joinColumns = @JoinColumn(name = "media_id"), inverseJoinColumns = @JoinColumn(name = "genre_id"))
+    private List<GenreEntity> genres;
 
     public Long getId() {
         return id;
@@ -142,5 +154,17 @@ public class MediaEntity extends AuditableEntity {
 
     public void setTmdbId(Long tmdbId) {
         this.tmdbId = tmdbId;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public List<GenreEntity> getGenres() {
+        return genres;
+    }
+
+    public void setGenres(List<GenreEntity> genres) {
+        this.genres = genres;
     }
 }

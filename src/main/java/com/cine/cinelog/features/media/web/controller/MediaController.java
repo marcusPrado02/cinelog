@@ -53,12 +53,12 @@ import java.util.Map;
  * séries).
  * Fornece endpoints para criar, atualizar, buscar, listar, remover, pesquisar e
  * recomendar mídias.
- * 
+ *
  * <p>
  * Este controlador implementa operações CRUD completas além de funcionalidades
  * avançadas como busca com filtros, recomendações personalizadas e paginação.
  * </p>
- * 
+ *
  * @since 1.0
  * @see Media
  * @see MediaMapper
@@ -187,7 +187,7 @@ public class MediaController {
     }
 
     @Operation(summary = "Busca avançada de mídias", description = "Permite filtrar por texto, tipo, ano, nota e gêneros, com paginação")
-    @GetMapping("/searchUC")
+    @PostMapping("/search")
     @Measured("cinelog.controller.search_media")
     @AlertIfSlow(thresholdMs = 1000, metricName = "cinelog.slow_search")
     public ResponseEntity<PageResponse<MediaResponse>> searchUC(@Valid @RequestBody MediaSearchRequest req) {

@@ -1,7 +1,10 @@
 package com.cine.cinelog.core.application.usecase.watchentry;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
+
+import com.cine.cinelog.core.domain.model.WatchEntryStatusType;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
@@ -99,13 +102,24 @@ public class UpdateWatchEntryService implements UpdateWatchEntryUseCase {
             log.debug("Watch entry encontrada. Aplicando atualizações");
             var updated = current.updateFrom(entry);
 
+            // Se o entry mesclado ainda está em PLANNING mas já possui rating ou watchedAt,
+            // auto-transiciona para COMPLETED (mesma lógica do CreateWatchEntryService)
+            if ((updated.getRating() != null || updated.getWatchedAt() != null)
+                    && updated.getStatusType() == WatchEntryStatusType.PLANNING) {
+                LocalDate savedWatchedAt = updated.getWatchedAt();
+                updated.startWatching(); // PLANNING → WATCHING
+                updated.markAsCompleted(null); // WATCHING → COMPLETED
+                if (savedWatchedAt != null)
+                    updated.setWatchedAt(savedWatchedAt);
+            }
+
             if (isRatingOperation && updated.getRating() != null) {
                 log.debug("Validando rating. Rating: {}", updated.getRating());
                 ratingPolicy.validateCanRate(updated, updated.getRating(), Instant.now());
             }
 
             log.debug("Validando políticas de atualização");
-            watchPolicy.validateUpdate(entry);
+            watchPolicy.validateUpdate(updated);
             referencePolicy.validateUpdate(current, updated);
 
             updated.applyRating(updated.getRating(), updated.getComment());

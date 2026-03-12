@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -87,6 +88,19 @@ public class CreateWatchEntryService implements CreateWatchEntryUseCase {
                         "episodeId", entry.getEpisodeId() != null ? entry.getEpisodeId() : "null"));
 
         try {
+            // Auto-transição de estado: se rating ou watchedAt informados, a entrada
+            // representa uma visualização já concluída → transicionar PLANNING → COMPLETED
+            // antes da validação de política (que usa setRating() state-aware).
+            if (entry.getRating() != null || entry.getWatchedAt() != null) {
+                LocalDate userWatchedAt = entry.getWatchedAt();
+                entry.startWatching();       // PLANNING → WATCHING
+                entry.markAsCompleted(null); // WATCHING → COMPLETED (watchedAt = today)
+                if (userWatchedAt != null) {
+                    entry.setWatchedAt(userWatchedAt); // preserva data fornecida pelo usuário
+                }
+                log.debug("Watch entry auto-transicionada para COMPLETED (rating/watchedAt presentes)");
+            }
+
             // Regras de domínio (R1–R4)
             log.debug("Validando políticas de domínio para watch entry");
             policy.validateCreate(entry);
