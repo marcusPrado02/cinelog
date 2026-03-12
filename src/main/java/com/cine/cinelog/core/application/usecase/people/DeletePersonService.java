@@ -11,16 +11,18 @@ import com.cine.cinelog.shared.observability.aop.SecureOperation;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por excluir pessoas do sistema.
- * 
+ *
  * <p>
  * A exclusão pode falhar se houver créditos (participações em mídias)
  * associados à pessoa,
  * garantindo integridade referencial.
- * 
+ *
  * @since 1.0
  * @see DeletePersonUseCase
  * @see PersonRepositoryPort
@@ -37,7 +39,7 @@ public class DeletePersonService implements DeletePersonUseCase {
 
     /**
      * Executa a exclusão de uma pessoa do sistema.
-     * 
+     *
      * @param id o identificador único da pessoa a ser excluída
      */
     @Override
@@ -45,6 +47,10 @@ public class DeletePersonService implements DeletePersonUseCase {
     @Measured("cinelog.service.person.delete")
     @AuditableAction(module = "PERSON", action = "DELETE", description = "Exclusão de pessoa")
     @SecureOperation(module = "PERSON", value = "CONTENT_ADMIN")
+    @Caching(evict = {
+            @CacheEvict(value = "peoplePage", allEntries = true),
+            @CacheEvict(value = "personById", key = "#id")
+    })
     public void execute(Long id) {
         log.debug("Iniciando exclusão de pessoa. ID: {}", id);
         try {

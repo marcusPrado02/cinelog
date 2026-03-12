@@ -14,6 +14,7 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -78,6 +79,7 @@ public class CreateWatchEntryService implements CreateWatchEntryUseCase {
     @Observed(name = "watchentry.create", contextualName = "create-watchentry-service")
     @Measured("cinelog.service.watchentry.create")
     @AuditableAction(module = "WATCH_ENTRY", action = "CREATE", description = "Registro de visualização")
+    @CacheEvict(value = "watchEntriesPage", allEntries = true)
     public WatchEntry execute(WatchEntry entry) {
         log.debug("Iniciando criação de watch entry. Parâmetros: {}",
                 Map.of("userId", entry.getUserId(),

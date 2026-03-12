@@ -13,15 +13,17 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por atualizar dados de episódios existentes.
- * 
+ *
  * <p>
  * Permite alterar informações do episódio como nome, número, temporada
  * associada e data de exibição.
- * 
+ *
  * @since 1.0
  * @see UpdateEpisodeUseCase
  * @see EpisodeRepositoryPort
@@ -38,7 +40,7 @@ public class UpdateEpisodeService implements UpdateEpisodeUseCase {
 
     /**
      * Executa a atualização de um episódio existente.
-     * 
+     *
      * @param id      o identificador único do episódio a ser atualizado
      * @param episode os novos dados do episódio
      * @return o episódio atualizado e persistido
@@ -49,6 +51,10 @@ public class UpdateEpisodeService implements UpdateEpisodeUseCase {
     @Observed(name = "episode.update", contextualName = "update-episode-service")
     @Measured("cinelog.service.episode.update")
     @AuditableAction(module = "EPISODE", action = "UPDATE", description = "Atualização de episódio")
+    @Caching(evict = {
+            @CacheEvict(value = "episodesPage", allEntries = true),
+            @CacheEvict(value = "episodeById", key = "#id")
+    })
     public Episode execute(Long id, Episode episode) {
         log.debug("Iniciando atualização de episódio. ID: {}", id);
 

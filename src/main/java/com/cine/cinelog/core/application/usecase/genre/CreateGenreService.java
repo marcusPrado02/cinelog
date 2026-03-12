@@ -6,6 +6,7 @@ import com.cine.cinelog.core.domain.model.Genre;
 import com.cine.cinelog.shared.observability.aop.Measured;
 
 import io.micrometer.observation.annotation.Observed;
+import org.springframework.cache.annotation.CacheEvict;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,18 +15,18 @@ import java.util.Map;
 
 /**
  * Serviço responsável por criar novos gêneros de mídia no sistema.
- * 
+ *
  * <p>
  * Este caso de uso permite cadastrar novos gêneros que podem ser associados
  * a mídias (filmes e séries), como Ação, Drama, Comédia, Terror, etc.
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link CreateGenreUseCase} e utilizando a porta de saída
  * {@link GenreRepositoryPort}
  * para persistência dos dados.
- * 
+ *
  * @since 1.0
  * @see CreateGenreUseCase
  * @see GenreRepositoryPort
@@ -43,10 +44,10 @@ public class CreateGenreService implements CreateGenreUseCase {
 
     /**
      * Executa a criação de um novo gênero no sistema.
-     * 
+     *
      * @param genre o gênero a ser criado, contendo o nome
      * @return o gênero criado e persistido, com ID gerado
-     * 
+     *
      * @Observed cria um span no distributed tracing (Tempo) para rastrear esta
      *           operação
      * @Measured registra timing da operação para métricas de performance
@@ -54,6 +55,7 @@ public class CreateGenreService implements CreateGenreUseCase {
     @Override
     @Observed(name = "genre.create", contextualName = "create-genre-service")
     @Measured("cinelog.service.genre.create")
+    @CacheEvict(value = "genresPage", allEntries = true)
     public Genre execute(Genre genre) {
         log.debug("Iniciando criação de gênero no service. Dados: {}",
                 Map.of("name", genre.getName()));

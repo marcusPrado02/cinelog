@@ -12,6 +12,7 @@ import com.cine.cinelog.shared.observability.aop.SecureOperation;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
@@ -79,6 +80,7 @@ public class CreateUserService implements CreateUserUseCase {
     @Measured("cinelog.service.user.create")
     @AuditableAction(module = "USER", action = "CREATE", description = "Criação de novo usuário no sistema")
     @SecureOperation(module = "USER", value = "USER_ADMIN")
+    @CacheEvict(value = "usersPage", allEntries = true)
     public User execute(User user) {
         log.debug("Iniciando execute. Parâmetros: {}", Map.of("name", user.getName(), "email", user.getEmail()));
 

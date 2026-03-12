@@ -8,22 +8,24 @@ import com.cine.cinelog.shared.observability.aop.SecureOperation;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por excluir um gênero do sistema.
- * 
+ *
  * <p>
  * Remove um gênero cadastrado. Note que a exclusão pode falhar
  * se houver mídias associadas ao gênero (integridade referencial
  * gerenciada pela camada de persistência).
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link DeleteGenreUseCase} e utilizando a porta de saída
  * {@link GenreRepositoryPort}.
- * 
+ *
  * @since 1.0
  * @see DeleteGenreUseCase
  * @see GenreRepositoryPort
@@ -41,7 +43,7 @@ public class DeleteGenreService implements DeleteGenreUseCase {
 
     /**
      * Executa a exclusão de um gênero do sistema.
-     * 
+     *
      * @param id o identificador único do gênero a ser excluído
      * @throws org.springframework.dao.DataIntegrityViolationException se houver
      *                                                                 mídias
@@ -53,6 +55,10 @@ public class DeleteGenreService implements DeleteGenreUseCase {
     @Measured("cinelog.service.genre.delete")
     @AuditableAction(module = "GENRE", action = "DELETE", description = "Exclusão de gênero")
     @SecureOperation(module = "GENRE", value = "CONTENT_ADMIN")
+    @Caching(evict = {
+            @CacheEvict(value = "genresPage", allEntries = true),
+            @CacheEvict(value = "genreById", key = "#id")
+    })
     public void execute(Long id) {
         log.debug("Iniciando exclusão de gênero no service. ID: {}", id);
 

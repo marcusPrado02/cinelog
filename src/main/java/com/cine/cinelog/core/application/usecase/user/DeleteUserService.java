@@ -12,13 +12,15 @@ import com.cine.cinelog.shared.observability.aop.SecureOperation;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
 /**
  * Serviço responsável por excluir um usuário do sistema.
- * 
+ *
  * <p>
  * Este caso de uso coordena a exclusão de um usuário, aplicando validações
  * de integridade referencial antes de permitir a remoção:
@@ -27,7 +29,7 @@ import java.util.Map;
  * <li>Valida se o usuário pode ser excluído (verifica dependências)</li>
  * <li>Remove o usuário do repositório se todas as validações passarem</li>
  * </ul>
- * 
+ *
  * <p>
  * As políticas de deleção verificam:
  * <ul>
@@ -35,18 +37,18 @@ import java.util.Map;
  * <li>Se existem itens na watchlist do usuário</li>
  * <li>Outras dependências que impedem a exclusão</li>
  * </ul>
- * 
+ *
  * <p>
  * O serviço realiza logging detalhado do processo de exclusão
  * para facilitar auditoria e troubleshooting.
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link DeleteUserUseCase} e utilizando a porta de saída
  * {@link UserRepositoryPort}
  * para persistência dos dados.
- * 
+ *
  * @since 1.0
  * @see DeleteUserUseCase
  * @see UserDeletionPolicy
@@ -67,11 +69,11 @@ public class DeleteUserService implements DeleteUserUseCase {
 
     /**
      * Executa a exclusão de um usuário do sistema.
-     * 
+     *
      * <p>
      * A exclusão é bloqueada se houver dependências (visualizações, watchlist),
      * garantindo a integridade referencial dos dados.
-     * 
+     *
      * @param id o identificador único do usuário a ser excluído
      * @throws DomainException com código {@link ErrorCode#USER_NOT_FOUND} se o
      *                         usuário não existir
@@ -83,6 +85,10 @@ public class DeleteUserService implements DeleteUserUseCase {
     @Measured("cinelog.service.user.delete")
     @AuditableAction(module = "USER", action = "DELETE", description = "Exclusão de usuário do sistema")
     @SecureOperation(module = "USER", value = "USER_ADMIN")
+    @Caching(evict = {
+            @CacheEvict(value = "usersPage", allEntries = true),
+            @CacheEvict(value = "userById", key = "#id")
+    })
     public void execute(Long id) {
         log.debug("Iniciando execute. Parâmetros: {}", Map.of("id", id));
 

@@ -13,14 +13,16 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por atualizar dados de temporadas existentes.
- * 
+ *
  * <p>
  * Permite alterar informações como número da temporada, nome e série associada.
- * 
+ *
  * @since 1.0
  * @see UpdateSeasonUseCase
  * @see SeasonRepositoryPort
@@ -37,7 +39,7 @@ public class UpdateSeasonService implements UpdateSeasonUseCase {
 
     /**
      * Executa a atualização de uma temporada existente.
-     * 
+     *
      * @param id     o identificador único da temporada a ser atualizada
      * @param season os novos dados da temporada
      * @return a temporada atualizada e persistida
@@ -48,6 +50,10 @@ public class UpdateSeasonService implements UpdateSeasonUseCase {
     @Observed(name = "season.update", contextualName = "update-season-service")
     @Measured("cinelog.service.season.update")
     @AuditableAction(module = "SEASON", action = "UPDATE", description = "Atualização de temporada")
+    @Caching(evict = {
+            @CacheEvict(value = "seasonsPage", allEntries = true),
+            @CacheEvict(value = "seasonById", key = "#id")
+    })
     public Season execute(Long id, Season season) {
         log.debug("Iniciando atualização de temporada. ID: {}", id);
 

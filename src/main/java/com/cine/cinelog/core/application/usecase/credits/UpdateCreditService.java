@@ -13,15 +13,17 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por atualizar créditos existentes.
- * 
+ *
  * <p>
  * Permite alterar a função (role) de uma pessoa em uma mídia,
  * ou modificar qual pessoa ou mídia está associada ao crédito.
- * 
+ *
  * @since 1.0
  * @see UpdateCreditUseCase
  * @see CreditRepositoryPort
@@ -38,7 +40,7 @@ public class UpdateCreditService implements UpdateCreditUseCase {
 
     /**
      * Executa a atualização de um crédito existente.
-     * 
+     *
      * @param id     o identificador único do crédito a ser atualizado
      * @param credit os novos dados (função, pessoa ou mídia)
      * @return o crédito atualizado e persistido
@@ -49,6 +51,10 @@ public class UpdateCreditService implements UpdateCreditUseCase {
     @Observed(name = "credit.update", contextualName = "update-credit-service")
     @Measured("cinelog.service.credit.update")
     @AuditableAction(module = "CREDIT", action = "UPDATE", description = "Atualização de crédito")
+    @Caching(evict = {
+            @CacheEvict(value = "creditsPage", allEntries = true),
+            @CacheEvict(value = "creditById", key = "#id")
+    })
     public Credit execute(Long id, Credit credit) {
         log.debug("Iniciando atualização de crédito. ID: {}", id);
 

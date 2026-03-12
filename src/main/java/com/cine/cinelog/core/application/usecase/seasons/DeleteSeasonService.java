@@ -15,15 +15,17 @@ import com.cine.cinelog.shared.observability.aop.SecureOperation;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por excluir temporadas do sistema.
- * 
+ *
  * <p>
  * Valida se a temporada pode ser excluída antes de removê-la.
  * A exclusão é bloqueada se houver episódios associados à temporada.
- * 
+ *
  * @since 1.0
  * @see DeleteSeasonUseCase
  * @see SeasonRepositoryPort
@@ -43,7 +45,7 @@ public class DeleteSeasonService implements DeleteSeasonUseCase {
 
     /**
      * Executa a exclusão de uma temporada.
-     * 
+     *
      * @param id o identificador único da temporada a ser excluída
      * @throws DomainException com código {@link ErrorCode#SEASON_NOT_FOUND} se a
      *                         temporada não existir
@@ -54,6 +56,10 @@ public class DeleteSeasonService implements DeleteSeasonUseCase {
     @Measured("cinelog.service.season.delete")
     @AuditableAction(module = "SEASON", action = "DELETE", description = "Exclusão de temporada")
     @SecureOperation(module = "SEASON", value = "CONTENT_ADMIN")
+    @Caching(evict = {
+            @CacheEvict(value = "seasonsPage", allEntries = true),
+            @CacheEvict(value = "seasonById", key = "#id")
+    })
     public void execute(Long id) {
         log.debug("Iniciando exclusão de temporada. ID: {}", id);
         try {

@@ -17,16 +17,17 @@ import com.cine.cinelog.shared.security.AuthenticatedUser;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 
 /**
  * Serviço responsável por adicionar mídias à watchlist (lista de desejo) do
  * usuário autenticado.
- * 
+ *
  * <p>
  * A watchlist permite aos usuários marcarem filmes e séries que desejam
  * assistir no futuro.
  * Cada item é vinculado ao usuário que o adicionou e à mídia desejada.
- * 
+ *
  * <p>
  * Validações aplicadas:
  * <ul>
@@ -36,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * vezes</li>
  * <li>Registra automaticamente a data de adição</li>
  * </ul>
- * 
+ *
  * @since 1.0
  * @see AddToWatchlistUseCase
  * @see WatchlistRepositoryPort
@@ -59,7 +60,7 @@ public class AddToWatchlistService implements AddToWatchlistUseCase {
 
     /**
      * Adiciona uma mídia à watchlist do usuário atual.
-     * 
+     *
      * @param command comando contendo o ID da mídia a ser adicionada
      * @return o item da watchlist criado e persistido
      * @throws DuplicateException se o usuário já tiver essa mídia na watchlist
@@ -70,6 +71,7 @@ public class AddToWatchlistService implements AddToWatchlistUseCase {
     @Observed(name = "watchlist.add", contextualName = "add-to-watchlist-service")
     @Measured("cinelog.service.watchlist.add")
     @AuditableAction(module = "WATCHLIST", action = "ADD", description = "Adicionar mídia à watchlist")
+    @CacheEvict(value = "watchlistPage", allEntries = true)
     public WatchlistItem add(AddCommand command) {
         AuthenticatedUser user = currentUser.getRequiredCurrentUser();
 

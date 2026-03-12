@@ -13,15 +13,16 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por criar novas temporadas de séries.
- * 
+ *
  * <p>
  * Uma temporada representa um conjunto de episódios de uma série,
  * tipicamente lançados em um mesmo período.
- * 
+ *
  * <p>
  * Este serviço aplica validações rigorosas:
  * <ul>
@@ -31,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  * uma série</li>
  * <li>Valida limite máximo de temporadas por série</li>
  * </ul>
- * 
+ *
  * @since 1.0
  * @see CreateSeasonUseCase
  * @see SeasonRepositoryPort
@@ -55,7 +56,7 @@ public class CreateSeasonService implements CreateSeasonUseCase {
 
     /**
      * Executa a criação de uma nova temporada.
-     * 
+     *
      * @param season a temporada a ser criada, associada a uma série
      * @return a temporada criada e persistida, com ID gerado
      * @throws DomainException se a série não for do tipo SERIES ou se violar regras
@@ -65,6 +66,7 @@ public class CreateSeasonService implements CreateSeasonUseCase {
     @Observed(name = "season.create", contextualName = "create-season-service")
     @Measured("cinelog.service.season.create")
     @AuditableAction(module = "SEASON", action = "CREATE", description = "Criação de nova temporada de série")
+    @CacheEvict(value = "seasonsPage", allEntries = true)
     public Season execute(Season season) {
         log.debug("Iniciando criação de temporada. Parâmetros: {}",
                 Map.of("seasonNumber", season.getSeasonNumber(),

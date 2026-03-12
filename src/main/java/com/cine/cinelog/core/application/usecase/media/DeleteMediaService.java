@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.usecase.media;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cine.cinelog.core.application.ports.in.media.DeleteMediaUseCase;
@@ -19,7 +21,7 @@ import java.util.Map;
 
 /**
  * Serviço responsável por excluir uma mídia do sistema.
- * 
+ *
  * <p>
  * Este caso de uso coordena a exclusão de uma mídia, aplicando validações
  * de integridade referencial antes de permitir a remoção:
@@ -28,7 +30,7 @@ import java.util.Map;
  * <li>Valida se a mídia pode ser excluída (verifica dependências)</li>
  * <li>Remove a mídia do repositório se todas as validações passarem</li>
  * </ul>
- * 
+ *
  * <p>
  * As políticas de deleção verificam:
  * <ul>
@@ -37,14 +39,14 @@ import java.util.Map;
  * <li>Se existem registros de visualização (watch entries) associados</li>
  * <li>Se a mídia está em watchlists de usuários</li>
  * </ul>
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link DeleteMediaUseCase} e utilizando a porta de saída
  * {@link MediaRepositoryPort}
  * para persistência dos dados.
- * 
+ *
  * @since 1.0
  * @see DeleteMediaUseCase
  * @see MediaDeletionPolicy
@@ -66,11 +68,11 @@ public class DeleteMediaService implements DeleteMediaUseCase {
 
     /**
      * Executa a exclusão de uma mídia do sistema.
-     * 
+     *
      * <p>
      * A exclusão é bloqueada se houver dependências (temporadas, créditos,
      * visualizações ou watchlists), garantindo a integridade referencial dos dados.
-     * 
+     *
      * @param id o identificador único da mídia a ser excluída
      * @throws DomainException com código {@link ErrorCode#MEDIA_NOT_FOUND} se a
      *                         mídia não existir
@@ -82,6 +84,10 @@ public class DeleteMediaService implements DeleteMediaUseCase {
     @Measured("cinelog.service.media.delete")
     @AuditableAction(module = "MEDIA", action = "DELETE", description = "Exclusão de mídia do catálogo")
     @SecureOperation(module = "MEDIA", value = "MEDIA_ADMIN")
+    @Caching(evict = {
+            @CacheEvict(value = "mediaPage", allEntries = true),
+            @CacheEvict(value = "mediaById", key = "#id")
+    })
     public void execute(Long id) {
         log.debug("Iniciando exclusão de mídia no service. ID: {}", id);
 

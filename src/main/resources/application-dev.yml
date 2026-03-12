@@ -53,6 +53,8 @@ logging:
 # e os delega ao BearerTokenAuthenticationFilter.
 # ─────────────────────────────────────────────────────────────────
 spring:
+    liquibase:
+        contexts: dev
     security:
         oauth2:
             resourceserver:

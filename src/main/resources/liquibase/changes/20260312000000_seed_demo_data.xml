@@ -1,0 +1,1029 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SEED DATA — Massa de demonstração para desenvolvimento e testes.
+         Contexto: dev (só roda quando spring.liquibase.contexts=dev)
+
+         Referencia dados já existentes no DB via TMDb sync:
+         - Filmes: IDs 1-82  (82 filmes)
+         - Séries: IDs 83-122 (40 séries)
+         - Pessoas: IDs 185-282 (diretores/showrunners)
+         - Temporadas/Episódios: já existem
+
+         Este seed adiciona:
+         - Gêneros (16)
+         - Créditos (diretores → mídias)
+         - Media_genres (associações gênero → mídia)
+         - Watch entries, watchlists, user_stats, media_popularity
+
+         Usuários seed (IDs 10-14) já inseridos de run anterior.
+         Senha padrão: Cinelog2025
+         ═══════════════════════════════════════════════════════════════════ -->
+
+    <!-- ────────────────────────── USERS (idempotente) ────────────────────────── -->
+    <changeSet id="seed-users" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM users WHERE email = 'demo@cinelog.dev'</sqlCheck>
+        </preConditions>
+        <comment>Usuários de demonstração (senha padrão: Cinelog2025)</comment>
+        <insert tableName="users">
+            <column name="id" valueNumeric="10" />
+            <column name="name" value="Demo Admin" />
+            <column name="email" value="demo@cinelog.dev" />
+            <column name="password_hash"
+                value="$2b$12$Nga421.1L8X5Tjvlph07nef3O6AVvqJtqK/SIQw4k7wABz2buYlIe" />
+            <column name="role" value="ADMIN" />
+            <column name="enabled" valueBoolean="true" />
+        </insert>
+        <insert tableName="users">
+            <column name="id" valueNumeric="11" />
+            <column name="name" value="Ana Cinéfila" />
+            <column name="email" value="ana@cinelog.dev" />
+            <column name="password_hash"
+                value="$2b$12$Nga421.1L8X5Tjvlph07nef3O6AVvqJtqK/SIQw4k7wABz2buYlIe" />
+            <column name="role" value="USER" />
+            <column name="enabled" valueBoolean="true" />
+        </insert>
+        <insert tableName="users">
+            <column name="id" valueNumeric="12" />
+            <column name="name" value="Bruno Maratonista" />
+            <column name="email" value="bruno@cinelog.dev" />
+            <column name="password_hash"
+                value="$2b$12$Nga421.1L8X5Tjvlph07nef3O6AVvqJtqK/SIQw4k7wABz2buYlIe" />
+            <column name="role" value="USER" />
+            <column name="enabled" valueBoolean="true" />
+        </insert>
+        <insert tableName="users">
+            <column name="id" valueNumeric="13" />
+            <column name="name" value="Carla Reviews" />
+            <column name="email" value="carla@cinelog.dev" />
+            <column name="password_hash"
+                value="$2b$12$Nga421.1L8X5Tjvlph07nef3O6AVvqJtqK/SIQw4k7wABz2buYlIe" />
+            <column name="role" value="USER" />
+            <column name="enabled" valueBoolean="true" />
+        </insert>
+        <insert tableName="users">
+            <column name="id" valueNumeric="14" />
+            <column name="name" value="Diego Casual" />
+            <column name="email" value="diego@cinelog.dev" />
+            <column name="password_hash"
+                value="$2b$12$Nga421.1L8X5Tjvlph07nef3O6AVvqJtqK/SIQw4k7wABz2buYlIe" />
+            <column name="role" value="USER" />
+            <column name="enabled" valueBoolean="true" />
+        </insert>
+    </changeSet>
+
+    <!-- ────────────────────────── GENRES ────────────────────────── -->
+    <changeSet id="seed-genres" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM genres WHERE name = 'Drama'</sqlCheck>
+        </preConditions>
+        <comment>Gêneros padrão (IDs 50+ para evitar colisão)</comment>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="50" />
+            <column name="name" value="Action" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="51" />
+            <column name="name" value="Adventure" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="52" />
+            <column name="name" value="Comedy" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="53" />
+            <column name="name" value="Drama" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="54" />
+            <column name="name" value="Science Fiction" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="55" />
+            <column name="name" value="Horror" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="56" />
+            <column name="name" value="Romance" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="57" />
+            <column name="name" value="Thriller" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="58" />
+            <column name="name" value="Animation" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="59" />
+            <column name="name" value="Documentary" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="60" />
+            <column name="name" value="Crime" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="61" />
+            <column name="name" value="Fantasy" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="62" />
+            <column name="name" value="Musical" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="63" />
+            <column name="name" value="War" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="64" />
+            <column name="name" value="Western" />
+        </insert>
+        <insert tableName="genres">
+            <column name="id" valueNumeric="65" />
+            <column name="name" value="Mystery" />
+        </insert>
+    </changeSet>
+
+    <!-- ────────────────────────── MEDIA_GENRES ────────────────────────── -->
+    <changeSet id="seed-media-genres" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM media_genres WHERE media_id = 1</sqlCheck>
+        </preConditions>
+        <comment>Associações mídia → gêneros</comment>
+        <!-- The Godfather (1): Drama, Crime -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="1" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="1" />
+            <column name="genre_id" valueNumeric="60" />
+        </insert>
+        <!-- The Dark Knight (3): Action, Drama, Crime -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="3" />
+            <column name="genre_id" valueNumeric="50" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="3" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="3" />
+            <column name="genre_id" valueNumeric="60" />
+        </insert>
+        <!-- Pulp Fiction (4): Crime, Drama -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="4" />
+            <column name="genre_id" valueNumeric="60" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="4" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <!-- LotR Fellowship (6): Fantasy, Adventure, Action -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="6" />
+            <column name="genre_id" valueNumeric="61" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="6" />
+            <column name="genre_id" valueNumeric="51" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="6" />
+            <column name="genre_id" valueNumeric="50" />
+        </insert>
+        <!-- Inception (8): Sci-Fi, Action, Thriller -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="8" />
+            <column name="genre_id" valueNumeric="54" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="8" />
+            <column name="genre_id" valueNumeric="50" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="8" />
+            <column name="genre_id" valueNumeric="57" />
+        </insert>
+        <!-- Fight Club (9): Drama, Thriller -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="9" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="9" />
+            <column name="genre_id" valueNumeric="57" />
+        </insert>
+        <!-- The Matrix (11): Action, Sci-Fi -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="11" />
+            <column name="genre_id" valueNumeric="50" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="11" />
+            <column name="genre_id" valueNumeric="54" />
+        </insert>
+        <!-- Interstellar (15): Sci-Fi, Drama, Adventure -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="15" />
+            <column name="genre_id" valueNumeric="54" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="15" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="15" />
+            <column name="genre_id" valueNumeric="51" />
+        </insert>
+        <!-- Parasite (16): Drama, Thriller, Comedy -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="16" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="16" />
+            <column name="genre_id" valueNumeric="57" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="16" />
+            <column name="genre_id" valueNumeric="52" />
+        </insert>
+        <!-- Spirited Away (17): Animation, Fantasy, Adventure -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="17" />
+            <column name="genre_id" valueNumeric="58" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="17" />
+            <column name="genre_id" valueNumeric="61" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="17" />
+            <column name="genre_id" valueNumeric="51" />
+        </insert>
+        <!-- City of God (18): Crime, Drama -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="18" />
+            <column name="genre_id" valueNumeric="60" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="18" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <!-- Pan's Labyrinth (43): Fantasy, Drama, War -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="43" />
+            <column name="genre_id" valueNumeric="61" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="43" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="43" />
+            <column name="genre_id" valueNumeric="63" />
+        </insert>
+        <!-- Toy Story (40): Animation, Comedy, Adventure -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="40" />
+            <column name="genre_id" valueNumeric="58" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="40" />
+            <column name="genre_id" valueNumeric="52" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="40" />
+            <column name="genre_id" valueNumeric="51" />
+        </insert>
+        <!-- Coco (42): Animation, Fantasy, Musical -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="42" />
+            <column name="genre_id" valueNumeric="58" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="42" />
+            <column name="genre_id" valueNumeric="61" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="42" />
+            <column name="genre_id" valueNumeric="62" />
+        </insert>
+        <!-- Breaking Bad (83): Drama, Crime, Thriller -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="83" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="83" />
+            <column name="genre_id" valueNumeric="60" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="83" />
+            <column name="genre_id" valueNumeric="57" />
+        </insert>
+        <!-- Stranger Things (90): Sci-Fi, Horror, Drama -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="90" />
+            <column name="genre_id" valueNumeric="54" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="90" />
+            <column name="genre_id" valueNumeric="55" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="90" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <!-- The Last of Us (93): Drama, Action, Adventure -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="93" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="93" />
+            <column name="genre_id" valueNumeric="50" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="93" />
+            <column name="genre_id" valueNumeric="51" />
+        </insert>
+        <!-- Dark (99): Sci-Fi, Drama, Mystery -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="99" />
+            <column name="genre_id" valueNumeric="54" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="99" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="99" />
+            <column name="genre_id" valueNumeric="65" />
+        </insert>
+        <!-- Succession (104): Drama -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="104" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <!-- Better Call Saul (105): Drama, Crime -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="105" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="105" />
+            <column name="genre_id" valueNumeric="60" />
+        </insert>
+        <!-- Black Mirror (102): Sci-Fi, Thriller -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="102" />
+            <column name="genre_id" valueNumeric="54" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="102" />
+            <column name="genre_id" valueNumeric="57" />
+        </insert>
+        <!-- Peaky Blinders (122): Crime, Drama -->
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="122" />
+            <column name="genre_id" valueNumeric="60" />
+        </insert>
+        <insert tableName="media_genres">
+            <column name="media_id" valueNumeric="122" />
+            <column name="genre_id" valueNumeric="53" />
+        </insert>
+    </changeSet>
+
+    <!-- ────────────────────────── CREDITS (diretores → mídias) ────────────────────────── -->
+    <changeSet id="seed-credits" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM credits WHERE media_id = 18</sqlCheck>
+        </preConditions>
+        <comment>Créditos: diretores/showrunners vinculados a mídias</comment>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="18" />
+            <column name="person_id" valueNumeric="189" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="11" />
+            <column name="person_id" valueNumeric="186" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="11" />
+            <column name="person_id" valueNumeric="187" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="1" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="22" />
+            <column name="person_id" valueNumeric="192" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="23" />
+            <column name="person_id" valueNumeric="193" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="24" />
+            <column name="person_id" valueNumeric="194" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="26" />
+            <column name="person_id" valueNumeric="196" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="10" />
+            <column name="person_id" valueNumeric="185" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="42" />
+            <column name="person_id" valueNumeric="227" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="40" />
+            <column name="person_id" valueNumeric="202" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="83" />
+            <column name="person_id" valueNumeric="232" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="90" />
+            <column name="person_id" valueNumeric="242" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="90" />
+            <column name="person_id" valueNumeric="243" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="1" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="93" />
+            <column name="person_id" valueNumeric="246" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="93" />
+            <column name="person_id" valueNumeric="247" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="1" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="99" />
+            <column name="person_id" valueNumeric="252" />
+            <column name="role" value="DIRECTOR" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="99" />
+            <column name="person_id" valueNumeric="253" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="122" />
+            <column name="person_id" valueNumeric="282" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="104" />
+            <column name="person_id" valueNumeric="260" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+        <insert tableName="credits">
+            <column name="media_id" valueNumeric="105" />
+            <column name="person_id" valueNumeric="261" />
+            <column name="role" value="WRITER" />
+            <column name="order_index" valueNumeric="0" />
+        </insert>
+    </changeSet>
+
+    <!-- ────────────────────────── WATCH ENTRIES ────────────────────────── -->
+    <changeSet id="seed-watch-entries" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM watch_entry WHERE user_id = 11 AND
+                media_id = 1</sqlCheck>
+        </preConditions>
+        <comment>Registros de visualização com ratings e comentários variados</comment>
+
+        <!-- ═══ Ana (11): cinéfila dedicada ═══ -->
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="1" />
+            <column name="rating" valueNumeric="10" />
+            <column name="comment" value="Obra-prima absoluta. Brando imortal." />
+            <column name="watched_at" value="2025-03-15" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="15" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Nolan no auge. Cena do planeta Miller me destruiu." />
+            <column name="watched_at" value="2025-04-20" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="16" />
+            <column name="rating" valueNumeric="10" />
+            <column name="comment" value="Genial do começo ao fim. Mereceu o Oscar." />
+            <column name="watched_at" value="2025-05-10" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="18" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Cinema brasileiro no seu melhor." />
+            <column name="watched_at" value="2025-06-01" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="11" />
+            <column name="rating" valueNumeric="8" />
+            <column name="comment" value="Revolucionário pra época. Efeitos ainda impressionam." />
+            <column name="watched_at" value="2025-07-12" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="8" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Nolan e DiCaprio juntos = perfeição." />
+            <column name="watched_at" value="2025-08-05" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="17" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Miyazaki é poeta. Animação sublime." />
+            <column name="watched_at" value="2025-09-18" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="83" />
+            <column name="rating" valueNumeric="10" />
+            <column name="comment" value="A melhor série já feita. Ozymandias é perfeição." />
+            <column name="watched_at" value="2025-02-28" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="99" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment"
+                value="Complexo mas recompensador. Cada rewatch revela algo novo." />
+            <column name="watched_at" value="2025-10-05" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="43" />
+            <column name="status_type" value="PLANNING" />
+        </insert>
+
+        <!-- ═══ Bruno (12): maratonista de séries ═══ -->
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="83" />
+            <column name="rating" valueNumeric="10" />
+            <column name="comment" value="Assisti 3 vezes. Sempre descubro algo novo." />
+            <column name="watched_at" value="2025-01-10" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="99" />
+            <column name="rating" valueNumeric="8" />
+            <column name="comment" value="Precisa de mapa pra acompanhar as linhas temporais." />
+            <column name="watched_at" value="2025-03-15" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="90" />
+            <column name="rating" valueNumeric="7" />
+            <column name="comment" value="Divertida, nostalgia dos anos 80." />
+            <column name="watched_at" value="2025-04-20" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="93" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Adaptação perfeita. Episódio 3 é devastador." />
+            <column name="watched_at" value="2025-05-25" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="102" />
+            <column name="rating" valueNumeric="7" />
+            <column name="comment" value="Conceito bom, execução irregular." />
+            <column name="watched_at" value="2025-06-30" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="11" />
+            <column name="rating" valueNumeric="8" />
+            <column name="watched_at" value="2025-07-15" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="104" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Succession é Shakespeare corporativo." />
+            <column name="watched_at" value="2025-08-20" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="8" />
+            <column name="status_type" value="WATCHING" />
+        </insert>
+
+        <!-- ═══ Carla (13): analítica ═══ -->
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="1" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Narrativa impecável. Coppola dominava a arte." />
+            <column name="watched_at" value="2025-02-14" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="4" />
+            <column name="rating" valueNumeric="10" />
+            <column name="comment" value="Diálogos perfeitos. Tarantino reinventou o cinema." />
+            <column name="watched_at" value="2025-03-22" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="9" />
+            <column name="rating" valueNumeric="8" />
+            <column name="comment" value="A primeira regra é: não falar sobre o Clube da Luta." />
+            <column name="watched_at" value="2025-04-30" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="43" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Del Toro é um mestre do fantástico. Fotografia sublime." />
+            <column name="watched_at" value="2025-05-18" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="6" />
+            <column name="rating" valueNumeric="10" />
+            <column name="comment"
+                value="Tolkien ficaria orgulhoso. Peter Jackson entendeu a essência." />
+            <column name="watched_at" value="2025-06-22" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="22" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Whiplash é intenso. J.K. Simmons brilha." />
+            <column name="watched_at" value="2025-07-10" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="122" />
+            <column name="rating" valueNumeric="8" />
+            <column name="comment" value="Peaky Blinders com atuações magistrais." />
+            <column name="watched_at" value="2025-08-15" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="83" />
+            <column name="status_type" value="WATCHING" />
+        </insert>
+
+        <!-- ═══ Diego (14): casual ═══ -->
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="14" />
+            <column name="media_id" valueNumeric="11" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Clássico. Keanu é o Neo." />
+            <column name="watched_at" value="2025-08-01" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="14" />
+            <column name="media_id" valueNumeric="42" />
+            <column name="rating" valueNumeric="7" />
+            <column name="comment" value="Chorei mais do que gostaria de admitir." />
+            <column name="watched_at" value="2025-09-15" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="14" />
+            <column name="media_id" valueNumeric="3" />
+            <column name="rating" valueNumeric="9" />
+            <column name="comment" value="Heath Ledger como Coringa é inesquecível." />
+            <column name="watched_at" value="2025-10-20" />
+            <column name="status_type" value="COMPLETED" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="14" />
+            <column name="media_id" valueNumeric="83" />
+            <column name="status_type" value="PLANNING" />
+        </insert>
+        <insert tableName="watch_entry">
+            <column name="user_id" valueNumeric="14" />
+            <column name="media_id" valueNumeric="15" />
+            <column name="status_type" value="DROPPED" />
+            <column name="comment" value="Muito longo, desisti no meio." />
+        </insert>
+    </changeSet>
+
+    <!-- ────────────────────────── WATCHLIST ────────────────────────── -->
+    <changeSet id="seed-watchlist" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM watchlist WHERE user_id = 11</sqlCheck>
+        </preConditions>
+        <comment>Listas de filmes/séries para assistir</comment>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="43" />
+            <column name="added_at" valueDate="2025-11-01T10:00:00" />
+        </insert>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="11" />
+            <column name="media_id" valueNumeric="42" />
+            <column name="added_at" valueDate="2025-11-05T14:30:00" />
+        </insert>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="105" />
+            <column name="added_at" valueDate="2025-10-10T09:00:00" />
+        </insert>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="122" />
+            <column name="added_at" valueDate="2025-10-15T20:00:00" />
+        </insert>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="12" />
+            <column name="media_id" valueNumeric="109" />
+            <column name="added_at" valueDate="2025-10-20T16:00:00" />
+        </insert>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="15" />
+            <column name="added_at" valueDate="2025-09-01T12:00:00" />
+        </insert>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="13" />
+            <column name="media_id" valueNumeric="93" />
+            <column name="added_at" valueDate="2025-09-10T18:00:00" />
+        </insert>
+        <insert tableName="watchlist">
+            <column name="user_id" valueNumeric="14" />
+            <column name="media_id" valueNumeric="16" />
+            <column name="added_at" valueDate="2025-11-20T22:00:00" />
+        </insert>
+    </changeSet>
+
+    <!-- ────────────────────────── USER STATS ────────────────────────── -->
+    <changeSet id="seed-user-stats" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM user_stats WHERE user_id = 11</sqlCheck>
+        </preConditions>
+        <comment>Estatísticas calculadas por usuário</comment>
+        <insert tableName="user_stats">
+            <column name="user_id" valueNumeric="11" />
+            <column name="total_watched" valueNumeric="9" />
+            <column name="total_movies" valueNumeric="7" />
+            <column name="total_series" valueNumeric="2" />
+            <column name="avg_rating" valueNumeric="9.22" />
+            <column name="last_watched_at" value="2025-10-05" />
+        </insert>
+        <insert tableName="user_stats">
+            <column name="user_id" valueNumeric="12" />
+            <column name="total_watched" valueNumeric="7" />
+            <column name="total_movies" valueNumeric="1" />
+            <column name="total_series" valueNumeric="6" />
+            <column name="avg_rating" valueNumeric="8.29" />
+            <column name="last_watched_at" value="2025-08-20" />
+        </insert>
+        <insert tableName="user_stats">
+            <column name="user_id" valueNumeric="13" />
+            <column name="total_watched" valueNumeric="7" />
+            <column name="total_movies" valueNumeric="5" />
+            <column name="total_series" valueNumeric="2" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="last_watched_at" value="2025-08-15" />
+        </insert>
+        <insert tableName="user_stats">
+            <column name="user_id" valueNumeric="14" />
+            <column name="total_watched" valueNumeric="3" />
+            <column name="total_movies" valueNumeric="3" />
+            <column name="total_series" valueNumeric="0" />
+            <column name="avg_rating" valueNumeric="8.33" />
+            <column name="last_watched_at" value="2025-10-20" />
+        </insert>
+    </changeSet>
+
+    <!-- ────────────────────────── MEDIA POPULARITY ────────────────────────── -->
+    <changeSet id="seed-media-popularity" author="cinelog-seed" context="dev">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM media_popularity WHERE media_id = 1</sqlCheck>
+        </preConditions>
+        <comment>Popularidade calculada por mídia</comment>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="1" />
+            <column name="ratings_count" valueNumeric="2" />
+            <column name="avg_rating" valueNumeric="9.50" />
+            <column name="watch_count" valueNumeric="2" />
+            <column name="last_watched_at" valueDate="2025-03-15T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="15" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="2" />
+            <column name="last_watched_at" valueDate="2025-04-20T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="16" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.99" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-05-10T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="18" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-06-01T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="11" />
+            <column name="ratings_count" valueNumeric="3" />
+            <column name="avg_rating" valueNumeric="8.33" />
+            <column name="watch_count" valueNumeric="3" />
+            <column name="last_watched_at" valueDate="2025-08-01T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="8" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="2" />
+            <column name="last_watched_at" valueDate="2025-08-05T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="4" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.99" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-03-22T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="6" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.99" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-06-22T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="9" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="8.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-04-30T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="43" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-05-18T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="22" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-07-10T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="17" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-09-18T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="3" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-10-20T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="42" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="7.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-09-15T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="83" />
+            <column name="ratings_count" valueNumeric="2" />
+            <column name="avg_rating" valueNumeric="9.99" />
+            <column name="watch_count" valueNumeric="4" />
+            <column name="last_watched_at" valueDate="2025-02-28T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="99" />
+            <column name="ratings_count" valueNumeric="2" />
+            <column name="avg_rating" valueNumeric="8.50" />
+            <column name="watch_count" valueNumeric="2" />
+            <column name="last_watched_at" valueDate="2025-10-05T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="90" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="7.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-04-20T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="93" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-05-25T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="102" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="7.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-06-30T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="104" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="9.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-08-20T00:00:00" />
+        </insert>
+        <insert tableName="media_popularity">
+            <column name="media_id" valueNumeric="122" />
+            <column name="ratings_count" valueNumeric="1" />
+            <column name="avg_rating" valueNumeric="8.00" />
+            <column name="watch_count" valueNumeric="1" />
+            <column name="last_watched_at" valueDate="2025-08-15T00:00:00" />
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

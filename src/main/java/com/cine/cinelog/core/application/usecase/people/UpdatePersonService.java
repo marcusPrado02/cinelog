@@ -13,15 +13,17 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por atualizar dados de pessoas existentes.
- * 
+ *
  * <p>
  * Permite alterar informações como nome, data de nascimento e local de
  * nascimento.
- * 
+ *
  * @since 1.0
  * @see UpdatePersonUseCase
  * @see PersonRepositoryPort
@@ -38,7 +40,7 @@ public class UpdatePersonService implements UpdatePersonUseCase {
 
     /**
      * Executa a atualização de uma pessoa existente.
-     * 
+     *
      * @param id     o identificador único da pessoa a ser atualizada
      * @param person os novos dados da pessoa
      * @return a pessoa atualizada e persistida
@@ -49,6 +51,10 @@ public class UpdatePersonService implements UpdatePersonUseCase {
     @Observed(name = "person.update", contextualName = "update-person-service")
     @Measured("cinelog.service.person.update")
     @AuditableAction(module = "PERSON", action = "UPDATE", description = "Atualização de pessoa")
+    @Caching(evict = {
+            @CacheEvict(value = "peoplePage", allEntries = true),
+            @CacheEvict(value = "personById", key = "#id")
+    })
     public Person execute(Long id, Person person) {
         log.debug("Iniciando atualização de pessoa. ID: {}", id);
         try {

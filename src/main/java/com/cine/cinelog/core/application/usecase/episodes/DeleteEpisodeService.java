@@ -11,15 +11,17 @@ import com.cine.cinelog.shared.observability.aop.SecureOperation;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por excluir episódios do sistema.
- * 
+ *
  * <p>
  * Remove um episódio de uma temporada. A exclusão pode falhar se houver
  * dependências como registros de visualização associados ao episódio.
- * 
+ *
  * @since 1.0
  * @see DeleteEpisodeUseCase
  * @see EpisodeRepositoryPort
@@ -36,7 +38,7 @@ public class DeleteEpisodeService implements DeleteEpisodeUseCase {
 
     /**
      * Executa a exclusão de um episódio.
-     * 
+     *
      * @param id o identificador único do episódio a ser excluído
      */
     @Override
@@ -44,6 +46,10 @@ public class DeleteEpisodeService implements DeleteEpisodeUseCase {
     @Measured("cinelog.service.episode.delete")
     @AuditableAction(module = "EPISODE", action = "DELETE", description = "Exclusão de episódio")
     @SecureOperation(module = "EPISODE", value = "CONTENT_ADMIN")
+    @Caching(evict = {
+            @CacheEvict(value = "episodesPage", allEntries = true),
+            @CacheEvict(value = "episodeById", key = "#id")
+    })
     public void execute(Long id) {
         log.debug("Iniciando exclusão de episódio. ID: {}", id);
         try {

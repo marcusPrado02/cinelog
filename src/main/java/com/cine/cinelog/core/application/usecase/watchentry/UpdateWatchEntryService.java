@@ -3,6 +3,8 @@ package com.cine.cinelog.core.application.usecase.watchentry;
 import java.time.Instant;
 import java.util.Map;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cine.cinelog.core.application.ports.in.watchentry.UpdateWatchEntryUseCase;
@@ -22,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Serviço responsável por atualizar entradas de visualização existentes.
- * 
+ *
  * <p>
  * Permite atualizar:
  * <ul>
@@ -30,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * <li>Rating (avaliação de 0-10)</li>
  * <li>Comentário</li>
  * </ul>
- * 
+ *
  * <p>
  * Aplica políticas específicas:
  * <ul>
@@ -39,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * existem</li>
  * <li>Validação de atualização: garante integridade dos dados</li>
  * </ul>
- * 
+ *
  * @since 1.0
  * @see UpdateWatchEntryUseCase
  * @see WatchEntryRepositoryPort
@@ -68,7 +70,7 @@ public class UpdateWatchEntryService implements UpdateWatchEntryUseCase {
 
     /**
      * Executa a atualização de uma entrada de visualização existente.
-     * 
+     *
      * @param id                o identificador único da entrada a ser atualizada
      * @param entry             os novos dados da entrada
      * @param isRatingOperation indica se é uma operação de avaliação (rating)
@@ -81,6 +83,10 @@ public class UpdateWatchEntryService implements UpdateWatchEntryUseCase {
     @Observed(name = "watchentry.update", contextualName = "update-watchentry-service")
     @Measured("cinelog.service.watchentry.update")
     @AuditableAction(module = "WATCH_ENTRY", action = "UPDATE", description = "Atualização de registro de visualização")
+    @Caching(evict = {
+            @CacheEvict(value = "watchEntriesPage", allEntries = true),
+            @CacheEvict(value = "watchEntryById", key = "#id")
+    })
     public WatchEntry execute(Long id, WatchEntry entry, boolean isRatingOperation) {
         log.debug("Iniciando atualização de watch entry. Parâmetros: {}",
                 Map.of("id", id, "isRatingOperation", isRatingOperation));

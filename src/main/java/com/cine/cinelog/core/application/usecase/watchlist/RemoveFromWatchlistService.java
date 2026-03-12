@@ -14,21 +14,22 @@ import com.cine.cinelog.shared.security.AuthenticatedUser;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 
 /**
  * Serviço responsável por remover mídias da watchlist do usuário autenticado.
- * 
+ *
  * <p>
  * Remove o item da lista de desejos quando o usuário decide que não deseja mais
  * assistir ou já assistiu a mídia.
- * 
+ *
  * <p>
  * Validações aplicadas:
  * <ul>
  * <li>Verifica se o item existe na watchlist do usuário</li>
  * <li>Garante que o usuário só pode remover itens da sua própria watchlist</li>
  * </ul>
- * 
+ *
  * @since 1.0
  * @see RemoveFromWatchlistUseCase
  * @see WatchlistRepositoryPort
@@ -48,7 +49,7 @@ public class RemoveFromWatchlistService implements RemoveFromWatchlistUseCase {
 
     /**
      * Remove uma mídia da watchlist do usuário atual.
-     * 
+     *
      * @param mediaId o identificador da mídia a ser removida da watchlist
      * @throws NotFoundException           se o item não existir na watchlist do
      *                                     usuário
@@ -59,6 +60,7 @@ public class RemoveFromWatchlistService implements RemoveFromWatchlistUseCase {
     @Observed(name = "watchlist.remove", contextualName = "remove-from-watchlist-service")
     @Measured("cinelog.service.watchlist.remove")
     @AuditableAction(module = "WATCHLIST", action = "REMOVE", description = "Remover mídia da watchlist")
+    @CacheEvict(value = "watchlistPage", allEntries = true)
     public void remove(Long mediaId) {
         AuthenticatedUser user = currentUser.getRequiredCurrentUser();
 

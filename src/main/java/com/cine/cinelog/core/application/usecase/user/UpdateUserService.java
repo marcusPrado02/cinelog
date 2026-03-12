@@ -14,13 +14,15 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
 /**
  * Serviço responsável por atualizar os dados de um usuário existente.
- * 
+ *
  * <p>
  * Este caso de uso coordena a atualização de um usuário, aplicando
  * múltiplas camadas de validação para garantir a integridade dos dados:
@@ -32,18 +34,18 @@ import java.util.Map;
  * <li>Verifica unicidade de email (se alterado)</li>
  * <li>Persiste as alterações</li>
  * </ul>
- * 
+ *
  * <p>
  * O serviço realiza logging detalhado de todas as etapas do processo
  * de atualização para facilitar auditoria e troubleshooting.
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link UpdateUserUseCase} e utilizando a porta de saída
  * {@link UserRepositoryPort}
  * para persistência dos dados.
- * 
+ *
  * @since 1.0
  * @see UpdateUserUseCase
  * @see UserPolicy
@@ -71,11 +73,11 @@ public class UpdateUserService implements UpdateUserUseCase {
 
     /**
      * Executa a atualização de um usuário existente.
-     * 
+     *
      * <p>
      * Aplica múltiplas validações antes de persistir, incluindo validação
      * de campos, políticas de atualização e unicidade de email (se alterado).
-     * 
+     *
      * @param id    o identificador único do usuário a ser atualizado
      * @param patch os novos dados para atualização (campos nulos são ignorados)
      * @return o usuário atualizado e persistido
@@ -89,6 +91,10 @@ public class UpdateUserService implements UpdateUserUseCase {
     @Observed(name = "user.update", contextualName = "update-user-service")
     @Measured("cinelog.service.user.update")
     @AuditableAction(module = "USER", action = "UPDATE", description = "Atualização de dados do usuário")
+    @Caching(evict = {
+            @CacheEvict(value = "usersPage", allEntries = true),
+            @CacheEvict(value = "userById", key = "#id")
+    })
     public User execute(Long id, User patch) {
         log.debug("Iniciando execute. Parâmetros: {}", Map.of("id", id, "patchName", patch.getName()));
 

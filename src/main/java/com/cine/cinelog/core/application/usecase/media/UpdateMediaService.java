@@ -1,5 +1,7 @@
 package com.cine.cinelog.core.application.usecase.media;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cine.cinelog.core.application.ports.in.media.UpdateMediaUseCase;
@@ -18,7 +20,7 @@ import java.util.Map;
 
 /**
  * Serviço responsável por atualizar os dados de uma mídia existente.
- * 
+ *
  * <p>
  * Este caso de uso coordena a atualização de uma mídia, realizando as seguintes
  * operações:
@@ -28,7 +30,7 @@ import java.util.Map;
  * <li>Valida as invariantes de domínio após a atualização</li>
  * <li>Persiste as alterações no repositório</li>
  * </ul>
- * 
+ *
  * <p>
  * As políticas de validação incluem:
  * <ul>
@@ -36,14 +38,14 @@ import java.util.Map;
  * <li>Validação de campos obrigatórios</li>
  * <li>Validação de regras específicas por tipo</li>
  * </ul>
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link UpdateMediaUseCase} e utilizando a porta de saída
  * {@link MediaRepositoryPort}
  * para persistência dos dados.
- * 
+ *
  * @since 1.0
  * @see UpdateMediaUseCase
  * @see MediaPolicy
@@ -64,7 +66,7 @@ public class UpdateMediaService implements UpdateMediaUseCase {
 
     /**
      * Executa a atualização de uma mídia existente.
-     * 
+     *
      * @param id   o identificador único da mídia a ser atualizada
      * @param data os novos dados para atualização (campos nulos são ignorados)
      * @return a mídia atualizada e persistida
@@ -77,6 +79,10 @@ public class UpdateMediaService implements UpdateMediaUseCase {
     @Observed(name = "media.update", contextualName = "update-media-service")
     @Measured("cinelog.service.media.update")
     @AuditableAction(module = "MEDIA", action = "UPDATE", description = "Atualização de dados de mídia")
+    @Caching(evict = {
+            @CacheEvict(value = "mediaPage", allEntries = true),
+            @CacheEvict(value = "mediaById", key = "#id")
+    })
     public Media execute(Long id, Media data) {
         log.debug("Iniciando atualização de mídia no service. ID: {}", id);
 

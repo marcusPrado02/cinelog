@@ -11,15 +11,16 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import io.micrometer.observation.annotation.Observed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Serviço responsável por criar créditos (participações) de pessoas em mídias.
- * 
+ *
  * <p>
  * Um crédito representa a participação de uma pessoa (ator, diretor, etc.)
  * em uma mídia (filme ou série), definindo seu papel/função nessa produção.
- * 
+ *
  * <p>
  * Este serviço permite associar pessoas a mídias com funções específicas como:
  * <ul>
@@ -30,13 +31,13 @@ import org.springframework.transaction.annotation.Transactional;
  * <li>Outras funções definidas no enum
  * {@link com.cine.cinelog.core.domain.enums.Role}</li>
  * </ul>
- * 
+ *
  * <p>
  * Este serviço faz parte da arquitetura hexagonal, implementando a porta de
  * entrada
  * {@link CreateCreditUseCase} e utilizando a porta de saída
  * {@link CreditRepositoryPort}.
- * 
+ *
  * @since 1.0
  * @see CreateCreditUseCase
  * @see CreditRepositoryPort
@@ -54,7 +55,7 @@ public class CreateCreditService implements CreateCreditUseCase {
 
     /**
      * Executa a criação de um novo crédito, associando uma pessoa a uma mídia.
-     * 
+     *
      * @param credit o crédito a ser criado, contendo pessoa, mídia e função
      * @return o crédito criado e persistido, com ID gerado
      */
@@ -62,6 +63,7 @@ public class CreateCreditService implements CreateCreditUseCase {
     @Observed(name = "credit.create", contextualName = "create-credit-service")
     @Measured("cinelog.service.credit.create")
     @AuditableAction(module = "CREDIT", action = "CREATE", description = "Criação de crédito (pessoa em mídia)")
+    @CacheEvict(value = "creditsPage", allEntries = true)
     public Credit execute(Credit credit) {
         log.debug("Iniciando criação de crédito. Parâmetros: {}",
                 Map.of("personId", credit.getPersonId(),

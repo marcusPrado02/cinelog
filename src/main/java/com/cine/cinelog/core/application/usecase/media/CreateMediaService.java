@@ -1,5 +1,6 @@
 package com.cine.cinelog.core.application.usecase.media;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cine.cinelog.core.application.ports.in.media.CreateMediaUseCase;
@@ -86,6 +87,7 @@ public class CreateMediaService implements CreateMediaUseCase {
     @Observed(name = "media.create", contextualName = "create-media-service")
     @Measured("cinelog.service.media.create")
     @AuditableAction(module = "MEDIA", action = "CREATE", description = "Criação de nova mídia no catálogo")
+    @CacheEvict(value = "mediaPage", allEntries = true)
     public Media execute(Media media) {
         log.debug("Iniciando criação de mídia no service. Dados: {}",
                 Map.of("title", media.getTitle(), "type", media.getType(),
