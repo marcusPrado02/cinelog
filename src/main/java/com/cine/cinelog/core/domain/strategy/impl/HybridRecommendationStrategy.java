@@ -6,6 +6,7 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -45,6 +46,7 @@ import java.util.Set;
  *
  * @since 1.0
  */
+@Component
 public class HybridRecommendationStrategy implements RecommendationStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(HybridRecommendationStrategy.class);

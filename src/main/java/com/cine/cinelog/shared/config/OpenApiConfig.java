@@ -73,8 +73,7 @@ public class OpenApiConfig {
                 var keycloakScopes = new Scopes()
                                 .addString("openid", "OpenID Connect identity")
                                 .addString("profile", "Perfil do usuário")
-                                .addString("email", "Endereço de e-mail")
-                                .addString("roles", "Roles do realm e cliente");
+                                .addString("email", "Endereço de e-mail");
 
                 var authCodeFlow = new OAuthFlow()
                                 .authorizationUrl(authUrl)

@@ -10,6 +10,7 @@ import com.cine.cinelog.shared.observability.aop.Measured;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +58,7 @@ import java.util.stream.Collectors;
  *
  * @since 1.0
  */
+@Component("contentBasedStrategy")
 public class ContentBasedRecommendationStrategy implements RecommendationStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(ContentBasedRecommendationStrategy.class);

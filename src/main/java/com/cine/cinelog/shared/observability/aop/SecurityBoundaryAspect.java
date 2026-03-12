@@ -105,9 +105,12 @@ public class SecurityBoundaryAspect {
             return false;
         }
 
+        // Aceita tanto a authority com prefixo ROLE_ (Keycloak/JWT) quanto sem prefixo
+        // (testes/local)
+        String withPrefix = "ROLE_" + requiredPermission;
         return authorities.stream()
                 .map(Object::toString)
-                .anyMatch(requiredPermission::equals);
+                .anyMatch(a -> a.equals(requiredPermission) || a.equals(withPrefix));
     }
 
 }

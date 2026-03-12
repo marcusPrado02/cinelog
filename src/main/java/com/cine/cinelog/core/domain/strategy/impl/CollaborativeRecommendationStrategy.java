@@ -3,6 +3,7 @@ package com.cine.cinelog.core.domain.strategy.impl;
 import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
 import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
 import com.cine.cinelog.core.domain.model.Media;
+import org.springframework.stereotype.Component;
 import com.cine.cinelog.core.domain.strategy.RecommendationStrategy;
 import com.cine.cinelog.shared.observability.aop.Measured;
 
@@ -47,6 +48,7 @@ import java.util.List;
  *
  * @since 1.0
  */
+@Component("collaborativeStrategy")
 public class CollaborativeRecommendationStrategy implements RecommendationStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(CollaborativeRecommendationStrategy.class);

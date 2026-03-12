@@ -202,7 +202,9 @@ cinelog:
             # idp-metadata-url: https://login.microsoftonline.com/{tenant}/federationmetadata/2007-06/federationmetadata.xml
     tmdb:
         base-url: https://api.themoviedb.org/3
-        api-key: ${TMDB_API_KEY:coloque_sua_key_aqui}
+        # Use o "API Read Access Token" (JWT longo) da página TMDb → Settings → API
+        # OU a v3 API Key curta — ambas funcionam como Bearer token
+        bearer-token: ${TMDB_API_KEY:coloque_sua_key_aqui}
         language: pt-BR
         region: BR
         timeout-ms: 3000
@@ -218,6 +220,13 @@ cinelog:
     integration:
         tracing:
             enabled: true
+
+# Kafka custom app properties (usados por @KafkaListener nos consumers)
+kafka:
+    consumer:
+        group-id: cinelog-consumer-group
+    topics:
+        watch-entry-created: cinelog.watchentry.created.v1
 
 # Outbox Pattern configuração
 outbox:

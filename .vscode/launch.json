@@ -6,13 +6,17 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Debug CinelogApplication",
+            "name": "Debug CinelogApplication (dev)",
             "request": "launch",
             "mainClass": "com.cine.cinelog.CinelogApplication",
             "projectName": "cinelog",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "shortenCommandLine": "auto"
+            "shortenCommandLine": "auto",
+            // Carrega variáveis sensíveis do .env (gitignored — nunca commite credenciais)
+            // Copie .env.example para .env e preencha os valores reais
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": "-Dspring.profiles.active=dev"
         },
         {
             "type": "java",

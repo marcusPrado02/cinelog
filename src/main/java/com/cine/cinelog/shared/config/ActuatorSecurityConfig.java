@@ -60,6 +60,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class ActuatorSecurityConfig {
 
     @Bean
+    @Order(1)
     SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher(EndpointRequest.toAnyEndpoint())

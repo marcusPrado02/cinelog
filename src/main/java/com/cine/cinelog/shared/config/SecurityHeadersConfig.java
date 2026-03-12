@@ -58,16 +58,32 @@ public class SecurityHeadersConfig extends OncePerRequestFilter {
         // "default-src 'self'" = só carrega recursos do próprio domínio.
         // Previne XSS: mesmo que atacante injete <script src="evil.com/malware.js">,
         // o browser recusa carregar porque evil.com não está na whitelist.
-        response.setHeader("Content-Security-Policy",
-                "default-src 'self'; "
-                        + "script-src 'self'; "
-                        + "style-src 'self' 'unsafe-inline'; " // unsafe-inline para Swagger UI
-                        + "img-src 'self' data:; "
-                        + "font-src 'self'; "
-                        + "connect-src 'self'; "
-                        + "frame-ancestors 'none'; " // reforça X-Frame-Options
-                        + "base-uri 'self'; "
-                        + "form-action 'self'");
+        String uri = request.getRequestURI();
+        if (uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")) {
+            // Swagger UI precisa de 'unsafe-inline' para scripts e connect-src
+            // para o token endpoint do Keycloak (OAuth2 PKCE flow)
+            response.setHeader("Content-Security-Policy",
+                    "default-src 'self'; "
+                            + "script-src 'self' 'unsafe-inline'; "
+                            + "style-src 'self' 'unsafe-inline'; "
+                            + "img-src 'self' data:; "
+                            + "font-src 'self'; "
+                            + "connect-src 'self' http://localhost:8180; "
+                            + "frame-ancestors 'none'; "
+                            + "base-uri 'self'; "
+                            + "form-action 'self'");
+        } else {
+            response.setHeader("Content-Security-Policy",
+                    "default-src 'self'; "
+                            + "script-src 'self'; "
+                            + "style-src 'self' 'unsafe-inline'; "
+                            + "img-src 'self' data:; "
+                            + "font-src 'self'; "
+                            + "connect-src 'self'; "
+                            + "frame-ancestors 'none'; "
+                            + "base-uri 'self'; "
+                            + "form-action 'self'");
+        }
 
         // ── Referrer-Policy ──
         // Controla quanta informação da URL anterior o browser envia no header Referer.
@@ -97,8 +113,7 @@ public class SecurityHeadersConfig extends OncePerRequestFilter {
         // Para respostas de API, impede que proxies/browsers armazenem cache de dados
         // pessoais.
         // Sem isso, dados do usuário podem ficar no cache do browser mesmo após logout.
-        String path = request.getRequestURI();
-        if (path.startsWith("/api/") && !path.startsWith("/api/auth/")) {
+        if (uri.startsWith("/api/") && !uri.startsWith("/api/auth/")) {
             response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
             response.setHeader("Pragma", "no-cache");
             response.setHeader("Expires", "0");

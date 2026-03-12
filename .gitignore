@@ -32,3 +32,17 @@ build/
 ## Environment Variables
 .env
 
+## Logs
+logs/
+*.log
+*.log.gz
+
+## JVM crash/debug files
+hs_err_pid*
+replay_pid*
+*.hprof
+
+## CodeQL (generated locally)
+codeql-db/
+*.sarif
+

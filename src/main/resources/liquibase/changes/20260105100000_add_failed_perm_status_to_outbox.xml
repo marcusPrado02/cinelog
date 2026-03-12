@@ -4,6 +4,12 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
+    <!-- Ignora erro se constraint não existir (failOnError pertence ao changeSet, não ao sql) -->
+    <changeSet id="20260105100000-drop-old-outbox-constraint" author="system" failOnError="false">
+        <comment>Remove constraint antiga antes de recriar com FAILED_PERM. Ignorado se não existir.</comment>
+        <sql dbms="mysql">ALTER TABLE outbox_event DROP CHECK chk_outbox_status;</sql>
+    </changeSet>
+
     <changeSet id="20260105100000-add-failed-perm-status-to-outbox" author="system">
         <comment>
             Adiciona status FAILED_PERM ao outbox_event para eventos que falharam permanentemente.
@@ -15,9 +21,6 @@
 
             Esta mudança é parte do PR2: Outbox Robusto com retry backoff inteligente.
         </comment>
-
-        <!-- Ignora erro se constraint não existir -->
-        <sql dbms="mysql" failOnError="false">ALTER TABLE outbox_event DROP CHECK chk_outbox_status;</sql>
 
         <!-- Adiciona nova constraint com FAILED_PERM -->
         <sql>ALTER TABLE outbox_event ADD CONSTRAINT chk_outbox_status CHECK (status IN ('PENDING',

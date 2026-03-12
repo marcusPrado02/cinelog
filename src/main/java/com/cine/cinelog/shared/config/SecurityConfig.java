@@ -40,7 +40,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * <p>
  * <strong>Fluxo de decisão:</strong>
  * </p>
- * 
+ *
  * <pre>
  *   Bearer token recebido
  *   ├─ iss == Keycloak → JwtAuthenticationFilter ignora →
@@ -54,121 +54,123 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-        /**
-         * Conversor de roles Keycloak → Spring GrantedAuthority.
-         * {@code null} quando Keycloak não está configurado (sem issuer-uri).
-         */
-        @Autowired(required = false)
-        private KeycloakJwtAuthenticationConverter keycloakJwtConverter;
+    /**
+     * Conversor de roles Keycloak → Spring GrantedAuthority.
+     * {@code null} quando Keycloak não está configurado (sem issuer-uri).
+     */
+    @Autowired(required = false)
+    private KeycloakJwtAuthenticationConverter keycloakJwtConverter;
 
-        /**
-         * JwtDecoder Keycloak (NimbusJwtDecoder via JWKS).
-         * {@code null} quando {@code issuer-uri} não está configurado.
-         */
-        @Autowired(required = false)
-        private JwtDecoder jwtDecoder;
+    /**
+     * JwtDecoder Keycloak (NimbusJwtDecoder via JWKS).
+     * {@code null} quando {@code issuer-uri} não está configurado.
+     */
+    @Autowired(required = false)
+    private JwtDecoder jwtDecoder;
 
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-                // A02: BCrypt com fator de trabalho 12 (mínimo recomendado OWASP)
-                return new BCryptPasswordEncoder(12);
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        // A02: BCrypt com fator de trabalho 12 (mínimo recomendado OWASP)
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
+
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder);
+        return authProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(
+            JwtTokenService jwtTokenService,
+            UserDetailsService userDetailsService,
+            SecurityEventLogger securityEventLogger,
+            SecurityMetricsService securityMetrics) {
+        return new JwtAuthenticationFilter(jwtTokenService, userDetailsService,
+                securityEventLogger, securityMetrics);
+    }
+
+    @Bean
+    public SqlInjectionFilter sqlInjectionFilter(
+            SecurityEventLogger securityEventLogger,
+            SecurityMetricsService securityMetrics) {
+        return new SqlInjectionFilter(securityEventLogger, securityMetrics);
+    }
+
+    @Bean
+    @Order(100)
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            DaoAuthenticationProvider authProvider,
+            JwtAuthenticationFilter jwtFilter,
+            SqlInjectionFilter sqlInjectionFilter,
+            RateLimitFilter rateLimitFilter,
+            CorsConfigurationSource corsConfigurationSource) throws Exception {
+
+        http
+                // A05: CORS restritivo — origens configuráveis por profile
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                // API stateless com JWT — CSRF não se aplica (sem cookies de sessão)
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authProvider)
+                // A02/A05: Security headers via Spring Security
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentTypeOptions(cto -> {
+                        })
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)))
+                .authorizeHttpRequests(auth -> auth
+                        // Docs (condicionados por springdoc.enabled via profile)
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**")
+                        .permitAll()
+                        // IAM: redirect OAuth2 do Swagger e callbacks Keycloak
+                        .requestMatchers(
+                                "/swagger-ui/oauth2-redirect.html",
+                                "/login/oauth2/code/**",
+                                "/oauth2/authorization/**")
+                        .permitAll()
+                        .requestMatchers("/api/auth/**")
+                        .permitAll()
+                        // Actuator: regras dedicadas em ActuatorSecurityConfig (@Order 1)
+                        // Endpoints ADMIN
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OPS")
+                        // Endpoints gerais (usuário logado)
+                        .anyRequest().authenticated())
+                // A04: Rate limit primeiro (bloqueia DoS antes de qualquer processamento)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                // A03: Detecção de SQL injection antes de autenticação
+                .addFilterBefore(sqlInjectionFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // IAM – Semana 2: OAuth2 Resource Server (Keycloak).
+        // Só ativo quando spring.security.oauth2.resourceserver.jwt.issuer-uri estiver
+        // configurado. Valida tokens RS256 via JWKS e extrai roles do Keycloak.
+        if (jwtDecoder != null) {
+            http.oauth2ResourceServer(oauth2 -> oauth2
+                    .jwt(jwt -> {
+                        jwt.decoder(jwtDecoder);
+                        if (keycloakJwtConverter != null) {
+                            jwt.jwtAuthenticationConverter(keycloakJwtConverter);
+                        }
+                    }));
         }
 
-        @Bean
-        public DaoAuthenticationProvider authenticationProvider(
-                        UserDetailsService userDetailsService,
-                        PasswordEncoder passwordEncoder) {
-
-                DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
-                authProvider.setPasswordEncoder(passwordEncoder);
-                return authProvider;
-        }
-
-        @Bean
-        public AuthenticationManager authenticationManager(
-                        AuthenticationConfiguration config) throws Exception {
-                return config.getAuthenticationManager();
-        }
-
-        @Bean
-        public JwtAuthenticationFilter jwtAuthenticationFilter(
-                        JwtTokenService jwtTokenService,
-                        UserDetailsService userDetailsService,
-                        SecurityEventLogger securityEventLogger,
-                        SecurityMetricsService securityMetrics) {
-                return new JwtAuthenticationFilter(jwtTokenService, userDetailsService,
-                                securityEventLogger, securityMetrics);
-        }
-
-        @Bean
-        public SqlInjectionFilter sqlInjectionFilter(
-                        SecurityEventLogger securityEventLogger,
-                        SecurityMetricsService securityMetrics) {
-                return new SqlInjectionFilter(securityEventLogger, securityMetrics);
-        }
-
-        @Bean
-        @Order(2)
-        SecurityFilterChain securityFilterChain(
-                        HttpSecurity http,
-                        DaoAuthenticationProvider authProvider,
-                        JwtAuthenticationFilter jwtFilter,
-                        SqlInjectionFilter sqlInjectionFilter,
-                        RateLimitFilter rateLimitFilter,
-                        CorsConfigurationSource corsConfigurationSource) throws Exception {
-
-                http
-                                // A05: CORS restritivo — origens configuráveis por profile
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                                .authenticationProvider(authProvider)
-                                // A02/A05: Security headers via Spring Security
-                                .headers(headers -> headers
-                                                .frameOptions(frame -> frame.deny())
-                                                .contentTypeOptions(cto -> {
-                                                })
-                                                .httpStrictTransportSecurity(hsts -> hsts
-                                                                .includeSubDomains(true)
-                                                                .maxAgeInSeconds(31536000)))
-                                .authorizeHttpRequests(auth -> auth
-                                                // Docs (condicionados por springdoc.enabled via profile)
-                                                .requestMatchers(
-                                                                "/swagger-ui/**",
-                                                                "/v3/api-docs/**")
-                                                .permitAll()
-                                                // IAM: redirect OAuth2 do Swagger e callbacks Keycloak
-                                                .requestMatchers(
-                                                                "/swagger-ui/oauth2-redirect.html",
-                                                                "/login/oauth2/code/**",
-                                                                "/oauth2/authorization/**")
-                                                .permitAll()
-                                                .requestMatchers("/api/auth/**")
-                                                .permitAll()
-                                                // Actuator: regras dedicadas em ActuatorSecurityConfig (@Order 1)
-                                                // Endpoints ADMIN
-                                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                                                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "OPS")
-                                                // Endpoints gerais (usuário logado)
-                                                .anyRequest().authenticated())
-                                // A04: Rate limit primeiro (bloqueia DoS antes de qualquer processamento)
-                                .addFilterBefore(rateLimitFilter, SqlInjectionFilter.class)
-                                // A03: Detecção de SQL injection antes de autenticação
-                                .addFilterBefore(sqlInjectionFilter, JwtAuthenticationFilter.class)
-                                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-                // IAM – Semana 2: OAuth2 Resource Server (Keycloak).
-                // Só ativo quando spring.security.oauth2.resourceserver.jwt.issuer-uri estiver
-                // configurado. Valida tokens RS256 via JWKS e extrai roles do Keycloak.
-                if (jwtDecoder != null) {
-                        http.oauth2ResourceServer(oauth2 -> oauth2
-                                        .jwt(jwt -> {
-                                                jwt.decoder(jwtDecoder);
-                                                if (keycloakJwtConverter != null) {
-                                                        jwt.jwtAuthenticationConverter(keycloakJwtConverter);
-                                                }
-                                        }));
-                }
-
-                return http.build();
-        }
+        return http.build();
+    }
 }
