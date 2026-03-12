@@ -11,6 +11,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -24,10 +26,10 @@ import java.util.UUID;
 @Component
 /**
  * Classe de configuração Spring para gerenciamento de observabilitycontextfilter.
- * 
+ *
  * <p>Define beans e configurações necessárias para o funcionamento
  * adequado da aplicação.</p>
- * 
+ *
  * @since 1.0
  */
 @Order(1)
@@ -35,7 +37,7 @@ public class ObservabilityContextFilter implements Filter {
 
     /**
      * Popula o MDC e gera log-resumo do request.
-     * 
+     *
      * @param servletRequest
      * @param servletResponse
      * @param chain
@@ -61,13 +63,8 @@ public class ObservabilityContextFilter implements Filter {
                 req.getHeader("X-Forwarded-For"),
                 req.getRemoteAddr()));
 
-        // Diag SQL
-        String diagHeader = req.getHeader("X-Diag-SQL");
-
-        // User context (se você popular RequestContext em outro lugar)
-        RequestContext ctx = RequestContext.get();
-        String userId = ctx != null && ctx.userId != null ? String.valueOf(ctx.userId) : null;
-        String userEmail = ctx != null ? ctx.userEmail : null;
+        // Diag SQL (reservado para uso futuro — ex: ativar log de queries)
+        // String diagHeader = req.getHeader("X-Diag-SQL");
 
         // Preenche MDC (vai para o JSON do Logback)
         MDC.put("traceId", traceId);
@@ -77,10 +74,6 @@ public class ObservabilityContextFilter implements Filter {
         MDC.put("query", safe(req.getQueryString()));
         MDC.put("clientIp", clientIp);
         MDC.put("userAgent", userAgent);
-        if (userId != null)
-            MDC.put("userId", userId);
-        if (userEmail != null)
-            MDC.put("userEmail", userEmail);
 
         try {
             chain.doFilter(servletRequest, servletResponse);
@@ -88,6 +81,17 @@ public class ObservabilityContextFilter implements Filter {
             long took = System.currentTimeMillis() - start;
             MDC.put("status", String.valueOf(res.getStatus()));
             MDC.put("tookMs", String.valueOf(took));
+
+            // Enriquece MDC com usuário autenticado (JWT filter já rodou dentro do chain.doFilter)
+            try {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.isAuthenticated()
+                        && !"anonymousUser".equals(String.valueOf(auth.getPrincipal()))) {
+                    MDC.put("userId", auth.getName());
+                }
+            } catch (Exception ignored) {
+                // nunca bloquear o request por falha no MDC
+            }
 
             LoggerFactory.getLogger("request_summary")
                     .info("request finished");
@@ -98,7 +102,7 @@ public class ObservabilityContextFilter implements Filter {
 
     /**
      * Pega o valor do header ou gera um novo ID.
-     * 
+     *
      * @param req
      * @param name
      * @return
@@ -110,7 +114,7 @@ public class ObservabilityContextFilter implements Filter {
 
     /**
      * Gera um novo ID (UUID sem hífens).
-     * 
+     *
      * @return
      */
     private static String newId() {
@@ -119,7 +123,7 @@ public class ObservabilityContextFilter implements Filter {
 
     /**
      * Retorna o primeiro valor não-nulo e não-vazio.
-     * 
+     *
      * @param values
      * @return
      */
@@ -132,7 +136,7 @@ public class ObservabilityContextFilter implements Filter {
 
     /**
      * Garante que a string não é nula.
-     * 
+     *
      * @param v
      * @return
      */

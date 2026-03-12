@@ -69,4 +69,9 @@ public class TmdbMediaDetails {
      * Lista de nomes de gêneros (ex.: ["Action", "Drama"]).
      */
     private List<String> genres;
+
+    /**
+     * Número de temporadas (apenas para séries).
+     */
+    private Integer numberOfSeasons;
 }

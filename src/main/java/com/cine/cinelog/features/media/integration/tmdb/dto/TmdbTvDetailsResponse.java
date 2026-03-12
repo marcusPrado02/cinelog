@@ -33,6 +33,9 @@ public class TmdbTvDetailsResponse {
     @JsonProperty("vote_average")
     private Double voteAverage;
 
+    @JsonProperty("number_of_seasons")
+    private Integer numberOfSeasons;
+
     private List<TmdbMovieDetailsResponse.Genre> genres;
 
     // getters/setters…
@@ -115,5 +118,13 @@ public class TmdbTvDetailsResponse {
 
     public void setGenres(List<TmdbMovieDetailsResponse.Genre> genres) {
         this.genres = genres;
+    }
+
+    public Integer getNumberOfSeasons() {
+        return numberOfSeasons;
+    }
+
+    public void setNumberOfSeasons(Integer numberOfSeasons) {
+        this.numberOfSeasons = numberOfSeasons;
     }
 }

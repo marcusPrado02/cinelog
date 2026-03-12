@@ -36,12 +36,12 @@ import java.util.Optional;
  * Adaptador de repositório para persistência de Media.
  * Implementa a interface de porta de saída convertendo operações de domínio
  * em operações de persistência JPA.
- * 
+ *
  * <p>
  * Este adaptador faz a ponte entre a camada de domínio e a infraestrutura,
  * realizando conversões entre Media e MediaEntity.
  * </p>
- * 
+ *
  * @since 1.0
  * @see MediaRepositoryPort
  * @see MediaEntity
@@ -111,6 +111,19 @@ public class MediaRepositoryAdapter implements MediaRepositoryPort {
                         MediaType.valueOf(item.getType()),
                         item.getAverageRating(),
                         item.getRatingCount()))
+                .toList();
+    }
+
+    @Override
+    public Optional<Media> findByTmdbId(Long tmdbId) {
+        return repository.findByTmdbId(tmdbId).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Media> findAllWithTmdbId(MediaType type) {
+        return repository.findByTypeAndTmdbIdNotNull(type)
+                .stream()
+                .map(mapper::toDomain)
                 .toList();
     }
 }

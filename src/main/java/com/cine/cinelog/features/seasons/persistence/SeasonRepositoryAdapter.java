@@ -23,12 +23,12 @@ import java.util.Optional;
  * Adaptador de repositório para persistência de Season.
  * Implementa a interface de porta de saída convertendo operações de domínio
  * em operações de persistência JPA.
- * 
+ *
  * <p>
  * Este adaptador faz a ponte entre a camada de domínio e a infraestrutura,
  * realizando conversões entre Season e SeasonEntity.
  * </p>
- * 
+ *
  * @since 1.0
  * @see SeasonRepositoryPort
  * @see SeasonEntity
@@ -87,5 +87,10 @@ public class SeasonRepositoryAdapter implements SeasonRepositoryPort {
     @Override
     public boolean existsById(Long id) {
         return jpa.existsById(id);
+    }
+
+    @Override
+    public Optional<Season> findByMediaIdAndSeasonNumber(Long mediaId, Integer seasonNumber) {
+        return jpa.findByMediaIdAndSeasonNumber(mediaId, seasonNumber).map(seasonMapper::toDomain);
     }
 }

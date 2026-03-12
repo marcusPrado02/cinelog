@@ -23,12 +23,12 @@ import java.util.Optional;
  * Adaptador de repositório para persistência de Person.
  * Implementa a interface de porta de saída convertendo operações de domínio
  * em operações de persistência JPA.
- * 
+ *
  * <p>
  * Este adaptador faz a ponte entre a camada de domínio e a infraestrutura,
  * realizando conversões entre Person e PersonEntity.
  * </p>
- * 
+ *
  * @since 1.0
  * @see PersonRepositoryPort
  * @see PersonEntity
@@ -72,5 +72,15 @@ public class PersonRepositoryAdapter implements PersonRepositoryPort {
     @Override
     public void deleteById(Long id) {
         jpa.deleteById(id);
+    }
+
+    @Override
+    public Optional<Person> findByTmdbPersonId(Long tmdbPersonId) {
+        return jpa.findByTmdbPersonId(tmdbPersonId).map(personMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Person> findByName(String name) {
+        return jpa.findByNameIgnoreCase(name).map(personMapper::toDomain);
     }
 }

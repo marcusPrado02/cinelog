@@ -22,6 +22,7 @@ auth.http (login) → media.http (criar mídia) → catalog.http (gêneros, pess
                                                → activity.http (watch entries, watchlist, progresso)
                                                → discovery.http (busca, popularidade, recomendações, insights)
                                                → admin.http (admin media, DLQ)
+                                               → batch.http (sync gêneros → importar filmes → séries → créditos → temporadas)
                                                → health.http (actuator, métricas)
 ```
 
@@ -36,6 +37,7 @@ auth.http (login) → media.http (criar mídia) → catalog.http (gêneros, pess
 | [`activity.http`](./activity.http)   | watch-entries · watchlist · watch-progress                                     | Token  |
 | [`discovery.http`](./discovery.http) | busca · top-rated · trending · most-watched · recomendações · insights         | Misto  |
 | [`admin.http`](./admin.http)         | /api/v1/admin/media · /admin/dlq (dead-letter queue) + cenários de permissão   | Admin  |
+| [`batch.http`](./batch.http)         | /api/v1/admin/batch/genres · movies · tv-shows · credits · seasons             | Admin  |
 | [`health.http`](./health.http)       | /actuator/\* · loggers · caches · /v3/api-docs                                 | Misto  |
 
 ## Variáveis de Ambiente

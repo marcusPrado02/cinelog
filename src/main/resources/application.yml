@@ -34,6 +34,12 @@ spring:
         enabled: true
         change-log: classpath:liquibase/db.changelog-master.xml
 
+    batch:
+        jdbc:
+            initialize-schema: never
+        job:
+            enabled: false # Desabilita auto-execução de jobs no startup; use a API ou o scheduler
+
     mvc:
         problemdetails:
             enabled: true
@@ -62,6 +68,14 @@ spring:
                 "[spring.json.trusted.packages]": "com.cine.cinelog.core.domain.events,com.cine.cinelog.core.domain.events.watchentry,com.cine.cinelog.infrastructure.persistence.outbox,java.util,java.lang"
         listener:
             ack-mode: manual
+    mail:
+        host: ${MAIL_HOST:localhost}
+        port: ${MAIL_PORT:1025}
+        username: ${MAIL_USER:}
+        password: ${MAIL_PASS:}
+        properties:
+            mail.smtp.auth: false
+            mail.smtp.starttls.enable: false
 
 springdoc:
     api-docs:
@@ -100,7 +114,7 @@ management:
     endpoints:
         web:
             exposure:
-                include: health,info,prometheus
+                include: health,info,prometheus,loggers,metrics,caches
         enabled-by-default: false
     endpoint:
         health:
@@ -109,6 +123,12 @@ management:
         info:
             enabled: true
         prometheus:
+            enabled: true
+        loggers:
+            enabled: true
+        metrics:
+            enabled: true
+        caches:
             enabled: true
     # Micrometer tracing
     tracing:
@@ -220,6 +240,38 @@ cinelog:
     integration:
         tracing:
             enabled: true
+
+    batch:
+        max-pages: 10
+        sort-by: popularity.desc
+        chunk-size: 20
+        jobs:
+            sync-genres:
+                enabled: true
+                cron: "0 0 3 * * SUN"
+            import-movies:
+                enabled: true
+                cron: "0 30 3 * * SUN"
+                max-pages: ${BATCH_IMPORT_MOVIES_MAX_PAGES:10}
+            import-tv-shows:
+                enabled: true
+                cron: "0 0 4 * * SUN"
+                max-pages: ${BATCH_IMPORT_TV_SHOWS_MAX_PAGES:10}
+            import-credits:
+                enabled: true
+                cron: "0 30 4 * * SUN"
+            import-seasons:
+                enabled: true
+                cron: "0 0 5 * * SUN"
+    reports:
+        enabled: true
+        from-email: ${REPORT_FROM_EMAIL:noreply@cinelog.dev}
+        from-name: CineLog
+        base-url: ${APP_BASE_URL:http://localhost:8080}
+        cron:
+            weekly-digest: "0 0 8 * * MON"
+            trending: "0 0 18 * * FRI"
+            platform-report: "0 0 6 * * SUN"
 
 # Kafka custom app properties (usados por @KafkaListener nos consumers)
 kafka:

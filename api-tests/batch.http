@@ -1,0 +1,182 @@
+# =============================================================================
+# CineLog API – Batch Jobs TMDB                                 [batch.http]
+# =============================================================================
+# Endpoints:
+#   POST /api/v1/admin/batch/genres     → Sincronizar gêneros do TMDB
+#   POST /api/v1/admin/batch/movies     → Importar filmes do TMDB
+#   POST /api/v1/admin/batch/tv-shows   → Importar séries de TV do TMDB
+#   POST /api/v1/admin/batch/credits    → Importar créditos (elenco/equipe)
+#   POST /api/v1/admin/batch/seasons    → Importar temporadas e episódios
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ WORKFLOW RECOMENDADO (executar na ordem abaixo):                        │
+# │  1. syncGenres   → popula a tabela de gêneros                           │
+# │  2. importMovies → importa filmes com seus gêneros                      │
+# │  3. importTvShows → importa séries com seus gêneros                     │
+# │  4. importCredits → vincula elenco/equipe às mídias importadas           │
+# │  5. importSeasons → importa temporadas e episódios das séries            │
+# │                                                                         │
+# │ ⚠ Todos os endpoints requerem role ADMIN.                               │
+# │ ⚠ Os jobs rodam de forma ASSÍNCRONA — o retorno é imediato com o        │
+# │    executionId; o processamento acontece em background.                 │
+# │                                                                         │
+# │ Resposta de sucesso:                                                    │
+# │  { "executionId": 1, "jobName": "importMoviesJob", "status": "STARTED"} │
+# └─────────────────────────────────────────────────────────────────────────┘
+#
+# STATUS possíveis retornados pelo Spring Batch:
+#   STARTING | STARTED | STOPPING | STOPPED | FAILED | COMPLETED | ABANDONED
+# =============================================================================
+
+# ─── Variáveis (edite conforme necessário) ───────────────────────────────────
+@baseUrl     = http://localhost:8080
+@adminToken  = REPLACE_AFTER_ADMIN_LOGIN
+@token       = REPLACE_AFTER_LOGIN
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 1. SYNC GENRES – /api/v1/admin/batch/genres
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name syncGenres
+# Dispara o job de sincronização de gêneros.
+# Faz merge dos gêneros de filmes e séries do TMDB, dedupando por nome.
+# → 200 OK  { "executionId": ..., "jobName": "syncGenresJob", "status": "STARTED" }
+# → 403 Forbidden (token sem role ADMIN)
+POST {{baseUrl}}/api/v1/admin/batch/genres
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name syncGenresForbidden
+# Tentativa de disparo com token USER (não-admin).
+# → 403 Forbidden
+POST {{baseUrl}}/api/v1/admin/batch/genres
+Authorization: Bearer {{token}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 2. IMPORT MOVIES – /api/v1/admin/batch/movies
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name importMovies
+# Importa filmes usando as configurações padrão do application.yml.
+# maxPages é lido de cinelog.batch.jobs.import-movies.max-pages (padrão: 10).
+# → 200 OK  { "executionId": ..., "jobName": "importMoviesJob", "status": "STARTED" }
+POST {{baseUrl}}/api/v1/admin/batch/movies
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name importMoviesCustomPages
+# Importa apenas 2 páginas (≈40 filmes) para teste rápido.
+# → 200 OK
+POST {{baseUrl}}/api/v1/admin/batch/movies?maxPages=2
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name importMoviesSinglePage
+# Importa apenas 1 página (≈20 filmes) — ideal para smoke test.
+# → 200 OK
+POST {{baseUrl}}/api/v1/admin/batch/movies?maxPages=1
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 3. IMPORT TV SHOWS – /api/v1/admin/batch/tv-shows
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name importTvShows
+# Importa séries de TV usando as configurações padrão.
+# maxPages lido de cinelog.batch.jobs.import-tv-shows.max-pages (padrão: 10).
+# → 200 OK  { "executionId": ..., "jobName": "importTvShowsJob", "status": "STARTED" }
+POST {{baseUrl}}/api/v1/admin/batch/tv-shows
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name importTvShowsCustomPages
+# Importa apenas 2 páginas de séries para teste rápido.
+# → 200 OK
+POST {{baseUrl}}/api/v1/admin/batch/tv-shows?maxPages=2
+Authorization: Bearer {{adminToken}}
+
+
+###
+# @name importTvShowsSinglePage
+# Importa apenas 1 página (≈20 séries) — smoke test.
+# → 200 OK
+POST {{baseUrl}}/api/v1/admin/batch/tv-shows?maxPages=1
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 4. IMPORT CREDITS – /api/v1/admin/batch/credits
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name importCredits
+# Varre todas as mídias com tmdbId e importa elenco + equipe técnica.
+# Cria ou atualiza registros de Person e Credit de forma idempotente.
+# Mapeamento de papéis:
+#   Cast → ACTOR (com characterName + orderIndex)
+#   Crew Director        → DIRECTOR
+#   Crew Writer/Screenplay/Story → WRITER
+#   Crew Producer        → PRODUCER
+#   Crew Music           → COMPOSER
+# → 200 OK  { "executionId": ..., "jobName": "importCreditsJob", "status": "STARTED" }
+POST {{baseUrl}}/api/v1/admin/batch/credits
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# 5. IMPORT SEASONS – /api/v1/admin/batch/seasons
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name importSeasons
+# Varre todas as séries com tmdbId e importa temporadas + episódios.
+# Para cada série: busca detalhes no TMDB → itera N temporadas →
+#   para cada temporada: salva Season (se novo) e cada Episode (se novo).
+# → 200 OK  { "executionId": ..., "jobName": "importSeasonsJob", "status": "STARTED" }
+POST {{baseUrl}}/api/v1/admin/batch/seasons
+Authorization: Bearer {{adminToken}}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CENÁRIOS DE ERRO
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name importMoviesForbiddenUser
+# Usuário sem role ADMIN tenta disparar importação de filmes.
+# → 403 Forbidden
+POST {{baseUrl}}/api/v1/admin/batch/movies
+Authorization: Bearer {{token}}
+
+
+###
+# @name importMoviesUnauthorized
+# Requisição sem token de autenticação.
+# → 401 Unauthorized
+POST {{baseUrl}}/api/v1/admin/batch/movies
+
+
+###
+# @name importCreditsForbidden
+# Usuário sem role ADMIN tenta disparar importação de créditos.
+# → 403 Forbidden
+POST {{baseUrl}}/api/v1/admin/batch/credits
+Authorization: Bearer {{token}}
+
+
+###
+# @name importSeasonsForbidden
+# Usuário sem role ADMIN tenta disparar importação de temporadas.
+# → 403 Forbidden
+POST {{baseUrl}}/api/v1/admin/batch/seasons
+Authorization: Bearer {{token}}

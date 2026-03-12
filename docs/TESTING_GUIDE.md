@@ -29,6 +29,8 @@
     - 7.14 [Watch Progress](#714-watch-progress)
     - 7.15 [Admin — Dead Letter Queue](#715-admin--dead-letter-queue)
     - 7.16 [Admin — Media (TMDb Sync)](#716-admin--media-tmdb-sync)
+    - 7.17 [Reports & Email](#717-reports--email)
+    - 7.18 [Admin — Batch Jobs (TMDb Sync)](#718-admin--batch-jobs-tmdb-sync)
 8. [Validando Segurança](#8-validando-segurança)
 9. [Observabilidade (Health, Metrics, Tracing)](#9-observabilidade)
 10. [Rodando os Testes Automatizados](#10-rodando-os-testes-automatizados)
@@ -52,11 +54,14 @@
 ## 2. Subindo a Infraestrutura
 
 ```bash
-# Na raiz do projeto — serviços principais (MySQL usa key 'db', não 'mysql'):
-docker compose up -d db redis keycloak
+# Na raiz do projeto — serviços principais:
+docker compose up -d db redis keycloak mailhog
 
 # Kafka + Zookeeper (definidos em arquivo separado):
 docker compose -f docker/docker-compose.dev.yml up -d zookeeper kafka
+
+# Stack de observabilidade (Prometheus, Grafana, Loki, Tempo, Jaeger):
+docker compose up -d prometheus grafana loki promtail tempo jaeger otel-collector
 ```
 
 Aguarde todos ficarem healthy:
@@ -466,6 +471,72 @@ GET /api/media/search/text?q=Matrix
 
 ---
 
+### 7.17. Reports & Email
+
+> Requer autenticação. Endpoints `/admin/reports/*` requerem role **ADMIN**.
+> Os emails são enviados via MailHog (http://localhost:8025) em ambiente de desenvolvimento.
+
+#### User Reports (autenticado)
+
+| Ação                       | Endpoint                               | Descrição                           |
+| -------------------------- | -------------------------------------- | ----------------------------------- |
+| **Ver digest semanal**     | `GET /api/v1/reports/weekly-digest`    | HTML/JSON do resumo semanal         |
+| **Enviar digest**          | `POST /api/v1/reports/weekly-digest`   | Envio imediato por email            |
+| **Ver top avaliados**      | `GET /api/v1/reports/top-rated`        | Relatório de mídias mais avaliadas  |
+| **Enviar top avaliados**   | `POST /api/v1/reports/top-rated`       | Envio imediato por email            |
+| **Ver recomendações**      | `GET /api/v1/reports/recommendations`  | Relatório de recomendações          |
+| **Enviar recomendações**   | `POST /api/v1/reports/recommendations` | Envio imediato por email            |
+| **Ver trending**           | `GET /api/v1/reports/trending`         | Relatório de trending               |
+| **Enviar trending**        | `POST /api/v1/reports/trending`        | Envio imediato por email            |
+
+#### Admin Reports
+
+| Ação                          | Endpoint                                 | Descrição                        |
+| ----------------------------- | ---------------------------------------- | -------------------------------- |
+| **Ver platform report**       | `GET /api/v1/admin/reports/platform`     | Relatório geral da plataforma    |
+| **Enviar platform report**    | `POST /api/v1/admin/reports/platform`    | Enviar por email (admin)         |
+| **Disparar envios em massa**  | `POST /api/v1/admin/reports/send-to-all` | Enviar digest para todos os usuários ativos |
+
+**Como testar o envio de email:**
+
+1. Execute `POST /api/v1/reports/weekly-digest` no Swagger
+2. Abra http://localhost:8025 (MailHog)
+3. O email com o template dark/cinema deve aparecer na caixa de entrada
+4. Inspecione o HTML para ver o template renderizado
+
+**Templates disponíveis:** `weekly-digest`, `top-rated`, `recommendations`, `trending`, `platform-report`
+
+---
+
+### 7.18. Admin — Batch Jobs (TMDb Sync)
+
+> **Requer role ADMIN.** Dispara jobs Spring Batch para popular o banco com dados do TMDb.
+
+| Ação                     | Endpoint                            | Parâmetros             |
+| ------------------------ | ----------------------------------- | ---------------------- |
+| **Importar gêneros**     | `POST /api/v1/admin/batch/genres`   | —                      |
+| **Importar filmes**      | `POST /api/v1/admin/batch/movies`   | `maxPages` (default 5) |
+| **Importar séries**      | `POST /api/v1/admin/batch/tv-shows` | `maxPages`             |
+| **Importar créditos**    | `POST /api/v1/admin/batch/credits`  | —                      |
+| **Importar temporadas**  | `POST /api/v1/admin/batch/seasons`  | —                      |
+
+**Exemplo via cURL:**
+
+```bash
+# Obter token admin e disparar import de filmes (5 páginas)
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@cinelog.dev","password":"Admin@CineLog2025!"}' \
+  | jq -r '.accessToken')
+
+curl -X POST "http://localhost:8080/api/v1/admin/batch/movies?maxPages=5" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+> Requer a variável `TMDB_API_KEY` configurada no ambiente (JWT Bearer do TMDb).
+
+---
+
 ## 8. Validando Segurança
 
 ### 8.1. Testes de autenticação
@@ -512,40 +583,105 @@ GET /api/media/search/text?q=Matrix
 
 ```bash
 curl http://localhost:8080/actuator/health | jq .
+# Esperado: {"status":"UP","components":{"db":{"status":"UP"}, "redis":{"status":"UP"}, ...}}
 ```
 
-### 9.2. Prometheus Metrics
+Health indicators customizados incluídos:
+- `tmdb` — conectividade com a API do TMDb
+- `outbox` — estado do outbox de eventos Kafka
+
+### 9.2. Endpoints Actuator Expostos
+
+| Endpoint                     | URL                                      | Descrição                        |
+| ---------------------------- | ---------------------------------------- | -------------------------------- |
+| Health                       | `/actuator/health`                       | Status da aplicação e dependências |
+| Info                         | `/actuator/info`                         | Versão e nome da aplicação       |
+| Prometheus (scrape)          | `/actuator/prometheus`                   | Todas as métricas em formato Prometheus |
+| Métricas JSON                | `/actuator/metrics`                      | Lista de meters disponíveis      |
+| Loggers                      | `/actuator/loggers`                      | Consulta e altera log levels em runtime |
+| Caches                       | `/actuator/caches`                       | Gerencia caches Redis            |
 
 ```bash
-# Requer autenticação ADMIN (via dev profile todos actuators estão abertos)
-curl http://localhost:8080/actuator/prometheus | head -50
-```
-
-Métricas customizadas a procurar:
-
-- `cinelog_auth_login_total` — contagem de logins
-- `cinelog_media_created_total` — contagem de mídias criadas
-- `cinelog_watchlist_added_total` — contagem de watchlist adds
-- `cinelog_domain_exception_total` — exceções de domínio
-
-### 9.3. Info
-
-```bash
+# Info da aplicação
 curl http://localhost:8080/actuator/info | jq .
+
+# Métricas Prometheus
+curl http://localhost:8080/actuator/prometheus | grep cinelog
+
+# Listar todos os meters
+curl http://localhost:8080/actuator/metrics | jq .names
+
+# Métricas de timer (gerado pelo @Measured / MetricsAspect)
+curl 'http://localhost:8080/actuator/metrics/cinelog.method.execution' | jq .
+
+# Listar loggers
+curl http://localhost:8080/actuator/loggers | jq '.loggers["com.cine.cinelog"]'
+
+# Alterar nível de log em runtime (sem reiniciar)
+curl -X POST http://localhost:8080/actuator/loggers/com.cine.cinelog.features \
+  -H 'Content-Type: application/json' \
+  -d '{"configuredLevel": "DEBUG"}'
 ```
 
-### 9.4. Stack de Observabilidade (Opcional)
+### 9.3. Métricas de Negócio (BusinessMetricsService)
 
-Se quiser subir Grafana + Prometheus + Tempo + Loki:
+Métricas customizadas disponíveis em `/actuator/prometheus`:
+
+| Nome da métrica                          | Tipo    | Descrição                         |
+| ---------------------------------------- | ------- | --------------------------------- |
+| `cinelog_business_auth_login_total`      | Counter | Logins (tag: `success`)           |
+| `cinelog_business_user_registered_total` | Counter | Usuários registrados              |
+| `cinelog_business_media_created_total`   | Counter | Mídias criadas (tag: `type`)      |
+| `cinelog_business_watchentry_created_total` | Counter | Watch entries criadas          |
+| `cinelog_business_watchlist_added_total` | Counter | Adições à watchlist               |
+| `cinelog_business_rating_given_total`    | Counter | Ratings registrados               |
+| `cinelog_integration_tmdb_calls_total`   | Counter | Chamadas à API TMDb               |
+| `cinelog_integration_duration`           | Timer   | Latência de integrações externas  |
+| `cinelog_batch_job_executed_total`       | Counter | Jobs Batch executados             |
+| `cinelog_method_execution`              | Timer   | Tempo de execução (MetricsAspect) |
+
+### 9.4. Tracing — Propagação de Trace Headers
+
+Todo request gera headers de rastreamento na resposta:
 
 ```bash
-docker compose -f docker/docker-compose.observability.yml up -d
+curl -v http://localhost:8080/actuator/health 2>&1 | grep -i 'x-trace\|x-span\|x-request'
+# Esperado:
+# X-Trace-Id: <traceId>
+# X-Span-Id: <spanId>
+# X-Request-Id: <uuid>
 ```
 
-| Serviço    | URL                                 |
-| ---------- | ----------------------------------- |
-| Grafana    | http://localhost:3000 (admin/admin) |
-| Prometheus | http://localhost:9090               |
+Os campos `traceId`, `spanId`, `userId`, `requestId`, `tookMs`, `status` aparecem em **todos os logs JSON** (MDC automático via `ObservabilityContextFilter`).
+
+### 9.5. Stack de Observabilidade Completa
+
+```bash
+# Subir toda a stack de observabilidade (já no docker-compose principal):
+docker compose up -d prometheus grafana loki promtail tempo jaeger otel-collector
+```
+
+| Serviço    | URL                                 | Descrição                              |
+| ---------- | ----------------------------------- | -------------------------------------- |
+| Grafana    | http://localhost:3000 (admin/admin) | Dashboards (auto-provisionados)        |
+| Prometheus | http://localhost:9090               | Dados de métricas                      |
+| Loki       | http://localhost:3100               | Logs centralizados                     |
+| Tempo      | http://localhost:3200               | Traces distribuídos                    |
+| Jaeger UI  | http://localhost:16686              | Visualização de traces                 |
+
+**Grafana — Datasources e Dashboards automáticos:**
+Ao subir o Grafana, os datasources (Prometheus, Loki, Tempo) e 3 dashboards são provisionados automaticamente:
+- **Business Metrics** — counters de negócio, logins, mídias, watchlist
+- **Infrastructure & Performance** — JVM, conexões, latência HTTP
+- **Logs** — busca de logs via Loki com correlação de traces
+
+### 9.6. Testes de Observabilidade via .http
+
+O arquivo `api-tests/observability.http` cobre todos os endpoints Actuator:
+
+```
+api-tests/observability.http  — health, metrics, loggers, caches, tracing headers
+```
 
 ---
 
@@ -554,7 +690,7 @@ docker compose -f docker/docker-compose.observability.yml up -d
 ### 10.1. Testes Unitários (sem Docker)
 
 ```bash
-# ~102 classes, ~550 testes — NÃO precisa de Docker
+# ~110 classes — NÃO precisa de Docker
 ./mvnw test -Dtest='!*IT,!*IntegrationTest,!*ConnectivityTest,!CinelogApplicationTest' \
   -Dspring.profiles.active=test
 ```
@@ -574,6 +710,12 @@ docker compose -f docker/docker-compose.observability.yml up -d
 # Relatório JaCoCo em: target/site/jacoco/index.html
 ```
 
+Se VS Code Tasks estiverem configuradas:
+
+```
+Ctrl+Shift+P → Run Task → "Test (coverage) + Report"
+```
+
 ### 10.4. Teste específico
 
 ```bash
@@ -591,6 +733,20 @@ docker compose -f docker/docker-compose.observability.yml up -d
 ```
 
 > Verifica que a arquitetura hexagonal é respeitada (core não depende de infra, etc.)
+
+### 10.6. Inventário de classes de teste (113 total)
+
+| Categoria                    | Classes | Exemplos                                             |
+| ---------------------------- | ------- | ---------------------------------------------------- |
+| Use cases (application)      | ~50     | `CreateMediaServiceTest`, `CreateWatchEntryServiceTest` |
+| Domain (VOs, policies, spec) | ~10     | `RatingTest`, `WatchEntryTest`, `DefaultRatingPolicyTest` |
+| Web controllers              | ~10     | `MediaControllerTest`, `UserControllerTest`          |
+| Persistence adapters         | ~10     | `MediaRepositoryAdapterTest`, `WatchEntryRepositoryIT` |
+| Infrastructure               | ~8      | `EventEnvelopeTest`, `BaseKafkaConsumerTest`, `RetryStrategyTest` |
+| Observability / Security     | ~8      | `ObservabilityContextFilterTest`, `JwtTokenServiceTest` |
+| Integration (Testcontainers) | 3       | `KeycloakOAuth2IntegrationTest`, `TestcontainersConnectivityTest` |
+| Architecture (ArchUnit)      | 1       | `LayeredArchitectureTest` |
+| Shared / Config              | ~10     | `GlobalExceptionHandlerTest`, `OpenApiConfigTest`    |
 
 ---
 
@@ -633,11 +789,19 @@ docker compose -f docker/docker-compose.observability.yml up -d
 
 ### ADMIN only
 
-| Método | Path                  | Descrição                |
-| ------ | --------------------- | ------------------------ |
-| GET    | `/api/v1/users`       | Listar todos os usuários |
-| DELETE | `/api/v1/users/{id}`  | Deletar usuário          |
-| POST   | `/api/v1/admin/media` | Criar mídia (admin)      |
+| Método | Path                                    | Descrição                             |
+| ------ | --------------------------------------- | ------------------------------------- |
+| GET    | `/api/v1/users`                         | Listar todos os usuários              |
+| DELETE | `/api/v1/users/{id}`                    | Deletar usuário                       |
+| POST   | `/api/v1/admin/media`                   | Criar mídia (admin)                   |
+| GET    | `/api/v1/admin/reports/platform`        | Relatório da plataforma               |
+| POST   | `/api/v1/admin/reports/platform`        | Enviar relatório da plataforma        |
+| POST   | `/api/v1/admin/reports/send-to-all`     | Disparar digest para todos os usuários |
+| POST   | `/api/v1/admin/batch/genres`            | Importar gêneros do TMDb              |
+| POST   | `/api/v1/admin/batch/movies`            | Importar filmes do TMDb               |
+| POST   | `/api/v1/admin/batch/tv-shows`          | Importar séries do TMDb               |
+| POST   | `/api/v1/admin/batch/credits`           | Importar créditos do TMDb             |
+| POST   | `/api/v1/admin/batch/seasons`           | Importar temporadas do TMDb           |
 
 ### ADMIN ou OPS
 
@@ -667,9 +831,11 @@ docker compose -f docker/docker-compose.observability.yml up -d
 - **Arquitetura Hexagonal** validada por ArchUnit (`LayeredArchitectureTest`)
 - **Dual Auth**: JWT local + OAuth2 Keycloak coexistem no mesmo SecurityFilterChain
 - **MFA** via TOTP configurado no Keycloak realm
-- **112 classes de teste** (~603 métodos), cobrindo unitários, integração e arquitetura
+- **113 classes de teste**, cobrindo unitários, integração e arquitetura
 - **Testcontainers** (MySQL, Kafka, Redis, Keycloak) para testes de integração reprodutíveis
-- **Observabilidade**: health checks customizados (TMDb, Outbox), métricas Micrometer, tracing OpenTelemetry
+- **Observabilidade completa**: health checks customizados (TMDb, Outbox), métricas Micrometer, tracing OpenTelemetry, logs JSON estruturados com MDC enriquecido (userId, traceId, tookMs), Grafana auto-provisionado (Prometheus + Loki + Tempo)
+- **Reports & Email**: 5 tipos de relatório com templates dark/cinema HTML, envio via MailHog em dev
+- **Spring Batch**: 5 jobs para sincronização com TMDb (319+ mídias, 126490+ episódios importados)
 - **Segurança OWASP**: rate limiting, SQL injection filter, CORS configurável, account lockout, refresh token rotation, password policy, input sanitization, tamper-proof validation
 - **Event-Driven**: Outbox pattern com Kafka, Dead Letter Queue, idempotent consumer (inbox)
 - **Design Patterns**: Strategy (recomendações), State (watch entry status), Specification (popular media), Observer (domain events), Template Method (base consumer)

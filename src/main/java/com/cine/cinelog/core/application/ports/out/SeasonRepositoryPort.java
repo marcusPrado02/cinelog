@@ -54,7 +54,7 @@ public interface SeasonRepositoryPort {
     /**
      * Verifica se uma temporada existe para uma mídia e número de temporada
      * específicos.
-     * 
+     *
      * @param mediaId
      * @param seasonNumber
      * @return
@@ -63,9 +63,18 @@ public interface SeasonRepositoryPort {
 
     /**
      * Verifica se uma temporada existe pelo seu ID.
-     * 
+     *
      * @param id
      * @return
      */
     boolean existsById(Long id);
+
+    /**
+     * Busca uma temporada pelo ID da mídia e número de temporada.
+     *
+     * @param mediaId      O ID da mídia.
+     * @param seasonNumber O número da temporada.
+     * @return Um Optional contendo a temporada encontrada, ou vazio.
+     */
+    Optional<Season> findByMediaIdAndSeasonNumber(Long mediaId, Integer seasonNumber);
 }

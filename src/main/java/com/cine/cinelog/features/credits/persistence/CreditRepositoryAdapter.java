@@ -24,10 +24,12 @@ import java.util.stream.Collectors;
  * Adaptador de repositório para persistência de Credit.
  * Implementa a interface de porta de saída convertendo operações de domínio
  * em operações de persistência JPA.
- * 
- * <p>Este adaptador faz a ponte entre a camada de domínio e a infraestrutura,
- * realizando conversões entre Credit e CreditEntity.</p>
- * 
+ *
+ * <p>
+ * Este adaptador faz a ponte entre a camada de domínio e a infraestrutura,
+ * realizando conversões entre Credit e CreditEntity.
+ * </p>
+ *
  * @since 1.0
  * @see CreditRepositoryPort
  * @see CreditEntity
@@ -72,5 +74,10 @@ public class CreditRepositoryAdapter implements CreditRepositoryPort {
     @Override
     public void deleteById(Long id) {
         jpa.deleteById(id);
+    }
+
+    @Override
+    public boolean existsByMediaIdAndPersonIdAndRole(Long mediaId, Long personId, String role) {
+        return jpa.existsByMediaIdAndPersonIdAndRole(mediaId, personId, role);
     }
 }

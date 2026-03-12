@@ -10,16 +10,19 @@ import com.cine.cinelog.core.application.ports.out.TmdbClientPort;
 import com.cine.cinelog.core.domain.enums.MediaType;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbCredits;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbDiscoverQuery;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbEpisodeDetails;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbGenre;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbImageConfig;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaDetails;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaSummary;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSearchResult;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbSeasonDetails;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbConfigurationResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbCreditsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbGenreListResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbMovieDetailsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbMovieSearchResponse;
+import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbSeasonDetailsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbTvDetailsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbTvSearchResponse;
 import com.cine.cinelog.shared.config.tmdb.TmdbProperties;
@@ -551,6 +554,58 @@ public class TmdbClientAdapter implements TmdbClientPort {
     }
 
     // ========================================================================
+    // Temporadas
+    // ========================================================================
+
+    @Override
+    @Retry(name = TMDB_INSTANCE)
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchTvSeason")
+    @Bulkhead(name = TMDB_INSTANCE)
+    public Optional<TmdbSeasonDetails> fetchTvSeason(Long tvId, int seasonNumber) {
+        if (tvId == null) {
+            return Optional.empty();
+        }
+
+        try {
+            TmdbSeasonDetailsResponse response = tmdbWebClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/tv/{id}/season/{seasonNumber}")
+                            .queryParam("language", properties.getLanguage())
+                            .build(tvId, seasonNumber))
+                    .retrieve()
+                    .bodyToMono(TmdbSeasonDetailsResponse.class)
+                    .block();
+
+            if (response == null) {
+                return Optional.empty();
+            }
+
+            List<TmdbEpisodeDetails> episodes = Optional.ofNullable(response.getEpisodes())
+                    .orElse(Collections.emptyList())
+                    .stream()
+                    .map(ep -> TmdbEpisodeDetails.builder()
+                            .episodeNumber(ep.getEpisodeNumber())
+                            .name(ep.getName())
+                            .airDate(parseDate(ep.getAirDate()))
+                            .build())
+                    .collect(Collectors.toList());
+
+            return Optional.of(TmdbSeasonDetails.builder()
+                    .seasonNumber(response.getSeasonNumber())
+                    .name(response.getName())
+                    .airDate(parseDate(response.getAirDate()))
+                    .episodes(episodes)
+                    .build());
+        } catch (WebClientResponseException ex) {
+            if (ex.getStatusCode().equals(HttpStatusCode.valueOf(404))) {
+                log.info("TMDb season not found for tvId={} season={}", tvId, seasonNumber);
+                return Optional.empty();
+            }
+            throw ex;
+        }
+    }
+
+    // ========================================================================
     // A10:2025 — Fallback methods (Resilience4j)
     // ========================================================================
 
@@ -626,6 +681,12 @@ public class TmdbClientAdapter implements TmdbClientPort {
         return TmdbImageConfig.builder().build();
     }
 
+    @SuppressWarnings("unused")
+    private Optional<TmdbSeasonDetails> fallbackFetchTvSeason(Long tvId, int seasonNumber, Throwable ex) {
+        log.warn("Fallback fetchTvSeason(tvId={}, season={}) due to {}", tvId, seasonNumber, ex.toString());
+        return Optional.empty();
+    }
+
     // ========================================================================
     // Mapping helpers
     // ========================================================================
@@ -673,6 +734,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
                         : dto.getGenres().stream()
                                 .map(TmdbMovieDetailsResponse.Genre::getName)
                                 .collect(Collectors.toList()))
+                .numberOfSeasons(dto.getNumberOfSeasons())
                 .build();
     }
 
@@ -751,6 +813,18 @@ public class TmdbClientAdapter implements TmdbClientPort {
             } catch (Exception ignore) {
                 return null;
             }
+        }
+    }
+
+    private LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(dateStr);
+        } catch (Exception e) {
+            log.warn("Could not parse TMDb date '{}' as LocalDate", dateStr);
+            return null;
         }
     }
 

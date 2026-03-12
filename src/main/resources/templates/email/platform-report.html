@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Relatório da Plataforma — CineLog Admin</title>
+  <style type="text/css">
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
+    body{margin:0!important;padding:0!important;background-color:#080810;}
+    @media only screen and (max-width:640px){
+      .email-body-padding{padding:0 16px!important;}
+      .metric-cell{display:block!important;width:auto!important;padding:0 0 8px 0!important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#080810;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+
+<!-- Preheader -->
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#080810;">
+  Relatório executivo da plataforma CineLog — métricas gerais, top-rated e trending.
+</div>
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#080810;">
+<tr><td align="center" style="padding:32px 16px;">
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="640"
+       style="background-color:#0E0E18;border-radius:20px;overflow:hidden;border:1px solid #1A1A2A;box-shadow:0 8px 40px rgba(0,0,15,0.9);">
+
+  <!-- BLUE ACCENT BAR -->
+  <tr><td height="5" style="background:linear-gradient(90deg,#0EA5E9,#38BDF8,#0369A1);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:linear-gradient(175deg,#030510 0%,#07102A 45%,#0E0E18 100%);padding:40px 48px 32px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td valign="middle" style="width:36px;">
+            <div style="width:4px;height:36px;background:#0EA5E9;border-radius:2px;"></div>
+          </td>
+          <td valign="middle" style="padding-left:10px;">
+            <span style="font-size:22px;font-weight:900;color:#FFFFFF;" th:text="${appName}">CineLog</span>
+          </td>
+          <td align="right" valign="middle">
+            <!-- ADMIN badge -->
+            <span style="display:inline-block;background:rgba(14,165,233,0.15);color:#0EA5E9;
+                         border:1px solid rgba(14,165,233,0.4);border-radius:6px;
+                         padding:5px 12px;font-size:10px;font-weight:700;letter-spacing:1.5px;">ADMIN</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:24px 0 0;font-size:32px;font-weight:800;color:#FFFFFF;line-height:1.15;letter-spacing:-0.5px;">
+        📊 Relatório<br/>da Plataforma
+      </p>
+      <p style="margin:10px 0 0;font-size:13px;color:rgba(255,255,255,0.35);"
+         th:text="|Gerado em ${data.generatedAt}|">
+        Gerado agora
+      </p>
+    </td>
+  </tr>
+
+  <!-- ═══ SECTION: TOTAIS ═══ -->
+  <tr>
+    <td class="email-body-padding" style="padding:36px 48px 0;">
+      <p style="margin:0 0 16px;font-size:11px;font-weight:700;color:#0EA5E9;text-transform:uppercase;letter-spacing:2px;">
+        Totais acumulados
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:32px;">
+        <tr>
+          <td class="metric-cell" width="33%" style="padding-right:6px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background:#111122;border-radius:14px;padding:22px 12px;text-align:center;
+                           border:1px solid #1A1A30;border-top:3px solid #0EA5E9;">
+                  <div style="font-size:34px;font-weight:900;color:#0EA5E9;line-height:1;"
+                       th:text="${data.totalUsers ?: 0}">0</div>
+                  <div style="font-size:10px;color:#444;margin-top:8px;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;">Usuários</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td class="metric-cell" width="33%" style="padding:0 3px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background:#111122;border-radius:14px;padding:22px 12px;text-align:center;
+                           border:1px solid #1A1A30;border-top:3px solid #0EA5E9;">
+                  <div style="font-size:34px;font-weight:900;color:#0EA5E9;line-height:1;"
+                       th:text="${data.totalMedia ?: 0}">0</div>
+                  <div style="font-size:10px;color:#444;margin-top:8px;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;">Mídias</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td class="metric-cell" width="33%" style="padding-left:6px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background:#111122;border-radius:14px;padding:22px 12px;text-align:center;
+                           border:1px solid #1A1A30;border-top:3px solid #0EA5E9;">
+                  <div style="font-size:34px;font-weight:900;color:#0EA5E9;line-height:1;"
+                       th:text="${data.totalWatchEntries ?: 0}">0</div>
+                  <div style="font-size:10px;color:#444;margin-top:8px;text-transform:uppercase;letter-spacing:1.2px;font-weight:600;">Visualizações</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ═══ SECTION: NOVOS ESTA SEMANA ═══ -->
+  <tr>
+    <td class="email-body-padding" style="padding:0 48px 0;">
+      <p style="margin:0 0 16px;font-size:11px;font-weight:700;color:#22C55E;text-transform:uppercase;letter-spacing:2px;">
+        ↑ Novos esta semana
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:36px;">
+        <tr>
+          <td class="metric-cell" width="33%" style="padding-right:6px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background:#0A1A0A;border-radius:14px;padding:20px 12px;text-align:center;
+                           border:1px solid #1A2A1A;border-top:3px solid #22C55E;">
+                  <div style="font-size:30px;font-weight:900;color:#22C55E;line-height:1;"
+                       th:text="${data.newUsersThisWeek ?: 0}">0</div>
+                  <div style="font-size:10px;color:#3A4A3A;margin-top:8px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Usuários</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td class="metric-cell" width="33%" style="padding:0 3px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background:#0A1A0A;border-radius:14px;padding:20px 12px;text-align:center;
+                           border:1px solid #1A2A1A;border-top:3px solid #22C55E;">
+                  <div style="font-size:30px;font-weight:900;color:#22C55E;line-height:1;"
+                       th:text="${data.newMediaThisWeek ?: 0}">0</div>
+                  <div style="font-size:10px;color:#3A4A3A;margin-top:8px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Mídias</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td class="metric-cell" width="33%" style="padding-left:6px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background:#0A1A0A;border-radius:14px;padding:20px 12px;text-align:center;
+                           border:1px solid #1A2A1A;border-top:3px solid #22C55E;">
+                  <div style="font-size:30px;font-weight:900;color:#22C55E;line-height:1;"
+                       th:text="${data.newWatchEntriesThisWeek ?: 0}">0</div>
+                  <div style="font-size:10px;color:#3A4A3A;margin-top:8px;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Visualizações</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ═══ SECTION: TOP 5 AVALIADOS ═══ -->
+  <tr>
+    <td class="email-body-padding" style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:16px;">
+        <tr>
+          <td style="border-bottom:1px solid #1A1A2A;padding-bottom:12px;">
+            <span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;">
+              ⭐ &nbsp;Top 5 mais bem avaliados
+            </span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr th:if="${data.topRatedMedia != null and !#lists.isEmpty(data.topRatedMedia)}">
+    <td class="email-body-padding" style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr th:each="item,iter : ${data.topRatedMedia}">
+          <td style="padding-bottom:6px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                   style="background:#111122;border-radius:12px;border:1px solid #1A1A2A;overflow:hidden;">
+              <tr>
+                <td width="3" style="width:3px;background:linear-gradient(180deg,#F5C518,#C9A200);"></td>
+                <td width="52" style="width:52px;text-align:center;vertical-align:middle;padding:0 4px;">
+                  <span style="font-size:13px;font-weight:800;color:#F5C518;"
+                        th:text="${iter.count}">#1</span>
+                </td>
+                <td style="padding:14px 14px 14px 4px;vertical-align:middle;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td>
+                        <span style="font-size:14px;font-weight:700;color:#FFFFFF;"
+                              th:text="${item.title}">Título</span>
+                        <span th:if="${item.type == 'MOVIE'}"
+                              style="display:inline-block;background:rgba(245,197,24,0.1);color:#F5C518;
+                                     border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;
+                                     letter-spacing:0.5px;margin-left:6px;vertical-align:middle;">FILME</span>
+                        <span th:unless="${item.type == 'MOVIE'}"
+                              style="display:inline-block;background:rgba(168,85,247,0.1);color:#A855F7;
+                                     border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;
+                                     letter-spacing:0.5px;margin-left:6px;vertical-align:middle;">SÉRIE</span>
+                      </td>
+                    </tr>
+                    <tr th:if="${item.releaseYear != null}">
+                      <td style="font-size:11px;color:#333;padding-top:4px;"
+                          th:text="${item.releaseYear}">2024</td>
+                    </tr>
+                  </table>
+                </td>
+                <td style="padding:14px 20px 14px 4px;vertical-align:middle;text-align:right;min-width:56px;">
+                  <span style="font-size:20px;font-weight:900;color:#F5C518;"
+                        th:text="${item.avgRating != null ? item.avgRating : '—'}">9.5</span>
+                  <span style="font-size:10px;color:#444;margin-left:2px;">/10</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr th:if="${data.topRatedMedia == null or #lists.isEmpty(data.topRatedMedia)}">
+    <td class="email-body-padding" style="padding:0 48px 24px;">
+      <p style="margin:0;font-size:13px;color:#333;font-style:italic;">Sem dados suficientes.</p>
+    </td>
+  </tr>
+
+  <!-- ═══ SECTION: TOP 5 TRENDING ═══ -->
+  <tr>
+    <td class="email-body-padding" style="padding:24px 48px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:16px;">
+        <tr>
+          <td style="border-bottom:1px solid #1A1A2A;padding-bottom:12px;">
+            <span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;">
+              🔥 &nbsp;Top 5 em alta
+            </span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr th:if="${data.trendingMedia != null and !#lists.isEmpty(data.trendingMedia)}">
+    <td class="email-body-padding" style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr th:each="item,iter : ${data.trendingMedia}">
+          <td style="padding-bottom:6px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                   style="background:#111122;border-radius:12px;border:1px solid #1A1A2A;overflow:hidden;">
+              <tr>
+                <td width="3" style="width:3px;background:linear-gradient(180deg,#FF4500,#FF6B00);"></td>
+                <td width="52" style="width:52px;text-align:center;vertical-align:middle;padding:0 4px;">
+                  <span style="font-size:13px;font-weight:800;color:#FF4500;"
+                        th:text="${iter.count}">#1</span>
+                </td>
+                <td style="padding:14px 14px 14px 4px;vertical-align:middle;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                      <td>
+                        <span style="font-size:14px;font-weight:700;color:#FFFFFF;"
+                              th:text="${item.title}">Título</span>
+                        <span th:if="${item.type == 'MOVIE'}"
+                              style="display:inline-block;background:rgba(229,9,20,0.1);color:#FF4444;
+                                     border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;
+                                     letter-spacing:0.5px;margin-left:6px;vertical-align:middle;">FILME</span>
+                        <span th:unless="${item.type == 'MOVIE'}"
+                              style="display:inline-block;background:rgba(59,158,255,0.1);color:#3B9EFF;
+                                     border-radius:3px;padding:1px 6px;font-size:9px;font-weight:700;
+                                     letter-spacing:0.5px;margin-left:6px;vertical-align:middle;">SÉRIE</span>
+                      </td>
+                    </tr>
+                    <tr th:if="${item.releaseYear != null}">
+                      <td style="font-size:11px;color:#333;padding-top:4px;"
+                          th:text="${item.releaseYear}">2024</td>
+                    </tr>
+                  </table>
+                </td>
+                <td style="padding:14px 20px 14px 4px;vertical-align:middle;text-align:right;min-width:70px;">
+                  <div th:if="${item.watchCount != null and item.watchCount > 0}">
+                    <span style="font-size:18px;font-weight:900;color:#FF4500;"
+                          th:text="${item.watchCount}">0</span>
+                    <span style="font-size:10px;color:#444;margin-left:2px;">views</span>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr th:if="${data.trendingMedia == null or #lists.isEmpty(data.trendingMedia)}">
+    <td class="email-body-padding" style="padding:0 48px 24px;">
+      <p style="margin:0;font-size:13px;color:#333;font-style:italic;">Sem dados de trending.</p>
+    </td>
+  </tr>
+
+  <!-- CTA -->
+  <tr>
+    <td style="padding:40px 48px;" align="center">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td style="border-radius:10px;background:linear-gradient(135deg,#0369A1,#0EA5E9);box-shadow:0 4px 20px rgba(14,165,233,0.3);">
+            <a th:href="${baseUrl}" href="#"
+               style="display:inline-block;padding:15px 40px;color:#FFFFFF;text-decoration:none;
+                      font-size:15px;font-weight:700;letter-spacing:0.3px;border-radius:10px;">
+              Abrir painel admin &nbsp;→
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CONFIDENTIAL NOTICE -->
+  <tr>
+    <td style="padding:0 48px 20px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td style="background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.15);
+                     border-radius:10px;padding:14px 18px;text-align:center;">
+            <span style="font-size:11px;color:#1A3A4A;letter-spacing:0.5px;">
+              🔒 Este relatório é confidencial e destinado exclusivamente ao uso administrativo.
+            </span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#050508;border-top:1px solid #12121E;padding:28px 48px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:12px;color:#222;line-height:1.7;">
+        Relatório gerado automaticamente pelo sistema
+        <a th:href="${baseUrl}" style="color:#333;text-decoration:none;" th:text="${appName}">CineLog</a>.
+      </p>
+      <p style="margin:0;font-size:11px;color:#1A1A1A;">© 2026 CineLog &nbsp;·&nbsp; Uso restrito — Admin</p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

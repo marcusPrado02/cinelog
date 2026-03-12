@@ -10,6 +10,7 @@ import com.cine.cinelog.core.domain.model.tmdb.TmdbImageConfig;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaDetails;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaSummary;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSearchResult;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbSeasonDetails;
 
 /**
  * Porta de saída para integração com o TMDb (The Movie Database API).
@@ -170,4 +171,16 @@ public interface TmdbClientPort {
      * @return configuração de imagens
      */
     TmdbImageConfig fetchImageConfig();
+
+    // ================== Temporadas ==================
+
+    /**
+     * Busca detalhes de uma temporada de série. Mapeia para GET
+     * /tv/{id}/season/{season_number}.
+     *
+     * @param tvId         identificador TMDb da série
+     * @param seasonNumber número da temporada
+     * @return detalhes da temporada, ou vazio se não encontrado
+     */
+    Optional<TmdbSeasonDetails> fetchTvSeason(Long tvId, int seasonNumber);
 }

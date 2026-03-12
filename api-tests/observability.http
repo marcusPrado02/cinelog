@@ -1,0 +1,167 @@
+### CineLog — Observability / Actuator Endpoints
+### Base URL: http://localhost:8080
+### Nota: endpoints do actuator ficam em /actuator/*
+
+@base = http://localhost:8080
+
+# ─────────────────────────────────────────────────────────────
+# HEALTH
+# ─────────────────────────────────────────────────────────────
+
+### Health geral (público)
+GET {{base}}/actuator/health
+
+###
+
+### Health — detalhes (requer role ADMIN via ActuatorSecurityConfig)
+# GET {{base}}/actuator/health
+# Accept: application/json
+
+# ─────────────────────────────────────────────────────────────
+# INFO
+# ─────────────────────────────────────────────────────────────
+
+### App info (nome, versão)
+GET {{base}}/actuator/info
+
+# ─────────────────────────────────────────────────────────────
+# MÉTRICAS — Prometheus scrape format
+# ─────────────────────────────────────────────────────────────
+
+### Todas as métricas no formato Prometheus
+GET {{base}}/actuator/prometheus
+
+###
+
+### Métricas — endpoint JSON (lista todos os meters disponíveis)
+GET {{base}}/actuator/metrics
+
+###
+
+### Métricas — timer de execução de métodos (gerado pelo MetricsAspect)
+GET {{base}}/actuator/metrics/cinelog.method.execution
+
+###
+
+### Métricas — erros em métodos instrumentados
+GET {{base}}/actuator/metrics/cinelog.method.execution.errors
+
+###
+
+### Métricas — usuários registrados
+GET {{base}}/actuator/metrics/cinelog.business.user.registered
+
+###
+
+### Métricas — logins (com tag success)
+GET {{base}}/actuator/metrics/cinelog.business.auth.login
+
+###
+
+### Métricas — mídias criadas
+GET {{base}}/actuator/metrics/cinelog.business.media.created
+
+###
+
+### JVM — heap memory usado
+GET {{base}}/actuator/metrics/jvm.memory.used
+
+###
+
+### JVM — threads ativas
+GET {{base}}/actuator/metrics/jvm.threads.live
+
+###
+
+### HTTP — latência das requisições (percentis p50, p95, p99)
+GET {{base}}/actuator/metrics/http.server.requests
+
+# ─────────────────────────────────────────────────────────────
+# LOGGERS — controle dinâmico de log level
+# ─────────────────────────────────────────────────────────────
+
+### Listar todos os loggers configurados
+GET {{base}}/actuator/loggers
+
+###
+
+### Ver nível do root logger
+GET {{base}}/actuator/loggers/ROOT
+
+###
+
+### Ver nível do logger de observabilidade
+GET {{base}}/actuator/loggers/com.cine.cinelog.shared.observability
+
+###
+
+### Ver nível do logger de request_summary
+GET {{base}}/actuator/loggers/request_summary
+
+###
+
+### Alterar root logger para DEBUG (temporário — útil em diagnóstico)
+# POST {{base}}/actuator/loggers/ROOT
+# Content-Type: application/json
+#
+# { "configuredLevel": "DEBUG" }
+
+###
+
+### Aumentar verbosidade do MetricsAspect para DEBUG
+# POST {{base}}/actuator/loggers/com.cine.cinelog.shared.observability.aop.MetricsAspect
+# Content-Type: application/json
+#
+# { "configuredLevel": "DEBUG" }
+
+###
+
+### Restaurar root logger para INFO
+# POST {{base}}/actuator/loggers/ROOT
+# Content-Type: application/json
+#
+# { "configuredLevel": "INFO" }
+
+# ─────────────────────────────────────────────────────────────
+# CACHES (Redis)
+# ─────────────────────────────────────────────────────────────
+
+### Listar todos os caches registrados
+GET {{base}}/actuator/caches
+
+###
+
+### Ver cache específico (ex: media)
+# GET {{base}}/actuator/caches/media
+
+###
+
+### Evict cache (limpar tudo — usar com cuidado em prod)
+# DELETE {{base}}/actuator/caches
+
+# ─────────────────────────────────────────────────────────────
+# TRACING — verificar propagação de trace headers
+# ─────────────────────────────────────────────────────────────
+
+### Qualquer request — verificar headers X-Trace-Id, X-Span-Id, X-Request-Id na resposta
+# Use junto com "Response Headers" na aba de resultado
+GET {{base}}/actuator/health
+X-Trace-Id: test-trace-00000001
+X-Span-Id: test-span-0001
+
+###
+
+### Verificar correlação de logs — request com trace id customizado
+GET {{base}}/api/media?page=0&size=5
+X-Trace-Id: correlation-test-trace
+
+# ─────────────────────────────────────────────────────────────
+# STACKS — observabilidade externa
+# ─────────────────────────────────────────────────────────────
+# Grafana:    http://localhost:3000        (admin/admin)
+# Prometheus: http://localhost:9090
+# Loki:       http://localhost:3100/ready
+# Tempo:      http://localhost:3200/ready
+# Jaeger UI:  http://localhost:16686
+# Kibana:     http://localhost:5601
+# MailHog:    http://localhost:8025

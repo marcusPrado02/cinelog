@@ -1,0 +1,165 @@
+# =============================================================================
+# CineLog API – Relatórios por E-mail                           [reports.http]
+# =============================================================================
+# Endpoints:
+#   GET  /api/v1/reports/weekly-digest    → Preview do digest semanal
+#   POST /api/v1/reports/weekly-digest    → Envia digest por e-mail (202)
+#   GET  /api/v1/reports/top-rated        → Preview top avaliados
+#   POST /api/v1/reports/top-rated        → Envia top-rated por e-mail (202)
+#   GET  /api/v1/reports/recommendations  → Preview recomendações personalizadas
+#   POST /api/v1/reports/recommendations  → Envia recomendações por e-mail (202)
+#   GET  /api/v1/reports/trending         → Preview em alta
+#   POST /api/v1/reports/trending         → Envia trending por e-mail (202)
+#   GET  /api/v1/admin/reports/platform   → Preview relatório de plataforma (admin)
+#   POST /api/v1/admin/reports/platform   → Envia relatório de plataforma (admin)
+#   POST /api/v1/admin/reports/send-to-all → Envia trending para TODOS os usuários
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │ WORKFLOW                                                                │
+# │  1. Faça login em auth.http e copie o accessToken                       │
+# │  2. Cole o token em @token abaixo                                       │
+# │  3. Para visualizar os e-mails: http://localhost:8025 (MailHog UI)      │
+# └─────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
+
+# ─── Variáveis ───────────────────────────────────────────────────────────────
+@baseUrl = http://localhost:8080
+@token = REPLACE_AFTER_LOGIN
+@adminToken = REPLACE_WITH_ADMIN_TOKEN
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# WEEKLY DIGEST — Preview
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name previewWeeklyDigest
+# Retorna os dados que serão enviados no e-mail de digest semanal.
+GET {{baseUrl}}/api/v1/reports/weekly-digest
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# WEEKLY DIGEST — Enviar por e-mail (202 Accepted)
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name sendWeeklyDigest
+# Envia o digest semanal ao e-mail do usuário autenticado.
+# Verifique o resultado em http://localhost:8025
+POST {{baseUrl}}/api/v1/reports/weekly-digest
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TOP RATED — Preview
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name previewTopRated
+GET {{baseUrl}}/api/v1/reports/top-rated?limit=10
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TOP RATED — Enviar por e-mail
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name sendTopRated
+POST {{baseUrl}}/api/v1/reports/top-rated
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "limit": 10
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# RECOMMENDATIONS — Preview
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name previewRecommendations
+GET {{baseUrl}}/api/v1/reports/recommendations
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# RECOMMENDATIONS — Enviar por e-mail
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name sendRecommendations
+POST {{baseUrl}}/api/v1/reports/recommendations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TRENDING — Preview
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name previewTrending
+GET {{baseUrl}}/api/v1/reports/trending?days=7&limit=10
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TRENDING — Enviar por e-mail
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name sendTrending
+POST {{baseUrl}}/api/v1/reports/trending
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PLATFORM REPORT (ADMIN) — Preview
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name previewPlatformReport
+GET {{baseUrl}}/api/v1/admin/reports/platform
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PLATFORM REPORT (ADMIN) — Enviar por e-mail
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name sendPlatformReport
+POST {{baseUrl}}/api/v1/admin/reports/platform
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "email": "admin@cinelog.dev"
+}
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SEND-TO-ALL (ADMIN) — Envia trending para todos os usuários
+# ═════════════════════════════════════════════════════════════════════════════
+
+###
+# @name sendTrendingToAll
+# ATENÇÃO: dispara e-mail para TODOS os usuários ativos!
+POST {{baseUrl}}/api/v1/admin/reports/send-to-all
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json

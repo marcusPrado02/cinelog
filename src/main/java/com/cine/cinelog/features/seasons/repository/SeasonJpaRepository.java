@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Repositório JPA para gerenciamento de temporadas de séries.
- * 
+ *
  * <p>
  * Fornece operações de persistência para {@link SeasonEntity}, incluindo:
  * <ul>
@@ -17,14 +17,14 @@ import java.util.List;
  * <li>Verificação de existência</li>
  * <li>Validação de unicidade (mídia + número da temporada)</li>
  * </ul>
- * 
+ *
  * @since 1.0
  * @see SeasonEntity
  */
 public interface SeasonJpaRepository extends JpaRepository<SeasonEntity, Long> {
         /**
          * Busca todas as temporadas de uma mídia, ordenadas por número.
-         * 
+         *
          * @param mediaId o identificador da mídia (série)
          * @return lista ordenada de temporadas
          */
@@ -32,7 +32,7 @@ public interface SeasonJpaRepository extends JpaRepository<SeasonEntity, Long> {
 
         /**
          * Verifica se existe alguma temporada para a mídia especificada.
-         * 
+         *
          * @param mediaId o identificador da mídia
          * @return true se houver temporadas, false caso contrário
          */
@@ -40,7 +40,7 @@ public interface SeasonJpaRepository extends JpaRepository<SeasonEntity, Long> {
 
         /**
          * Verifica se uma temporada específica existe para uma mídia.
-         * 
+         *
          * @param mediaId      o identificador da mídia
          * @param seasonNumber o número da temporada
          * @return true se a temporada existir, false caso contrário
@@ -54,7 +54,7 @@ public interface SeasonJpaRepository extends JpaRepository<SeasonEntity, Long> {
 
         /**
          * Verifica se uma temporada existe pelo seu ID.
-         * 
+         *
          * @param id
          * @return
          */
@@ -64,4 +64,13 @@ public interface SeasonJpaRepository extends JpaRepository<SeasonEntity, Long> {
                         WHERE s.id = :id
                         """)
         boolean existsById(Long id);
+
+        /**
+         * Busca uma temporada pelo ID da mídia e número de temporada.
+         *
+         * @param mediaId      o ID da mídia
+         * @param seasonNumber o número da temporada
+         * @return Optional da entidade encontrada
+         */
+        java.util.Optional<SeasonEntity> findByMediaIdAndSeasonNumber(Long mediaId, Integer seasonNumber);
 }

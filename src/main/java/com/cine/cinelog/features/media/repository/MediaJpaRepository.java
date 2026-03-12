@@ -1,6 +1,7 @@
 package com.cine.cinelog.features.media.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,33 +19,43 @@ import com.cine.cinelog.features.media.projection.MediaWithRatingProjection;
  * adapter de persistência.
  */
 public interface MediaJpaRepository extends JpaRepository<MediaEntity, Long>, JpaSpecificationExecutor<MediaEntity> {
-    Page<MediaEntity> findByType(MediaType type, Pageable pageable);
+  Page<MediaEntity> findByType(MediaType type, Pageable pageable);
 
-    Page<MediaEntity> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+  Page<MediaEntity> findByTitleContainingIgnoreCase(String title, Pageable pageable);
 
-    Page<MediaEntity> findByTypeAndTitleContainingIgnoreCase(MediaType type, String title, Pageable pageable);
+  Page<MediaEntity> findByTypeAndTitleContainingIgnoreCase(MediaType type, String title, Pageable pageable);
 
-    /**
-     * Retorna uma lista de mídias "candidatas" a recomendação
-     * (por exemplo, mais assistidas ou por gênero do usuário).
-     */
-    @Query("""
-            SELECT m.id AS mediaId,
-                   m.title AS title,
-                   m.type AS type,
-                   AVG(w.rating) AS averageRating,
-                   COUNT(w.id) AS ratingCount
-            FROM MediaEntity m
-            JOIN WatchEntryEntity w ON m.id = w.mediaId
-            WHERE w.rating IS NOT NULL
-              AND m.id NOT IN (
-                SELECT wi.mediaId
-                FROM WatchlistItemEntity wi
-                WHERE wi.userId = :userId
-            )
-            GROUP BY m.id, m.title, m.type
-            HAVING COUNT(w.id) >= 5
-            ORDER BY averageRating DESC
-            """)
-    List<MediaWithRatingProjection> findCandidatesForUser(Long userId);
+  /**
+   * Retorna uma lista de mídias "candidatas" a recomendação
+   * (por exemplo, mais assistidas ou por gênero do usuário).
+   */
+  @Query("""
+      SELECT m.id AS mediaId,
+             m.title AS title,
+             m.type AS type,
+             AVG(w.rating) AS averageRating,
+             COUNT(w.id) AS ratingCount
+      FROM MediaEntity m
+      JOIN WatchEntryEntity w ON m.id = w.mediaId
+      WHERE w.rating IS NOT NULL
+        AND m.id NOT IN (
+          SELECT wi.mediaId
+          FROM WatchlistItemEntity wi
+          WHERE wi.userId = :userId
+      )
+      GROUP BY m.id, m.title, m.type
+      HAVING COUNT(w.id) >= 5
+      ORDER BY averageRating DESC
+      """)
+  List<MediaWithRatingProjection> findCandidatesForUser(Long userId);
+
+  /**
+   * Busca uma mídia pelo ID do TMDB.
+   */
+  Optional<MediaEntity> findByTmdbId(Long tmdbId);
+
+  /**
+   * Retorna todas as mídias de um tipo específico que possuem tmdbId definido.
+   */
+  List<MediaEntity> findByTypeAndTmdbIdNotNull(MediaType type);
 }

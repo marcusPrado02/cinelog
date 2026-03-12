@@ -38,12 +38,12 @@ public class MediaGenreJdbcRepository implements MediaGenreLinkPort {
                 "INSERT INTO media_genres(media_id, genre_id) VALUES (?, ?)",
                 new BatchPreparedStatementSetter() {
 
-                    private final Short[] ids = genreIds.toArray(new Short[0]);
+                    private final Long[] ids = genreIds.toArray(new Long[0]);
 
                     @Override
                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                         ps.setLong(1, mediaId);
-                        ps.setShort(2, ids[i]);
+                        ps.setLong(2, ids[i]);
                     }
 
                     @Override

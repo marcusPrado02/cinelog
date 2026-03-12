@@ -118,16 +118,43 @@ services:
         # depends_on:
         #     - app
 
+    loki:
+        image: grafana/loki:3.2.0
+        container_name: cinelog-loki
+        command: -config.file=/etc/loki/local-config.yaml
+        ports:
+            - 3100:3100
+        volumes:
+            - loki-data:/loki
+        restart: unless-stopped
+
+    promtail:
+        image: grafana/promtail:3.2.0
+        container_name: cinelog-promtail
+        command: -config.file=/etc/promtail/config.yaml
+        volumes:
+            - ./logs:/var/log/cinelog:ro
+            - ./observability/promtail-config.yaml:/etc/promtail/config.yaml:ro
+        depends_on:
+            - loki
+        restart: unless-stopped
+
     grafana:
         image: grafana/grafana:11.3.0
         container_name: cinelog-grafana
         environment:
             GF_SECURITY_ADMIN_PASSWORD: admin
+            GF_PATHS_PROVISIONING: /etc/grafana/provisioning
         ports:
             - 3000:3000
+        volumes:
+            - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+            - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+            - grafana-data:/var/lib/grafana
         depends_on:
             - prometheus
             - tempo
+            - loki
 
     # ========= Observabilidade: ELK =========
     elasticsearch:
@@ -203,8 +230,17 @@ services:
             retries: 10
             start_period: 60s
 
+    mailhog:
+        image: mailhog/mailhog:latest
+        container_name: cinelog-mailhog
+        ports:
+            - "1025:1025" # SMTP
+            - "8025:8025" # Web UI
+
 volumes:
     dbdata:
     redis-data:
     tempo-data:
     es-data:
+    loki-data:
+    grafana-data:

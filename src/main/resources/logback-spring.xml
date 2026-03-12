@@ -179,6 +179,19 @@
         </logger>
     </springProfile>
 
+    <!-- Profile docker: JSON no console + Logstash (aplicação roda em container) -->
+    <springProfile name="docker">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_JSON_CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+            <appender-ref ref="ASYNC_LOGSTASH" />
+        </root>
+        <logger name="SECURITY" level="INFO" additivity="false">
+            <appender-ref ref="ASYNC_SECURITY_FILE" />
+            <appender-ref ref="ASYNC_LOGSTASH" />
+        </logger>
+    </springProfile>
+
     <!-- Fallback profile -->
     <springProfile name="default">
         <root level="INFO">

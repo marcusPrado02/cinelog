@@ -42,4 +42,20 @@ public interface PersonRepositoryPort {
      * @param id O ID da pessoa a ser removida.
      */
     void deleteById(Long id);
+
+    /**
+     * Busca uma pessoa pelo identificador do TMDB.
+     *
+     * @param tmdbPersonId o ID da pessoa no TMDB
+     * @return Optional com a pessoa encontrada, ou vazio
+     */
+    Optional<Person> findByTmdbPersonId(Long tmdbPersonId);
+
+    /**
+     * Busca uma pessoa pelo nome exato.
+     *
+     * @param name nome da pessoa
+     * @return Optional com a pessoa encontrada, ou vazio
+     */
+    Optional<Person> findByName(String name);
 }

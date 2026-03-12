@@ -42,4 +42,14 @@ public interface CreditRepositoryPort {
      * @param id O ID do crédito a ser removido.
      */
     void deleteById(Long id);
+
+    /**
+     * Verifica se já existe um crédito para a combinação mídia + pessoa + papel.
+     *
+     * @param mediaId  ID da mídia
+     * @param personId ID da pessoa
+     * @param role     papel (ex: "ACTOR", "DIRECTOR")
+     * @return true se já existir
+     */
+    boolean existsByMediaIdAndPersonIdAndRole(Long mediaId, Long personId, String role);
 }

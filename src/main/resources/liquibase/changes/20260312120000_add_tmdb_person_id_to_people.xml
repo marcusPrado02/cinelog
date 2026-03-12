@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="20260312120000-1" author="cinelog">
+        <comment>Add tmdb_person_id column to people table for batch import idempotency</comment>
+        <addColumn tableName="people">
+            <column name="tmdb_person_id" type="BIGINT">
+                <constraints nullable="true" unique="true"
+                    uniqueConstraintName="uq_people_tmdb_person_id" />
+            </column>
+        </addColumn>
+        <createIndex indexName="idx_people_tmdb_person_id" tableName="people">
+            <column name="tmdb_person_id" />
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

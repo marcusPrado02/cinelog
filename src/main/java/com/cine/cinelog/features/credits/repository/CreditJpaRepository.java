@@ -27,4 +27,15 @@ public interface CreditJpaRepository extends JpaRepository<CreditEntity, Long> {
      * @return lista ordenada de créditos
      */
     List<CreditEntity> findByMediaIdOrderByOrderIndexAsc(Long mediaId);
+
+    /**
+     * Verifica se existe um crédito para uma combinação específica de mídia, pessoa
+     * e papel.
+     *
+     * @param mediaId  ID da mídia
+     * @param personId ID da pessoa
+     * @param role     papel
+     * @return true se existir
+     */
+    boolean existsByMediaIdAndPersonIdAndRole(Long mediaId, Long personId, String role);
 }

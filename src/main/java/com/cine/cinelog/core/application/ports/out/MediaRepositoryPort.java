@@ -54,7 +54,7 @@ public interface MediaRepositoryPort {
 
     /**
      * Recupera todas as mídias existentes do repositório com paginação.
-     * 
+     *
      * @param query O objeto PageQuery contendo os parâmetros de paginação.
      * @return Um PageResult contendo as mídias encontradas e informações de
      *         paginação.
@@ -63,7 +63,7 @@ public interface MediaRepositoryPort {
 
     /**
      * Verifica se uma mídia existe pelo ID.
-     * 
+     *
      * @param id O ID da mídia a ser verificada.
      * @return true se existir, false caso contrário.
      */
@@ -74,4 +74,21 @@ public interface MediaRepositoryPort {
      * (por exemplo, mais assistidas ou por gênero do usuário).
      */
     List<MediaWithRating> findCandidatesForUser(Long userId);
+
+    /**
+     * Busca uma mídia pelo ID do TMDB.
+     *
+     * @param tmdbId o ID da mídia no TMDB
+     * @return Optional com a mídia encontrada, ou vazio
+     */
+    Optional<Media> findByTmdbId(Long tmdbId);
+
+    /**
+     * Retorna todas as mídias de um determinado tipo que possuem tmdbId (para
+     * importação batch).
+     *
+     * @param type tipo da mídia (MOVIE, SERIES)
+     * @return lista de mídias com tmdbId não nulo
+     */
+    List<Media> findAllWithTmdbId(MediaType type);
 }

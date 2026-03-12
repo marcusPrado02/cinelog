@@ -10,10 +10,13 @@ import com.cine.cinelog.shared.persistence.AuditableEntity;
 /**
  * Entidade JPA que representa a tabela de person no banco de dados.
  * Mapeia a estrutura de persistência para Person.
- * 
- * <p>Esta entidade contém as anotações JPA necessárias para mapeamento objeto-relacional
- * e é convertida para/de Person pelo PersonMapper.</p>
- * 
+ *
+ * <p>
+ * Esta entidade contém as anotações JPA necessárias para mapeamento
+ * objeto-relacional
+ * e é convertida para/de Person pelo PersonMapper.
+ * </p>
+ *
  * @since 1.0
  * @see Person
  */
@@ -30,6 +33,9 @@ public class PersonEntity extends AuditableEntity {
     private LocalDate birthDate;
     @Column(name = "place_of_birth", length = 200)
     private String placeOfBirth;
+
+    @Column(name = "tmdb_person_id", unique = true)
+    private Long tmdbPersonId;
 
     public Long getId() {
         return id;
@@ -61,5 +67,13 @@ public class PersonEntity extends AuditableEntity {
 
     public void setPlaceOfBirth(String p) {
         this.placeOfBirth = p;
+    }
+
+    public Long getTmdbPersonId() {
+        return tmdbPersonId;
+    }
+
+    public void setTmdbPersonId(Long tmdbPersonId) {
+        this.tmdbPersonId = tmdbPersonId;
     }
 }
