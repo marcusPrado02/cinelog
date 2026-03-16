@@ -32,7 +32,7 @@
         <java.version>21</java.version>
         <liquibase.version>5.0.1</liquibase.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-        <lombok.version>1.18.42</lombok.version>
+        <lombok.version>1.18.44</lombok.version>
         <otel.version>1.41.0</otel.version>
         <logstash.version>7.4</logstash.version>
         <springdoc.version>1.5</springdoc.version>
