@@ -3,6 +3,7 @@
 ## ❌ Problema
 
 Você configurou MFA no Keycloak, mas:
+
 - Removeu do Microsoft Authenticator
 - Perdeu acesso ao app
 - O QR code não aparece mais no login
@@ -16,7 +17,7 @@ Você configurou MFA no Keycloak, mas:
 # 1. Acesse o Keycloak Admin Console
 URL: http://localhost:8180/admin/
 Usuário: admin
-Senha: admin 
+Senha: admin
 
 # 2. Navegue até o usuário
 Sidebar → Users → Buscar: marcus → Clicar no usuário
@@ -55,11 +56,13 @@ Pronto! ✅
 ### 1. Acesse o Keycloak Admin Console
 
 Abra o navegador:
+
 ```
 http://localhost:8180/admin/
 ```
 
 **Credenciais de Admin:**
+
 - Usuário: `admin`
 - Senha: `admin`
 
@@ -73,9 +76,9 @@ http://localhost:8180/admin/
 
 1. Clique na aba **"Credentials"**
 2. Na lista de credenciais, procure por:
-   - **OTP** ou
-   - **TOTP** ou  
-   - **Authenticator**
+    - **OTP** ou
+    - **TOTP** ou
+    - **Authenticator**
 3. Clique no ícone de **lixeira** (Delete) ao lado
 4. Confirme a remoção
 
@@ -92,6 +95,7 @@ Password: Marcus@CineLog2025!
 ```
 
 **O que acontece:**
+
 1. Você digita username e senha
 2. Keycloak detecta: "TOTP não configurado"
 3. **Mostra o QR code novamente!** 🎉
@@ -180,6 +184,7 @@ Se perder o acesso novamente, pode inserir manualmente no authenticator.
 ### Múltiplos Devices
 
 Você pode adicionar o **MESMO secret** em vários apps:
+
 - Microsoft Authenticator (celular)
 - Google Authenticator (tablet)
 - FreeOTP (backup)
@@ -213,10 +218,10 @@ Pode ser que o MFA já esteja resetado. Tente fazer login para confirmar.
 1. Limpe cache do navegador
 2. Use navegador anônimo/privado
 3. Ou force reconfiguração:
-   - Admin Console → Users → marcus
-   - Aba: Details ou Required Actions
-   - Marque: **Configure OTP**
-   - Save
+    - Admin Console → Users → marcus
+    - Aba: Details ou Required Actions
+    - Marque: **Configure OTP**
+    - Save
 
 ### "Keycloak não está rodando"
 
@@ -256,6 +261,7 @@ docker logs keycloak
 **Resultado:** QR code aparece novamente no login
 
 **Comando rápido:**
+
 ```bash
 ./scripts/reset-mfa.sh
 # Escolha: Opção 1
@@ -263,6 +269,7 @@ docker logs keycloak
 ```
 
 **Passo a passo manual:**
+
 1. http://localhost:8180/admin/ (admin/admin)
 2. Users → marcus → Credentials
 3. Delete OTP/TOTP
