@@ -27,7 +27,7 @@ public final class Rating {
 
     public static Rating of(BigDecimal raw) {
         if (raw == null) {
-            return null;
+            return new Rating(BigDecimal.ZERO);
         }
         return new Rating(raw);
     }

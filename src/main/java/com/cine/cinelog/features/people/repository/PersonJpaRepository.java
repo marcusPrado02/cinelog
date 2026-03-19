@@ -4,7 +4,9 @@ import com.cine.cinelog.features.people.persistence.entity.PersonEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -45,4 +47,12 @@ public interface PersonJpaRepository extends JpaRepository<PersonEntity, Long> {
      * @return Optional com a pessoa encontrada, ou vazio
      */
     Optional<PersonEntity> findByNameIgnoreCase(String name);
+
+    /**
+     * Retorna todas as pessoas com tmdbPersonId definido mas sem profileUrl ou
+     * biography.
+     * Usadas para enriquecimento de perfil via TMDB.
+     */
+    @Query("SELECT p FROM PersonEntity p WHERE p.tmdbPersonId IS NOT NULL AND (p.profileUrl IS NULL OR p.biography IS NULL)")
+    List<PersonEntity> findAllMissingProfile();
 }

@@ -22,5 +22,15 @@ public class Person extends Auditable {
     private LocalDate birthDate;
     private String placeOfBirth;
     private Long tmdbPersonId;
+    private String profileUrl;
+
+    // Campos enriquecidos via TMDB /person/{id}
+    private String biography;
+    private String knownForDepartment;
+    private Integer gender;
+    private Double popularity;
+    private String imdbId;
+    private String homepage;
+    private LocalDate deathday;
 
 }

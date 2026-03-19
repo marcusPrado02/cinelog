@@ -30,19 +30,20 @@ class RatingTest {
 
     @Test
     void shouldThrowWhenValueIsNaN() {
-        DomainException ex = assertThrows(DomainException.class, () -> Rating.of(BigDecimal.valueOf(Double.NaN)));
-        assertEquals("Rating deve estar entre 0 e 10", ex.getMessage());
+        // BigDecimal.valueOf(Double.NaN) throws NumberFormatException before Rating.of() is invoked,
+        // because BigDecimal has no NaN concept. This is the expected low-level behaviour.
+        assertThrows(NumberFormatException.class, () -> Rating.of(BigDecimal.valueOf(Double.NaN)));
     }
 
     @Test
     void shouldThrowWhenValueIsNegative() {
         DomainException ex = assertThrows(DomainException.class, () -> Rating.of(BigDecimal.valueOf(-0.1)));
-        assertEquals("Rating deve estar entre 0 e 10", ex.getMessage());
+        assertTrue(ex.getMessage().contains("Classificação fora do intervalo"));
     }
 
     @Test
     void shouldThrowWhenValueGreaterThanTen() {
         DomainException ex = assertThrows(DomainException.class, () -> Rating.of(BigDecimal.valueOf(10.1)));
-        assertEquals("Rating deve estar entre 0 e 10", ex.getMessage());
+        assertTrue(ex.getMessage().contains("Classificação fora do intervalo"));
     }
 }

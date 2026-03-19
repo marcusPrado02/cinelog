@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import java.time.LocalDate;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,7 +24,7 @@ class ListWatchEntriesServiceTest {
         ListWatchEntriesService service = new ListWatchEntriesService(repo);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> service.execute(null, null, null, null, null, null, Pageable.unpaged()));
+                () -> service.execute(null, null, null, null, null, null, PageRequest.of(0, 10)));
         assertTrue(ex.getMessage().contains("userId is required"));
         verifyNoInteractions(repo);
     }
@@ -39,7 +39,7 @@ class ListWatchEntriesServiceTest {
         Integer minRating = 4;
         LocalDate from = LocalDate.of(2020, 1, 1);
         LocalDate to = LocalDate.of(2020, 12, 31);
-        Pageable pageable = Pageable.unpaged();
+        PageRequest pageable = PageRequest.of(0, 10);
 
         @SuppressWarnings("unchecked")
         PageResult<WatchEntry> expected = mock(PageResult.class);

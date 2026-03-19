@@ -11,6 +11,7 @@ public class MediaItem {
     private String title;
     private String type; // MOVIE | TV_SHOW
     private String posterUrl;
+    private String backdropUrl;
     private BigDecimal avgRating;
     private Long watchCount;
     private Integer releaseYear;
@@ -83,5 +84,13 @@ public class MediaItem {
 
     public void setReleaseYear(Integer releaseYear) {
         this.releaseYear = releaseYear;
+    }
+
+    public String getBackdropUrl() {
+        return backdropUrl;
+    }
+
+    public void setBackdropUrl(String backdropUrl) {
+        this.backdropUrl = backdropUrl;
     }
 }

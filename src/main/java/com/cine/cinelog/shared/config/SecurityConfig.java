@@ -8,6 +8,7 @@ import com.cine.cinelog.shared.security.KeycloakJwtAuthenticationConverter;
 import com.cine.cinelog.shared.security.RateLimitFilter;
 import com.cine.cinelog.shared.security.SqlInjectionFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -21,9 +22,14 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Configuração de segurança Spring Security com suporte dual:
@@ -67,6 +73,15 @@ public class SecurityConfig {
      */
     @Autowired(required = false)
     private JwtDecoder jwtDecoder;
+
+    /**
+     * URI do issuer Keycloak — usado para criar o BearerTokenResolver seletivo
+     * que só repassa tokens Keycloak ao OAuth2 Resource Server.
+     */
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:#{null}}")
+    private String keycloakIssuerUri;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -163,6 +178,7 @@ public class SecurityConfig {
         // configurado. Valida tokens RS256 via JWKS e extrai roles do Keycloak.
         if (jwtDecoder != null) {
             http.oauth2ResourceServer(oauth2 -> oauth2
+                    .bearerTokenResolver(keycloakOnlyBearerTokenResolver())
                     .jwt(jwt -> {
                         jwt.decoder(jwtDecoder);
                         if (keycloakJwtConverter != null) {
@@ -172,5 +188,44 @@ public class SecurityConfig {
         }
 
         return http.build();
+    }
+
+    /**
+     * BearerTokenResolver seletivo: só retorna o token para o OAuth2 Resource
+     * Server quando o JWT foi emitido pelo Keycloak (iss == keycloakIssuerUri).
+     * Tokens locais (HS384, sem iss Keycloak) são ignorados — serão tratados
+     * pelo {@link JwtAuthenticationFilter} que roda antes.
+     */
+    private BearerTokenResolver keycloakOnlyBearerTokenResolver() {
+        DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
+        return (HttpServletRequest request) -> {
+            String token = delegate.resolve(request);
+            if (token == null || keycloakIssuerUri == null) {
+                return null;
+            }
+            // Inspeciona o payload sem verificar assinatura
+            try {
+                String[] parts = token.split("\\.");
+                if (parts.length < 2)
+                    return null;
+
+                String payload = parts[1];
+                int mod = payload.length() % 4;
+                if (mod == 2)
+                    payload += "==";
+                else if (mod == 3)
+                    payload += "=";
+
+                byte[] bytes = java.util.Base64.getUrlDecoder().decode(payload);
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Object> claims = OBJECT_MAPPER.readValue(bytes, java.util.Map.class);
+                String iss = (String) claims.get("iss");
+
+                // Só repassa ao OAuth2 Resource Server se for do Keycloak
+                return keycloakIssuerUri.equals(iss) ? token : null;
+            } catch (Exception e) {
+                return null; // payload ilegível → não é Keycloak
+            }
+        };
     }
 }

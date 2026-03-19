@@ -43,6 +43,8 @@ public class EpisodeControllerTest {
 
         EpisodeCreateRequest req = mock(EpisodeCreateRequest.class);
         Episode domain = mock(Episode.class);
+        when(req.name()).thenReturn("Pilot");
+        when(req.seasonId()).thenReturn(1L);
         when(mapper.toDomain(req)).thenReturn(domain);
 
         Episode created = mock(Episode.class);
@@ -79,6 +81,7 @@ public class EpisodeControllerTest {
         Long id = 7L;
         EpisodeUpdateRequest req = mock(EpisodeUpdateRequest.class);
         Episode domain = mock(Episode.class);
+        when(req.name()).thenReturn("Updated Episode");
         when(mapper.toDomain(req)).thenReturn(domain);
 
         Episode updated = mock(Episode.class);

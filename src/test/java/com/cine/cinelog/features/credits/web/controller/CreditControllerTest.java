@@ -49,6 +49,7 @@ class CreditControllerTest {
         Credit domain = mock(Credit.class);
         CreditResponse resp = mock(CreditResponse.class);
 
+        when(req.role()).thenReturn("ACTOR");
         when(mapper.toDomain(req)).thenReturn(domain);
         when(createUC.execute(domain)).thenReturn(domain);
         when(domain.getId()).thenReturn(1L);
@@ -73,6 +74,7 @@ class CreditControllerTest {
         Credit domain = mock(Credit.class);
         CreditResponse resp = mock(CreditResponse.class);
 
+        when(req.role()).thenReturn("DIRECTOR");
         when(mapper.toDomain(req)).thenReturn(domain);
         when(updateUC.execute(id, domain)).thenReturn(domain);
         when(mapper.toResponse(domain)).thenReturn(resp);

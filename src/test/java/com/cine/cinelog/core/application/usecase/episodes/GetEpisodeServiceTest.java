@@ -37,7 +37,7 @@ class GetEpisodeServiceTest {
 
         GetEpisodeService service = new GetEpisodeService(repo);
         DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
-        assertEquals("Episode not found: " + id, ex.getMessage());
+        assertTrue(ex.getMessage().contains("Episode not found: " + id));
         verify(repo, times(1)).findById(id);
     }
 }

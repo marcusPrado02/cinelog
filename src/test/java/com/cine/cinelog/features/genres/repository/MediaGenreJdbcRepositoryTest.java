@@ -20,11 +20,11 @@ class MediaGenreJdbcRepositoryTest {
     @Test
     void link_shouldCallJdbcUpdateWithInsertSqlAndParameters() {
         long mediaId = 123L;
-        short genreId = 5;
+        long genreId = 5L;
 
         repository.link(mediaId, genreId);
 
-        String expectedSql = "INSERT IGNORE INTO media_genres(media_id, genre_id) VALUES (?,?)";
+        String expectedSql = "INSERT INTO media_genres(media_id, genre_id) VALUES (?, ?)";
         verify(jdbc, times(1)).update(expectedSql, mediaId, genreId);
         verifyNoMoreInteractions(jdbc);
     }
@@ -32,11 +32,11 @@ class MediaGenreJdbcRepositoryTest {
     @Test
     void unlink_shouldCallJdbcUpdateWithDeleteSqlAndParameters() {
         long mediaId = 987L;
-        short genreId = 2;
+        long genreId = 2L;
 
         repository.unlink(mediaId, genreId);
 
-        String expectedSql = "DELETE FROM media_genres WHERE media_id=? AND genre_id=?";
+        String expectedSql = "DELETE FROM media_genres WHERE media_id = ? AND genre_id = ?";
         verify(jdbc, times(1)).update(expectedSql, mediaId, genreId);
         verifyNoMoreInteractions(jdbc);
     }

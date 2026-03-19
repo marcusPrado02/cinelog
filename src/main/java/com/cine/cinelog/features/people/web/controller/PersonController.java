@@ -39,12 +39,12 @@ import java.util.Map;
  * Controlador REST responsável por gerenciar cadastro de pessoas.
  * Fornece endpoints para criar, atualizar, buscar, listar e remover pessoas
  * (atores, diretores, produtores e demais profissionais do cinema/TV).
- * 
+ *
  * <p>
  * Este controlador implementa operações CRUD completas para pessoas,
  * incluindo paginação para listagem e validação de dados de entrada.
  * </p>
- * 
+ *
  * @since 1.0
  * @see Person
  * @see PersonMapper
@@ -62,18 +62,21 @@ public class PersonController {
     private final GetPersonUseCase getUC;
     private final ListPeopleUseCase listUC;
     private final DeletePersonUseCase deleteUC;
+    private final SearchPeopleUseCase searchUC;
     private final PersonMapper mapper;
     private final BusinessMetricsService metricsService;
 
     public PersonController(CreatePersonUseCase createUC, UpdatePersonUseCase updateUC,
             GetPersonUseCase getUC, ListPeopleUseCase listUC,
-            DeletePersonUseCase deleteUC, PersonMapper mapper,
+            DeletePersonUseCase deleteUC, SearchPeopleUseCase searchUC,
+            PersonMapper mapper,
             BusinessMetricsService metricsService) {
         this.createUC = createUC;
         this.updateUC = updateUC;
         this.getUC = getUC;
         this.listUC = listUC;
         this.deleteUC = deleteUC;
+        this.searchUC = searchUC;
         this.mapper = mapper;
         this.metricsService = metricsService;
     }
@@ -158,6 +161,23 @@ public class PersonController {
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             log.error("Erro ao remover pessoa. ID: {}, Erro: {}", id, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Operation(summary = "Pesquisa pessoas por nome (substring, case-insensitive)")
+    @GetMapping("/search")
+    public ResponseEntity<PageResponse<PersonResponse>> search(
+            @RequestParam String name,
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        log.debug("Iniciando search. Parâmetros: {}", Map.of("name", name));
+        try {
+            PageQuery query = PageableMapper.toPageQuery(pageable);
+            PageResult<Person> result = searchUC.execute(name, query);
+            log.debug("Search retornado. Total: {}", result.content().size());
+            return ResponseEntity.ok(PageResponseMapper.from(result, mapper::toResponse));
+        } catch (Exception e) {
+            log.error("Erro ao pesquisar pessoas. Nome: {}, Erro: {}", name, e.getMessage(), e);
             throw e;
         }
     }

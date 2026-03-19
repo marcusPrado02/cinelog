@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="20260313100000-1" author="cinelog">
+        <comment>Adiciona coluna profile_url à tabela people para armazenar a URL da foto de perfil do TMDB</comment>
+        <addColumn tableName="people">
+            <column name="profile_url" type="VARCHAR(500)"
+                remarks="URL absoluta da foto de perfil (TMDB)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

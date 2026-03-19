@@ -6,6 +6,7 @@ import java.time.Year;
 import org.junit.jupiter.api.Test;
 import com.cine.cinelog.core.domain.error.DomainException;
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.enums.MediaType;
 
 class DefaultMediaPolicyTest {
 
@@ -17,13 +18,16 @@ class DefaultMediaPolicyTest {
         DefaultMediaPolicy policy = new DefaultMediaPolicy(MIN_YEAR, FUTURE_SLACK);
 
         DomainException ex = assertThrows(DomainException.class, () -> policy.validateInvariants(null));
-        assertEquals("media must not be null", ex.getMessage());
+        // GEN_VALIDATION.title = "Falha de validação"
+        assertTrue(ex.getMessage().contains("Falha de valida\u00e7\u00e3o"));
     }
 
     @Test
     void shouldNotThrowWhenReleaseYearIsNull() {
         DefaultMediaPolicy policy = new DefaultMediaPolicy(MIN_YEAR, FUTURE_SLACK);
         Media media = mock(Media.class);
+        when(media.getTitle()).thenReturn("Valid Title");
+        when(media.getType()).thenReturn(MediaType.MOVIE);
         when(media.getReleaseYear()).thenReturn(null);
 
         assertDoesNotThrow(() -> policy.validateInvariants(media));
@@ -37,14 +41,20 @@ class DefaultMediaPolicyTest {
         DefaultMediaPolicy policy = new DefaultMediaPolicy(MIN_YEAR, FUTURE_SLACK);
 
         Media mediaAtMin = mock(Media.class);
+        when(mediaAtMin.getTitle()).thenReturn("Valid Title");
+        when(mediaAtMin.getType()).thenReturn(MediaType.MOVIE);
         when(mediaAtMin.getReleaseYear()).thenReturn(MIN_YEAR);
         assertDoesNotThrow(() -> policy.validateInvariants(mediaAtMin));
 
         Media mediaAtCurrent = mock(Media.class);
+        when(mediaAtCurrent.getTitle()).thenReturn("Valid Title");
+        when(mediaAtCurrent.getType()).thenReturn(MediaType.MOVIE);
         when(mediaAtCurrent.getReleaseYear()).thenReturn(current);
         assertDoesNotThrow(() -> policy.validateInvariants(mediaAtCurrent));
 
         Media mediaAtMax = mock(Media.class);
+        when(mediaAtMax.getTitle()).thenReturn("Valid Title");
+        when(mediaAtMax.getType()).thenReturn(MediaType.MOVIE);
         when(mediaAtMax.getReleaseYear()).thenReturn(maxYear);
         assertDoesNotThrow(() -> policy.validateInvariants(mediaAtMax));
     }
@@ -54,10 +64,13 @@ class DefaultMediaPolicyTest {
         DefaultMediaPolicy policy = new DefaultMediaPolicy(MIN_YEAR, FUTURE_SLACK);
 
         Media media = mock(Media.class);
+        when(media.getTitle()).thenReturn("Valid Title");
+        when(media.getType()).thenReturn(MediaType.MOVIE);
         when(media.getReleaseYear()).thenReturn(MIN_YEAR - 1);
 
         DomainException ex = assertThrows(DomainException.class, () -> policy.validateInvariants(media));
-        assertEquals("invalid release year", ex.getMessage());
+        // MEDIA_YEAR_OUT_OF_RANGE.title = "Ano fora do intervalo"
+        assertTrue(ex.getMessage().contains("Ano fora do intervalo"));
     }
 
     @Test
@@ -68,9 +81,12 @@ class DefaultMediaPolicyTest {
         DefaultMediaPolicy policy = new DefaultMediaPolicy(MIN_YEAR, FUTURE_SLACK);
 
         Media media = mock(Media.class);
+        when(media.getTitle()).thenReturn("Valid Title");
+        when(media.getType()).thenReturn(MediaType.MOVIE);
         when(media.getReleaseYear()).thenReturn(maxYear + 1);
 
         DomainException ex = assertThrows(DomainException.class, () -> policy.validateInvariants(media));
-        assertEquals("invalid release year", ex.getMessage());
+        // MEDIA_YEAR_OUT_OF_RANGE.title = "Ano fora do intervalo"
+        assertTrue(ex.getMessage().contains("Ano fora do intervalo"));
     }
 }

@@ -17,6 +17,8 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -164,11 +166,17 @@ public class MediaPopularityUpdater extends BaseKafkaConsumer {
         if (event.rating() != null) {
             popularity.incrementRatingsCount();
 
-            // Recalcular avg_rating
-            // Fórmula: new_avg = ((old_avg * old_count) + new_rating) / new_count
-            // Para simplificar MVP, vamos apenas marcar que precisa recálculo
-            // TODO: Implementar recálculo real em versão futura
-            log.debug("Rating detectado: {}. ratings_count={}", event.rating(), popularity.getRatingsCount());
+            // Avg incremental: new_avg = ((old_avg * (n-1)) + new_rating) / n
+            BigDecimal oldAvg = popularity.getAvgRating() != null
+                    ? popularity.getAvgRating()
+                    : BigDecimal.ZERO;
+            long count = popularity.getRatingsCount();
+            BigDecimal newAvg = (oldAvg.multiply(BigDecimal.valueOf(count - 1))
+                    .add(event.rating()))
+                    .divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
+            popularity.setAvgRating(newAvg);
+            log.debug("avg_rating atualizado: {} → {} (rating={}, count={})",
+                    oldAvg, newAvg, event.rating(), count);
         }
 
         // Atualizar last_watched_at

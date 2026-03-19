@@ -82,7 +82,8 @@ public class CreateUserService implements CreateUserUseCase {
     @SecureOperation(module = "USER", value = "USER_ADMIN")
     @CacheEvict(value = "usersPage", allEntries = true)
     public User execute(User user) {
-        log.debug("Iniciando execute. Parâmetros: {}", Map.of("name", user.getName(), "email", user.getEmail()));
+        log.debug("Iniciando execute. Parâmetros: {}",
+                Map.of("name", String.valueOf(user.getName()), "email", String.valueOf(user.getEmail())));
 
         try {
             userPolicy.validateCreate(user);
@@ -99,7 +100,8 @@ public class CreateUserService implements CreateUserUseCase {
             return saved;
         } catch (Exception e) {
             log.error("Erro ao criar usuário. Parâmetros: {}. Erro: {}",
-                    Map.of("name", user.getName(), "email", user.getEmail()), e.getMessage(), e);
+                    Map.of("name", String.valueOf(user.getName()), "email", String.valueOf(user.getEmail())),
+                    e.getMessage(), e);
             throw e;
         }
     }

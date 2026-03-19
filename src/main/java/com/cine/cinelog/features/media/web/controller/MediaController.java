@@ -191,8 +191,8 @@ public class MediaController {
     @Measured("cinelog.controller.search_media")
     @AlertIfSlow(thresholdMs = 1000, metricName = "cinelog.slow_search")
     public ResponseEntity<PageResponse<MediaResponse>> searchUC(@Valid @RequestBody MediaSearchRequest req) {
-        log.debug("Iniciando searchUC. Parâmetros: {}",
-                Map.of("text", req.getText(), "type", req.getType(), "page", req.getPage()));
+        log.debug("Iniciando searchUC. Parâmetros: text={}, type={}, page={}",
+                req.getText(), req.getType(), req.getPage());
         try {
             var criteria = new MediaSearchCriteria();
             criteria.setText(req.getText());
@@ -211,8 +211,8 @@ public class MediaController {
             log.debug("Finalizando searchUC. Resultado: {} mídias encontradas", result.content().size());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Erro na busca avançada de mídias. Parâmetros: {}. Erro: {}",
-                    Map.of("text", req.getText(), "type", req.getType()), e.getMessage(), e);
+            log.error("Erro na busca avançada de mídias. text={}, type={}, erro={}",
+                    req.getText(), req.getType(), e.getMessage(), e);
             throw e;
         }
     }

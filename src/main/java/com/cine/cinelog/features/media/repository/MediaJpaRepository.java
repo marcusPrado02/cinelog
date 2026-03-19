@@ -58,4 +58,11 @@ public interface MediaJpaRepository extends JpaRepository<MediaEntity, Long>, Jp
    * Retorna todas as mídias de um tipo específico que possuem tmdbId definido.
    */
   List<MediaEntity> findByTypeAndTmdbIdNotNull(MediaType type);
+
+  /**
+   * Retorna mídias com tmdbId definido mas sem posterUrl ou backdropUrl.
+   * Usadas pelo job de enriquecimento de imagens.
+   */
+  @Query("SELECT m FROM MediaEntity m WHERE m.tmdbId IS NOT NULL AND (m.posterUrl IS NULL OR m.backdropUrl IS NULL)")
+  List<MediaEntity> findAllMissingImages();
 }

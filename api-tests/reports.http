@@ -1,165 +1,270 @@
 # =============================================================================
 # CineLog API – Relatórios por E-mail                           [reports.http]
 # =============================================================================
-# Endpoints:
-#   GET  /api/v1/reports/weekly-digest    → Preview do digest semanal
-#   POST /api/v1/reports/weekly-digest    → Envia digest por e-mail (202)
-#   GET  /api/v1/reports/top-rated        → Preview top avaliados
-#   POST /api/v1/reports/top-rated        → Envia top-rated por e-mail (202)
-#   GET  /api/v1/reports/recommendations  → Preview recomendações personalizadas
-#   POST /api/v1/reports/recommendations  → Envia recomendações por e-mail (202)
-#   GET  /api/v1/reports/trending         → Preview em alta
-#   POST /api/v1/reports/trending         → Envia trending por e-mail (202)
-#   GET  /api/v1/admin/reports/platform   → Preview relatório de plataforma (admin)
-#   POST /api/v1/admin/reports/platform   → Envia relatório de plataforma (admin)
-#   POST /api/v1/admin/reports/send-to-all → Envia trending para TODOS os usuários
 #
-# ┌─────────────────────────────────────────────────────────────────────────┐
-# │ WORKFLOW                                                                │
-# │  1. Faça login em auth.http e copie o accessToken                       │
-# │  2. Cole o token em @token abaixo                                       │
-# │  3. Para visualizar os e-mails: http://localhost:8025 (MailHog UI)      │
-# └─────────────────────────────────────────────────────────────────────────┘
+#  Endpoints:
+#   GET  /api/v1/reports/weekly-digest       → Preview digest semanal
+#   POST /api/v1/reports/weekly-digest       → Envia digest por e-mail (202)
+#   GET  /api/v1/reports/top-rated           → Preview top avaliados
+#   POST /api/v1/reports/top-rated           → Envia top-rated por e-mail (202)
+#   GET  /api/v1/reports/recommendations     → Preview recomendações
+#   POST /api/v1/reports/recommendations     → Envia recomendações por e-mail (202)
+#   GET  /api/v1/reports/trending            → Preview em alta
+#   POST /api/v1/reports/trending            → Envia trending por e-mail (202)
+#   GET  /api/v1/admin/reports/platform      → Preview plataforma (ADMIN)
+#   POST /api/v1/admin/reports/platform      → Envia plataforma por e-mail (ADMIN)
+#   POST /api/v1/admin/reports/send-to-all   → E-mail para TODOS os usuários (ADMIN)
+#
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │ CONFIGURAÇÃO                                                             │
+# │  1. Execute auth.http → login → copie o accessToken                     │
+# │  2. Cole em @token / @adminToken abaixo                                 │
+# │  3. Configure REST Client env (rest-client.env.json – gitignored):      │
+# │       { "test": { "testEmail": "seu.email@dominio.com" } }              │
+# │  4. MailHog (captura local): http://localhost:8025                      │
+# │                                                                          │
+# │  ⚠️  NÃO faça commit de endereços de e-mail reais neste arquivo.        │
+# │     Use sempre a variável {{testEmail}} que vem de rest-client.env.json │
+# └──────────────────────────────────────────────────────────────────────────┘
+#
 # =============================================================================
 
-# ─── Variáveis ───────────────────────────────────────────────────────────────
-@baseUrl = http://localhost:8080
-@token = REPLACE_AFTER_LOGIN
+# ─── Variáveis ────────────────────────────────────────────────────────────────
+@baseUrl    = http://localhost:8080
+@token      = REPLACE_AFTER_LOGIN
 @adminToken = REPLACE_WITH_ADMIN_TOKEN
+# testEmail vem de rest-client.env.json (gitignored), fallback abaixo.
+# Defina no arquivo de ambiente: { "test": { "testEmail": "seu@email.com" } }
+@testEmail  = test@mailhog.local
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# WEEKLY DIGEST — Preview
-# ═════════════════════════════════════════════════════════════════════════════
+# =============================================================================
+# WEEKLY DIGEST
+# =============================================================================
 
 ###
 # @name previewWeeklyDigest
-# Retorna os dados que serão enviados no e-mail de digest semanal.
+# Preview: retorna os dados que seriam enviados no digest semanal.
+# Espera: 200 OK + JSON com campos recentActivity, stats, etc.
 GET {{baseUrl}}/api/v1/reports/weekly-digest
 Authorization: Bearer {{token}}
 Accept: application/json
 
-
-# ═════════════════════════════════════════════════════════════════════════════
-# WEEKLY DIGEST — Enviar por e-mail (202 Accepted)
-# ═════════════════════════════════════════════════════════════════════════════
-
 ###
-# @name sendWeeklyDigest
-# Envia o digest semanal ao e-mail do usuário autenticado.
-# Verifique o resultado em http://localhost:8025
+# @name sendWeeklyDigestToSelf
+# Envia o digest semanal ao e-mail do usuário autenticado (sem body).
+# Espera: 202 Accepted  — verifique em http://localhost:8025
 POST {{baseUrl}}/api/v1/reports/weekly-digest
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
+###
+# @name sendWeeklyDigestToEmail
+# Envia o digest semanal a um endereço explícito.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/weekly-digest
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
-# ═════════════════════════════════════════════════════════════════════════════
-# TOP RATED — Preview
-# ═════════════════════════════════════════════════════════════════════════════
+{
+  "email": "{{testEmail}}"
+}
+
+
+# =============================================================================
+# TOP RATED
+# =============================================================================
 
 ###
 # @name previewTopRated
+# Preview: top-N filmes/séries mais bem avaliados.
+# Espera: 200 OK + lista de media ordenada por rating desc
 GET {{baseUrl}}/api/v1/reports/top-rated?limit=10
 Authorization: Bearer {{token}}
 Accept: application/json
 
-
-# ═════════════════════════════════════════════════════════════════════════════
-# TOP RATED — Enviar por e-mail
-# ═════════════════════════════════════════════════════════════════════════════
+###
+# @name previewTopRated5
+# Preview limitado a 5 resultados.
+GET {{baseUrl}}/api/v1/reports/top-rated?limit=5
+Authorization: Bearer {{token}}
+Accept: application/json
 
 ###
 # @name sendTopRated
+# Envia o relatório top-rated ao e-mail passado no body.
+# Espera: 202 Accepted
 POST {{baseUrl}}/api/v1/reports/top-rated
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
+  "email": "{{testEmail}}",
   "limit": 10
 }
 
+###
+# @name sendTopRatedToSelf
+# Envia sem especificar e-mail → usa e-mail do usuário autenticado.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/top-rated
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
-# ═════════════════════════════════════════════════════════════════════════════
-# RECOMMENDATIONS — Preview
-# ═════════════════════════════════════════════════════════════════════════════
+{
+  "limit": 5
+}
+
+###
+# @name sendTopRatedValidationError
+# Limite inválido (0) → deve retornar 400 Bad Request.
+POST {{baseUrl}}/api/v1/reports/top-rated
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "limit": 0
+}
+
+###
+# @name sendTopRatedInvalidEmail
+# E-mail com formato inválido → deve retornar 400 Bad Request.
+POST {{baseUrl}}/api/v1/reports/top-rated
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "nao-eh-email",
+  "limit": 5
+}
+
+
+# =============================================================================
+# RECOMMENDATIONS
+# =============================================================================
 
 ###
 # @name previewRecommendations
+# Preview: recomendações personalizadas do usuário autenticado.
+# Espera: 200 OK + lista de media recomendada
 GET {{baseUrl}}/api/v1/reports/recommendations
 Authorization: Bearer {{token}}
 Accept: application/json
 
-
-# ═════════════════════════════════════════════════════════════════════════════
-# RECOMMENDATIONS — Enviar por e-mail
-# ═════════════════════════════════════════════════════════════════════════════
-
 ###
-# @name sendRecommendations
+# @name sendRecommendationsToSelf
+# Envia recomendações ao e-mail do usuário autenticado.
+# Espera: 202 Accepted
 POST {{baseUrl}}/api/v1/reports/recommendations
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
+###
+# @name sendRecommendationsToEmail
+# Envia recomendações a um endereço explícito.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/recommendations
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
-# ═════════════════════════════════════════════════════════════════════════════
-# TRENDING — Preview
-# ═════════════════════════════════════════════════════════════════════════════
+{
+  "email": "{{testEmail}}"
+}
+
+
+# =============================================================================
+# TRENDING
+# =============================================================================
 
 ###
 # @name previewTrending
+# Preview: conteúdo em alta nos últimos 7 dias.
+# Espera: 200 OK + lista de media ordenada por popularidade
 GET {{baseUrl}}/api/v1/reports/trending?days=7&limit=10
 Authorization: Bearer {{token}}
 Accept: application/json
 
-
-# ═════════════════════════════════════════════════════════════════════════════
-# TRENDING — Enviar por e-mail
-# ═════════════════════════════════════════════════════════════════════════════
+###
+# @name previewTrendingLast30Days
+# Preview: em alta nos últimos 30 dias, top 5.
+GET {{baseUrl}}/api/v1/reports/trending?days=30&limit=5
+Authorization: Bearer {{token}}
+Accept: application/json
 
 ###
-# @name sendTrending
+# @name sendTrendingToSelf
+# Envia relatório trending ao e-mail do usuário autenticado.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/trending
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+# @name sendTrendingToEmail
+# Envia relatório trending a um endereço explícito.
+# Espera: 202 Accepted
 POST {{baseUrl}}/api/v1/reports/trending
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "email": "user@example.com"
+  "email": "{{testEmail}}",
+  "limit": 10
 }
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# PLATFORM REPORT (ADMIN) — Preview
-# ═════════════════════════════════════════════════════════════════════════════
+# =============================================================================
+# PLATFORM REPORT (ADMIN)
+# =============================================================================
 
 ###
 # @name previewPlatformReport
+# Preview: relatório geral da plataforma — requer role ADMIN.
+# Espera: 200 OK + métricas globais
 GET {{baseUrl}}/api/v1/admin/reports/platform
 Authorization: Bearer {{adminToken}}
 Accept: application/json
 
-
-# ═════════════════════════════════════════════════════════════════════════════
-# PLATFORM REPORT (ADMIN) — Enviar por e-mail
-# ═════════════════════════════════════════════════════════════════════════════
-
 ###
 # @name sendPlatformReport
+# Envia relatório de plataforma a um e-mail — requer role ADMIN.
+# Espera: 202 Accepted
 POST {{baseUrl}}/api/v1/admin/reports/platform
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
-  "email": "admin@cinelog.dev"
+  "email": "{{testEmail}}"
+}
+
+###
+# @name sendPlatformReportForbidden
+# Acesso sem token de admin → deve retornar 403 Forbidden.
+POST {{baseUrl}}/api/v1/admin/reports/platform
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
 }
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# SEND-TO-ALL (ADMIN) — Envia trending para todos os usuários
-# ═════════════════════════════════════════════════════════════════════════════
+# =============================================================================
+# SEND-TO-ALL (ADMIN)
+# =============================================================================
 
 ###
 # @name sendTrendingToAll
-# ATENÇÃO: dispara e-mail para TODOS os usuários ativos!
+# ⚠️  ATENÇÃO: dispara e-mail para TODOS os usuários ativos!
+# Use apenas em ambiente de testes com MailHog ativo.
+# Requer role ADMIN. Espera: 202 Accepted.
 POST {{baseUrl}}/api/v1/admin/reports/send-to-all
 Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+###
+# @name sendToAllForbidden
+# Tentativa de envio em massa sem role ADMIN → deve retornar 403.
+POST {{baseUrl}}/api/v1/admin/reports/send-to-all
+Authorization: Bearer {{token}}
 Content-Type: application/json

@@ -161,4 +161,18 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
             throw e;
         }
     }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        log.debug("Iniciando findByEmail. Parâmetros: {}", Map.of("email", email));
+        try {
+            Optional<User> result = jpa.findByEmail(email).map(userMapper::toDomain);
+            log.debug("Finalizando findByEmail. Encontrado: {}", result.isPresent());
+            return result;
+        } catch (Exception e) {
+            log.error("Erro ao buscar usuário por email. Parâmetros: {}. Erro: {}", Map.of("email", email),
+                    e.getMessage(), e);
+            throw e;
+        }
+    }
 }

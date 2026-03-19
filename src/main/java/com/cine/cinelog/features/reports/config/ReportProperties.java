@@ -1,18 +1,18 @@
 package com.cine.cinelog.features.reports.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
  * Configuration properties for the email reports feature.
  *
  * <p>
  * Bound from {@code cinelog.reports.*} in application.yml.
+ * Registered via {@code @EnableConfigurationProperties} in
+ * {@code CinelogApplication}.
  * </p>
  *
  * @since 1.0
  */
-@Component
 @ConfigurationProperties(prefix = "cinelog.reports")
 public class ReportProperties {
 

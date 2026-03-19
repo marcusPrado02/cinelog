@@ -1,219 +1,734 @@
-<!DOCTYPE html>
+<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>Em Alta — CineLog</title>
-  <style type="text/css">
-    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
-    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
-    body{margin:0!important;padding:0!important;background-color:#0D0D0D;}
-    @media only screen and (max-width:640px){
-      .email-body-padding{padding:0 16px!important;}
-    }
-  </style>
-</head>
-<body style="margin:0;padding:0;background-color:#0D0D0D;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <title>Em Alta — CineLog</title>
+        <style type="text/css">
+            body,
+            table,
+            td,
+            a {
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+            }
+            table,
+            td {
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+            }
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: #0d0d0d;
+            }
+            @media only screen and (max-width: 640px) {
+                .email-body-padding {
+                    padding: 0 16px !important;
+                }
+            }
+        </style>
+    </head>
+    <body
+        style="
+            margin: 0;
+            padding: 0;
+            background-color: #0d0d0d;
+            font-family:
+                &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif;
+        "
+    >
+        <!-- Preheader -->
+        <div
+            style="
+                display: none;
+                max-height: 0;
+                overflow: hidden;
+                mso-hide: all;
+                font-size: 1px;
+                color: #0d0d0d;
+            "
+            th:text="|Os títulos que todo mundo está assistindo nos últimos ${data.days} dias — não fique de fora!|"
+        >
+            Os títulos em alta chegaram — veja o que a galera está assistindo.
+        </div>
 
-<!-- Preheader -->
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#0D0D0D;"
-     th:text="|Os títulos que todo mundo está assistindo nos últimos ${data.days} dias — não fique de fora!|">
-  Os títulos em alta chegaram — veja o que a galera está assistindo.
-</div>
-
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#0D0D0D;">
-<tr><td align="center" style="padding:32px 16px;">
-
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="620"
-       style="background-color:#141414;border-radius:20px;overflow:hidden;border:1px solid #1E1E1E;box-shadow:0 8px 40px rgba(0,0,0,0.8);">
-
-  <!-- FIRE ACCENT BAR -->
-  <tr><td height="5" style="background:linear-gradient(90deg,#FF4500,#FF6B00,#E50914);font-size:0;line-height:0;">&nbsp;</td></tr>
-
-  <!-- HEADER -->
-  <tr>
-    <td style="background:linear-gradient(175deg,#1A0800 0%,#2A1000 45%,#0F0F0F 100%);padding:40px 48px 32px;">
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-        <tr>
-          <td valign="middle" style="width:36px;">
-            <div style="width:4px;height:36px;background:linear-gradient(180deg,#FF4500,#FF6B00);border-radius:2px;"></div>
-          </td>
-          <td valign="middle" style="padding-left:10px;">
-            <span style="font-size:22px;font-weight:900;color:#FFFFFF;" th:text="${appName}">CineLog</span>
-          </td>
-          <td align="right" valign="middle">
-            <span style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;">Trending</span>
-          </td>
-        </tr>
-      </table>
-      <p style="margin:24px 0 0;font-size:32px;font-weight:800;color:#FFFFFF;line-height:1.15;letter-spacing:-0.5px;">
-        🔥 Em Alta<br/>Esta Semana
-      </p>
-      <p style="margin:10px 0 0;font-size:14px;color:rgba(255,255,255,0.4);"
-         th:text="|Os mais assistidos nos últimos ${data.days} dias|">
-        Os mais assistidos dos últimos 7 dias
-      </p>
-    </td>
-  </tr>
-
-  <!-- BODY -->
-  <tr>
-    <td class="email-body-padding" style="padding:36px 48px 0;">
-      <p style="margin:0 0 24px;font-size:14px;color:#666;line-height:1.6;">
-        O que todo mundo no CineLog não consegue parar de assistir:
-      </p>
-      <!-- Section header -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:16px;">
-        <tr>
-          <td style="border-bottom:1px solid #1E1E1E;padding-bottom:12px;">
-            <span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;">
-              📈 &nbsp;Mais assistidos
-            </span>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- TRENDING CARDS -->
-  <tr th:if="${data.items != null and !#lists.isEmpty(data.items)}">
-    <td class="email-body-padding" style="padding:0 48px;">
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-        <tr th:each="item,iter : ${data.items}">
-          <td style="padding-bottom:8px;">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
-                   style="background:#1A1A1A;border-radius:14px;border:1px solid #242424;overflow:hidden;">
-              <tr>
-                <!-- Rank -->
-                <td width="60" style="width:60px;text-align:center;vertical-align:middle;padding:0 4px;">
-                  <div th:if="${iter.index < 3}"
-                       style="font-size:22px;line-height:1;text-align:center;">
-                    <span th:text="${iter.index == 0 ? '🔥' : (iter.index == 1 ? '⚡' : '✨')}">🔥</span>
-                  </div>
-                  <div th:if="${iter.index >= 3}"
-                       style="width:36px;height:36px;border-radius:50%;background:#1F1F1F;border:1px solid #2A2A2A;
-                              margin:0 auto;text-align:center;line-height:36px;">
-                    <span style="font-size:14px;font-weight:800;color:#444;"
-                          th:text="${iter.count}">#4</span>
-                  </div>
-                </td>
-                <!-- Left bar -->
-                <td width="3"
-                    th:style="${iter.index < 3 ? 'width:3px;background:linear-gradient(180deg,#FF4500,#FF6B00);' : 'width:3px;background:#1E1E1E;'}"></td>
-                <!-- Poster -->
-                <td width="72" valign="top"
-                    style="width:72px;min-width:72px;background:#111;overflow:hidden;vertical-align:top;">
-                  <div th:if="${item.posterUrl != null and !#strings.isEmpty(item.posterUrl)}"
-                       style="width:72px;height:108px;overflow:hidden;">
-                    <img th:src="${item.posterUrl}" alt="" width="72" height="108"
-                         style="width:72px;height:108px;object-fit:cover;display:block;"/>
-                  </div>
-                  <div th:unless="${item.posterUrl != null and !#strings.isEmpty(item.posterUrl)}"
-                       style="width:72px;height:108px;background:#1A1A1A;text-align:center;line-height:108px;">
-                    <span style="font-size:24px;opacity:0.25;"
-                          th:text="${item.type == 'MOVIE' ? '🎬' : '📺'}">🎬</span>
-                  </div>
-                </td>
-                <!-- Details -->
-                <td style="padding:16px 16px;vertical-align:middle;">
-                  <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                    <tr>
-                      <td style="padding-bottom:6px;">
-                        <span th:if="${item.type == 'MOVIE'}"
-                              style="display:inline-block;background:rgba(229,9,20,0.12);color:#FF4444;
-                                     border:1px solid rgba(229,9,20,0.3);border-radius:4px;
-                                     padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:0.8px;">FILME</span>
-                        <span th:unless="${item.type == 'MOVIE'}"
-                              style="display:inline-block;background:rgba(59,158,255,0.12);color:#3B9EFF;
-                                     border:1px solid rgba(59,158,255,0.3);border-radius:4px;
-                                     padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:0.8px;">SÉRIE</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="padding-bottom:8px;">
-                        <span style="font-size:15px;font-weight:700;color:#FFFFFF;line-height:1.3;"
-                              th:text="${item.title}">Nome do Título</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                          <tr>
-                            <td th:if="${item.releaseYear != null}"
-                                style="font-size:12px;color:#444;padding-right:14px;"
-                                th:text="${item.releaseYear}">2024</td>
-                            <td th:if="${item.avgRating != null}">
-                              <span style="color:#F5C518;font-size:12px;font-weight:800;">★</span>
-                              <span style="color:#F5C518;font-size:12px;font-weight:700;margin-left:2px;"
-                                    th:text="${item.avgRating}">8.0</span>
+        <table
+            role="presentation"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            width="100%"
+            style="background-color: #0d0d0d"
+        >
+            <tr>
+                <td align="center" style="padding: 32px 16px">
+                    <table
+                        role="presentation"
+                        cellspacing="0"
+                        cellpadding="0"
+                        border="0"
+                        width="620"
+                        style="
+                            background-color: #141414;
+                            border-radius: 20px;
+                            overflow: hidden;
+                            border: 1px solid #1e1e1e;
+                            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+                        "
+                    >
+                        <!-- FIRE ACCENT BAR -->
+                        <tr>
+                            <td
+                                height="5"
+                                style="
+                                    background: linear-gradient(
+                                        90deg,
+                                        #ff4500,
+                                        #ff6b00,
+                                        #e50914
+                                    );
+                                    font-size: 0;
+                                    line-height: 0;
+                                "
+                            >
+                                &nbsp;
                             </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                  </table>
+                        </tr>
+
+                        <!-- HEADER -->
+                        <tr>
+                            <td
+                                style="
+                                    background: linear-gradient(
+                                        175deg,
+                                        #1a0800 0%,
+                                        #2a1000 45%,
+                                        #0f0f0f 100%
+                                    );
+                                    padding: 40px 48px 32px;
+                                "
+                            >
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                >
+                                    <tr>
+                                        <td valign="middle" style="width: 36px">
+                                            <div
+                                                style="
+                                                    width: 4px;
+                                                    height: 36px;
+                                                    background: linear-gradient(
+                                                        180deg,
+                                                        #ff4500,
+                                                        #ff6b00
+                                                    );
+                                                    border-radius: 2px;
+                                                "
+                                            ></div>
+                                        </td>
+                                        <td
+                                            valign="middle"
+                                            style="padding-left: 10px"
+                                        >
+                                            <span
+                                                style="
+                                                    font-size: 22px;
+                                                    font-weight: 900;
+                                                    color: #ffffff;
+                                                "
+                                                th:text="${appName}"
+                                                >CineLog</span
+                                            >
+                                        </td>
+                                        <td align="right" valign="middle">
+                                            <span
+                                                style="
+                                                    font-size: 11px;
+                                                    color: rgba(
+                                                        255,
+                                                        255,
+                                                        255,
+                                                        0.3
+                                                    );
+                                                    letter-spacing: 2px;
+                                                    text-transform: uppercase;
+                                                "
+                                                >Trending</span
+                                            >
+                                        </td>
+                                    </tr>
+                                </table>
+                                <p
+                                    style="
+                                        margin: 24px 0 0;
+                                        font-size: 32px;
+                                        font-weight: 800;
+                                        color: #ffffff;
+                                        line-height: 1.15;
+                                        letter-spacing: -0.5px;
+                                    "
+                                >
+                                    🔥 Em Alta<br />Esta Semana
+                                </p>
+                                <p
+                                    style="
+                                        margin: 10px 0 0;
+                                        font-size: 14px;
+                                        color: rgba(255, 255, 255, 0.4);
+                                    "
+                                    th:text="|Os mais assistidos nos últimos ${data.days} dias|"
+                                >
+                                    Os mais assistidos dos últimos 7 dias
+                                </p>
+                            </td>
+                        </tr>
+
+                        <!-- BODY -->
+                        <tr>
+                            <td
+                                class="email-body-padding"
+                                style="padding: 36px 48px 0"
+                            >
+                                <p
+                                    style="
+                                        margin: 0 0 24px;
+                                        font-size: 14px;
+                                        color: #666;
+                                        line-height: 1.6;
+                                    "
+                                >
+                                    O que todo mundo no CineLog não consegue
+                                    parar de assistir:
+                                </p>
+                                <!-- Section header -->
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                    style="margin-bottom: 16px"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                border-bottom: 1px solid #1e1e1e;
+                                                padding-bottom: 12px;
+                                            "
+                                        >
+                                            <span
+                                                style="
+                                                    font-size: 11px;
+                                                    font-weight: 700;
+                                                    color: #555;
+                                                    text-transform: uppercase;
+                                                    letter-spacing: 1.5px;
+                                                "
+                                            >
+                                                📈 &nbsp;Mais assistidos
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- TRENDING CARDS -->
+                        <tr
+                            th:if="${data.items != null and !#lists.isEmpty(data.items)}"
+                        >
+                            <td
+                                class="email-body-padding"
+                                style="padding: 0 48px"
+                            >
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                >
+                                    <tr th:each="item,iter : ${data.items}">
+                                        <td style="padding-bottom: 8px">
+                                            <table
+                                                role="presentation"
+                                                cellspacing="0"
+                                                cellpadding="0"
+                                                border="0"
+                                                width="100%"
+                                                style="
+                                                    background: #1a1a1a;
+                                                    border-radius: 14px;
+                                                    border: 1px solid #242424;
+                                                    overflow: hidden;
+                                                "
+                                            >
+                                                <!-- BACKDROP HERO for top items -->
+                                                <tr
+                                                    th:if="${iter.index < 3 and item.backdropUrl != null and !#strings.isEmpty(item.backdropUrl)}"
+                                                >
+                                                    <td
+                                                        colspan="5"
+                                                        style="
+                                                            height: 100px;
+                                                            position: relative;
+                                                        "
+                                                    >
+                                                        <img
+                                                            th:src="${item.backdropUrl}"
+                                                            alt=""
+                                                            width="620"
+                                                            height="100"
+                                                            style="
+                                                                width: 100%;
+                                                                height: 100px;
+                                                                object-fit: cover;
+                                                                display: block;
+                                                                opacity: 0.5;
+                                                            "
+                                                        />
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <!-- Rank -->
+                                                    <td
+                                                        width="60"
+                                                        style="
+                                                            width: 60px;
+                                                            text-align: center;
+                                                            vertical-align: middle;
+                                                            padding: 0 4px;
+                                                        "
+                                                    >
+                                                        <div
+                                                            th:if="${iter.index < 3}"
+                                                            style="
+                                                                font-size: 22px;
+                                                                line-height: 1;
+                                                                text-align: center;
+                                                            "
+                                                        >
+                                                            <span
+                                                                th:text="${iter.index == 0 ? '🔥' : (iter.index == 1 ? '⚡' : '✨')}"
+                                                                >🔥</span
+                                                            >
+                                                        </div>
+                                                        <div
+                                                            th:if="${iter.index >= 3}"
+                                                            style="
+                                                                width: 36px;
+                                                                height: 36px;
+                                                                border-radius: 50%;
+                                                                background: #1f1f1f;
+                                                                border: 1px
+                                                                    solid
+                                                                    #2a2a2a;
+                                                                margin: 0 auto;
+                                                                text-align: center;
+                                                                line-height: 36px;
+                                                            "
+                                                        >
+                                                            <span
+                                                                style="
+                                                                    font-size: 14px;
+                                                                    font-weight: 800;
+                                                                    color: #444;
+                                                                "
+                                                                th:text="${iter.count}"
+                                                                >#4</span
+                                                            >
+                                                        </div>
+                                                    </td>
+                                                    <!-- Left bar -->
+                                                    <td
+                                                        width="3"
+                                                        th:style="${iter.index < 3 ? 'width:3px;background:linear-gradient(180deg,#FF4500,#FF6B00);' : 'width:3px;background:#1E1E1E;'}"
+                                                    ></td>
+                                                    <!-- Poster -->
+                                                    <td
+                                                        width="72"
+                                                        valign="top"
+                                                        style="
+                                                            width: 72px;
+                                                            min-width: 72px;
+                                                            background: #111;
+                                                            overflow: hidden;
+                                                            vertical-align: top;
+                                                        "
+                                                    >
+                                                        <div
+                                                            th:if="${item.posterUrl != null and !#strings.isEmpty(item.posterUrl)}"
+                                                            style="
+                                                                width: 72px;
+                                                                height: 108px;
+                                                                overflow: hidden;
+                                                            "
+                                                        >
+                                                            <img
+                                                                th:src="${item.posterUrl}"
+                                                                alt=""
+                                                                width="72"
+                                                                height="108"
+                                                                style="
+                                                                    width: 72px;
+                                                                    height: 108px;
+                                                                    object-fit: cover;
+                                                                    display: block;
+                                                                "
+                                                            />
+                                                        </div>
+                                                        <div
+                                                            th:unless="${item.posterUrl != null and !#strings.isEmpty(item.posterUrl)}"
+                                                            style="
+                                                                width: 72px;
+                                                                height: 108px;
+                                                                background: #1a1a1a;
+                                                                text-align: center;
+                                                                line-height: 108px;
+                                                            "
+                                                        >
+                                                            <span
+                                                                style="
+                                                                    font-size: 24px;
+                                                                    opacity: 0.25;
+                                                                "
+                                                                th:text="${item.type == 'MOVIE' ? '🎬' : '📺'}"
+                                                                >🎬</span
+                                                            >
+                                                        </div>
+                                                    </td>
+                                                    <!-- Details -->
+                                                    <td
+                                                        style="
+                                                            padding: 16px 16px;
+                                                            vertical-align: middle;
+                                                        "
+                                                    >
+                                                        <table
+                                                            role="presentation"
+                                                            cellspacing="0"
+                                                            cellpadding="0"
+                                                            border="0"
+                                                        >
+                                                            <tr>
+                                                                <td
+                                                                    style="
+                                                                        padding-bottom: 6px;
+                                                                    "
+                                                                >
+                                                                    <span
+                                                                        th:if="${item.type == 'MOVIE'}"
+                                                                        style="
+                                                                            display: inline-block;
+                                                                            background: rgba(
+                                                                                229,
+                                                                                9,
+                                                                                20,
+                                                                                0.12
+                                                                            );
+                                                                            color: #ff4444;
+                                                                            border: 1px
+                                                                                solid
+                                                                                rgba(
+                                                                                    229,
+                                                                                    9,
+                                                                                    20,
+                                                                                    0.3
+                                                                                );
+                                                                            border-radius: 4px;
+                                                                            padding: 2px
+                                                                                8px;
+                                                                            font-size: 10px;
+                                                                            font-weight: 700;
+                                                                            letter-spacing: 0.8px;
+                                                                        "
+                                                                        >FILME</span
+                                                                    >
+                                                                    <span
+                                                                        th:unless="${item.type == 'MOVIE'}"
+                                                                        style="
+                                                                            display: inline-block;
+                                                                            background: rgba(
+                                                                                59,
+                                                                                158,
+                                                                                255,
+                                                                                0.12
+                                                                            );
+                                                                            color: #3b9eff;
+                                                                            border: 1px
+                                                                                solid
+                                                                                rgba(
+                                                                                    59,
+                                                                                    158,
+                                                                                    255,
+                                                                                    0.3
+                                                                                );
+                                                                            border-radius: 4px;
+                                                                            padding: 2px
+                                                                                8px;
+                                                                            font-size: 10px;
+                                                                            font-weight: 700;
+                                                                            letter-spacing: 0.8px;
+                                                                        "
+                                                                        >SÉRIE</span
+                                                                    >
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td
+                                                                    style="
+                                                                        padding-bottom: 8px;
+                                                                    "
+                                                                >
+                                                                    <span
+                                                                        style="
+                                                                            font-size: 15px;
+                                                                            font-weight: 700;
+                                                                            color: #ffffff;
+                                                                            line-height: 1.3;
+                                                                        "
+                                                                        th:text="${item.title}"
+                                                                        >Nome do
+                                                                        Título</span
+                                                                    >
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>
+                                                                    <table
+                                                                        role="presentation"
+                                                                        cellspacing="0"
+                                                                        cellpadding="0"
+                                                                        border="0"
+                                                                    >
+                                                                        <tr>
+                                                                            <td
+                                                                                th:if="${item.releaseYear != null}"
+                                                                                style="
+                                                                                    font-size: 12px;
+                                                                                    color: #444;
+                                                                                    padding-right: 14px;
+                                                                                "
+                                                                                th:text="${item.releaseYear}"
+                                                                            >
+                                                                                2024
+                                                                            </td>
+                                                                            <td
+                                                                                th:if="${item.avgRating != null}"
+                                                                            >
+                                                                                <span
+                                                                                    style="
+                                                                                        color: #f5c518;
+                                                                                        font-size: 12px;
+                                                                                        font-weight: 800;
+                                                                                    "
+                                                                                    >★</span
+                                                                                >
+                                                                                <span
+                                                                                    style="
+                                                                                        color: #f5c518;
+                                                                                        font-size: 12px;
+                                                                                        font-weight: 700;
+                                                                                        margin-left: 2px;
+                                                                                    "
+                                                                                    th:text="${item.avgRating}"
+                                                                                    >8.0</span
+                                                                                >
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                    <!-- Views -->
+                                                    <td
+                                                        style="
+                                                            padding: 16px 20px
+                                                                16px 4px;
+                                                            vertical-align: middle;
+                                                            text-align: right;
+                                                            min-width: 70px;
+                                                        "
+                                                    >
+                                                        <div
+                                                            th:if="${item.watchCount != null and item.watchCount > 0}"
+                                                        >
+                                                            <div
+                                                                style="
+                                                                    font-size: 22px;
+                                                                    font-weight: 900;
+                                                                    color: #ff4500;
+                                                                    line-height: 1;
+                                                                "
+                                                                th:text="${item.watchCount}"
+                                                            >
+                                                                0
+                                                            </div>
+                                                            <div
+                                                                style="
+                                                                    font-size: 10px;
+                                                                    color: #444;
+                                                                    margin-top: 3px;
+                                                                    letter-spacing: 0.5px;
+                                                                "
+                                                            >
+                                                                views
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- Empty state -->
+                        <tr
+                            th:if="${data.items == null or #lists.isEmpty(data.items)}"
+                        >
+                            <td
+                                class="email-body-padding"
+                                style="padding: 0 48px"
+                            >
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                background: #111;
+                                                border-radius: 14px;
+                                                border: 1px dashed #222;
+                                                padding: 40px;
+                                                text-align: center;
+                                            "
+                                        >
+                                            <p
+                                                style="
+                                                    margin: 0;
+                                                    font-size: 36px;
+                                                "
+                                            >
+                                                📡
+                                            </p>
+                                            <p
+                                                style="
+                                                    margin: 14px 0 0;
+                                                    font-size: 14px;
+                                                    color: #555;
+                                                "
+                                            >
+                                                Nenhum título em destaque por
+                                                enquanto.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- CTA -->
+                        <tr>
+                            <td style="padding: 40px 48px" align="center">
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                border-radius: 10px;
+                                                background: linear-gradient(
+                                                    135deg,
+                                                    #cc3700,
+                                                    #ff4500
+                                                );
+                                                box-shadow: 0 4px 20px
+                                                    rgba(255, 69, 0, 0.35);
+                                            "
+                                        >
+                                            <a
+                                                th:href="${baseUrl}"
+                                                href="#"
+                                                style="
+                                                    display: inline-block;
+                                                    padding: 15px 40px;
+                                                    color: #ffffff;
+                                                    text-decoration: none;
+                                                    font-size: 15px;
+                                                    font-weight: 700;
+                                                    letter-spacing: 0.3px;
+                                                    border-radius: 10px;
+                                                "
+                                            >
+                                                Não fique de fora &nbsp;→
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- FOOTER -->
+                        <tr>
+                            <td
+                                style="
+                                    background: #0a0a0a;
+                                    border-top: 1px solid #1a1a1a;
+                                    padding: 28px 48px;
+                                    text-align: center;
+                                "
+                            >
+                                <p
+                                    style="
+                                        margin: 0 0 8px;
+                                        font-size: 12px;
+                                        color: #333;
+                                        line-height: 1.7;
+                                    "
+                                >
+                                    Você recebeu este e-mail por ter uma conta
+                                    no
+                                    <a
+                                        th:href="${baseUrl}"
+                                        style="
+                                            color: #555;
+                                            text-decoration: none;
+                                        "
+                                        th:text="${appName}"
+                                        >CineLog</a
+                                    >.
+                                </p>
+                                <p
+                                    style="
+                                        margin: 0;
+                                        font-size: 11px;
+                                        color: #222;
+                                    "
+                                >
+                                    © 2026 CineLog &nbsp;·&nbsp; Todos os
+                                    direitos reservados
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <!-- Views -->
-                <td style="padding:16px 20px 16px 4px;vertical-align:middle;text-align:right;min-width:70px;">
-                  <div th:if="${item.watchCount != null and item.watchCount > 0}">
-                    <div style="font-size:22px;font-weight:900;color:#FF4500;line-height:1;"
-                         th:text="${item.watchCount}">0</div>
-                    <div style="font-size:10px;color:#444;margin-top:3px;letter-spacing:0.5px;">views</div>
-                  </div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- Empty state -->
-  <tr th:if="${data.items == null or #lists.isEmpty(data.items)}">
-    <td class="email-body-padding" style="padding:0 48px;">
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-        <tr>
-          <td style="background:#111;border-radius:14px;border:1px dashed #222;padding:40px;text-align:center;">
-            <p style="margin:0;font-size:36px;">📡</p>
-            <p style="margin:14px 0 0;font-size:14px;color:#555;">Nenhum título em destaque por enquanto.</p>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- CTA -->
-  <tr>
-    <td style="padding:40px 48px;" align="center">
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-        <tr>
-          <td style="border-radius:10px;background:linear-gradient(135deg,#CC3700,#FF4500);box-shadow:0 4px 20px rgba(255,69,0,0.35);">
-            <a th:href="${baseUrl}" href="#"
-               style="display:inline-block;padding:15px 40px;color:#FFFFFF;text-decoration:none;
-                      font-size:15px;font-weight:700;letter-spacing:0.3px;border-radius:10px;">
-              Não fique de fora &nbsp;→
-            </a>
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- FOOTER -->
-  <tr>
-    <td style="background:#0A0A0A;border-top:1px solid #1A1A1A;padding:28px 48px;text-align:center;">
-      <p style="margin:0 0 8px;font-size:12px;color:#333;line-height:1.7;">
-        Você recebeu este e-mail por ter uma conta no
-        <a th:href="${baseUrl}" style="color:#555;text-decoration:none;" th:text="${appName}">CineLog</a>.
-      </p>
-      <p style="margin:0;font-size:11px;color:#222;">© 2026 CineLog &nbsp;·&nbsp; Todos os direitos reservados</p>
-    </td>
-  </tr>
-
-</table>
-</td></tr>
-</table>
-</body>
+            </tr>
+        </table>
+    </body>
 </html>

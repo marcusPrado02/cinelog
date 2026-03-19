@@ -1,0 +1,620 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <title>Top Atores — CineLog</title>
+        <style type="text/css">
+            body,
+            table,
+            td,
+            a {
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+            }
+            table,
+            td {
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+            }
+            img {
+                -ms-interpolation-mode: bicubic;
+                border: 0;
+                display: block;
+                outline: none;
+                text-decoration: none;
+            }
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: #08080c;
+            }
+            @media only screen and (max-width: 640px) {
+                .email-body-padding {
+                    padding: 0 16px !important;
+                }
+                .actor-card td {
+                    display: block !important;
+                    width: 100% !important;
+                }
+                .actor-photo-td {
+                    display: block !important;
+                    text-align: center !important;
+                    padding-bottom: 12px !important;
+                }
+                .filmstrip {
+                    display: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body
+        style="
+            margin: 0;
+            padding: 0;
+            background-color: #08080c;
+            font-family:
+                &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif;
+        "
+    >
+        <div
+            style="
+                display: none;
+                max-height: 0;
+                overflow: hidden;
+                mso-hide: all;
+                font-size: 1px;
+                color: #08080c;
+                line-height: 1px;
+            "
+            th:text="|Top ${data.limit} atores com filmes mais bem avaliados no catálogo|"
+        >
+            Descubra os atores com melhor desempenho no CineLog.
+        </div>
+
+        <table
+            role="presentation"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            width="100%"
+            style="background-color: #08080c"
+        >
+            <tr>
+                <td align="center" style="padding: 32px 16px">
+                    <table
+                        role="presentation"
+                        cellspacing="0"
+                        cellpadding="0"
+                        border="0"
+                        width="620"
+                        style="
+                            background-color: #111118;
+                            border-radius: 20px;
+                            overflow: hidden;
+                            border: 1px solid #1e1e28;
+                            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+                        "
+                    >
+                        <!-- ACCENT BAR -->
+                        <tr>
+                            <td
+                                height="5"
+                                style="
+                                    background: linear-gradient(
+                                        90deg,
+                                        #10b981,
+                                        #059669,
+                                        #34d399
+                                    );
+                                    font-size: 0;
+                                    line-height: 0;
+                                "
+                            >
+                                &nbsp;
+                            </td>
+                        </tr>
+
+                        <!-- HEADER -->
+                        <tr>
+                            <td
+                                style="
+                                    background: linear-gradient(
+                                        175deg,
+                                        #001a10 0%,
+                                        #00120a 45%,
+                                        #0a0a10 100%
+                                    );
+                                    padding: 40px 48px 32px;
+                                "
+                            >
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                >
+                                    <tr>
+                                        <td valign="middle" style="width: 36px">
+                                            <div
+                                                style="
+                                                    width: 4px;
+                                                    height: 36px;
+                                                    background: #10b981;
+                                                    border-radius: 2px;
+                                                "
+                                            ></div>
+                                        </td>
+                                        <td
+                                            valign="middle"
+                                            style="padding-left: 10px"
+                                        >
+                                            <span
+                                                style="
+                                                    font-size: 22px;
+                                                    font-weight: 900;
+                                                    color: #ffffff;
+                                                    letter-spacing: -0.5px;
+                                                "
+                                                th:text="${appName}"
+                                                >CineLog</span
+                                            >
+                                        </td>
+                                        <td align="right" valign="middle">
+                                            <span
+                                                style="
+                                                    font-size: 11px;
+                                                    color: rgba(
+                                                        255,
+                                                        255,
+                                                        255,
+                                                        0.35
+                                                    );
+                                                    letter-spacing: 2px;
+                                                    text-transform: uppercase;
+                                                "
+                                                >Atores</span
+                                            >
+                                        </td>
+                                    </tr>
+                                </table>
+                                <p
+                                    style="
+                                        margin: 24px 0 0;
+                                        font-size: 32px;
+                                        font-weight: 800;
+                                        color: #ffffff;
+                                        line-height: 1.15;
+                                        letter-spacing: -0.5px;
+                                    "
+                                >
+                                    Top Atores 🌟
+                                </p>
+                                <p
+                                    style="
+                                        margin: 8px 0 0;
+                                        font-size: 14px;
+                                        color: rgba(255, 255, 255, 0.45);
+                                    "
+                                >
+                                    Atores com os filmes mais bem avaliados no
+                                    catálogo
+                                </p>
+                            </td>
+                        </tr>
+
+                        <!-- BODY -->
+                        <tr>
+                            <td
+                                class="email-body-padding"
+                                style="padding: 36px 48px 0"
+                            >
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                    style="margin-bottom: 16px"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                border-bottom: 1px solid #1e1e28;
+                                                padding-bottom: 12px;
+                                            "
+                                        >
+                                            <span
+                                                style="
+                                                    font-size: 11px;
+                                                    font-weight: 700;
+                                                    color: #555;
+                                                    text-transform: uppercase;
+                                                    letter-spacing: 1.5px;
+                                                "
+                                                th:text="|🏆 Top ${data.limit} atores|"
+                                                >🏆 Top 10 atores</span
+                                            >
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- ACTOR CARDS -->
+                        <tr
+                            th:if="${data.actors != null and !#lists.isEmpty(data.actors)}"
+                        >
+                            <td
+                                class="email-body-padding"
+                                style="padding: 0 48px"
+                            >
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                >
+                                    <tr th:each="actor, iter : ${data.actors}">
+                                        <td style="padding-bottom: 16px">
+                                            <table
+                                                role="presentation"
+                                                class="actor-card"
+                                                cellspacing="0"
+                                                cellpadding="0"
+                                                border="0"
+                                                width="100%"
+                                                style="
+                                                    background: #151520;
+                                                    border-radius: 16px;
+                                                    border: 1px solid #1e1e28;
+                                                    overflow: hidden;
+                                                "
+                                            >
+                                                <tr>
+                                                    <!-- RANK BADGE -->
+                                                    <td
+                                                        width="44"
+                                                        valign="top"
+                                                        style="
+                                                            width: 44px;
+                                                            padding: 20px 0 20px
+                                                                18px;
+                                                            vertical-align: top;
+                                                        "
+                                                    >
+                                                        <div
+                                                            th:style="|background:${iter.index == 0 ? 'linear-gradient(135deg,#F5C518,#D4A30F)' : (iter.index == 1 ? 'linear-gradient(135deg,#C0C0C0,#9A9A9A)' : (iter.index == 2 ? 'linear-gradient(135deg,#CD7F32,#A66929)' : 'rgba(16,185,129,0.2)'))};width:32px;height:32px;border-radius:10px;text-align:center;line-height:32px;font-size:${iter.index < 3 ? '14' : '13'}px;font-weight:900;color:${iter.index < 3 ? '#000' : '#10B981'};|"
+                                                            th:text="${iter.index + 1}"
+                                                        >
+                                                            1
+                                                        </div>
+                                                    </td>
+                                                    <!-- PHOTO -->
+                                                    <td
+                                                        class="actor-photo-td"
+                                                        width="72"
+                                                        valign="top"
+                                                        style="
+                                                            width: 72px;
+                                                            padding: 16px 0;
+                                                        "
+                                                    >
+                                                        <div
+                                                            th:if="${actor.profileUrl != null and !#strings.isEmpty(actor.profileUrl)}"
+                                                            style="
+                                                                width: 64px;
+                                                                height: 64px;
+                                                                border-radius: 50%;
+                                                                overflow: hidden;
+                                                                border: 2px
+                                                                    solid
+                                                                    #10b981;
+                                                            "
+                                                        >
+                                                            <img
+                                                                th:src="${actor.profileUrl}"
+                                                                alt=""
+                                                                width="64"
+                                                                height="64"
+                                                                style="
+                                                                    width: 64px;
+                                                                    height: 64px;
+                                                                    object-fit: cover;
+                                                                    display: block;
+                                                                "
+                                                            />
+                                                        </div>
+                                                        <div
+                                                            th:unless="${actor.profileUrl != null and !#strings.isEmpty(actor.profileUrl)}"
+                                                            style="
+                                                                width: 64px;
+                                                                height: 64px;
+                                                                border-radius: 50%;
+                                                                background: linear-gradient(
+                                                                    135deg,
+                                                                    #252535,
+                                                                    #1a1a25
+                                                                );
+                                                                border: 2px
+                                                                    solid #333;
+                                                                text-align: center;
+                                                                line-height: 64px;
+                                                            "
+                                                        >
+                                                            <span
+                                                                style="
+                                                                    font-size: 26px;
+                                                                    opacity: 0.4;
+                                                                "
+                                                                >🎭</span
+                                                            >
+                                                        </div>
+                                                    </td>
+                                                    <!-- INFO -->
+                                                    <td
+                                                        style="
+                                                            padding: 16px 20px
+                                                                16px 12px;
+                                                            vertical-align: middle;
+                                                        "
+                                                    >
+                                                        <p
+                                                            style="
+                                                                margin: 0 0 4px;
+                                                                font-size: 16px;
+                                                                font-weight: 700;
+                                                                color: #ffffff;
+                                                                line-height: 1.2;
+                                                            "
+                                                            th:text="${actor.name}"
+                                                        >
+                                                            Actor Name
+                                                        </p>
+                                                        <table
+                                                            role="presentation"
+                                                            cellspacing="0"
+                                                            cellpadding="0"
+                                                            border="0"
+                                                            style="
+                                                                margin-top: 6px;
+                                                            "
+                                                        >
+                                                            <tr>
+                                                                <td
+                                                                    style="
+                                                                        padding-right: 16px;
+                                                                    "
+                                                                >
+                                                                    <span
+                                                                        style="
+                                                                            color: #f5c518;
+                                                                            font-size: 14px;
+                                                                            font-weight: 800;
+                                                                        "
+                                                                        >★</span
+                                                                    >
+                                                                    <span
+                                                                        style="
+                                                                            color: #f5c518;
+                                                                            font-size: 14px;
+                                                                            font-weight: 700;
+                                                                            margin-left: 2px;
+                                                                        "
+                                                                        th:text="${actor.avgRating}"
+                                                                        >8.5</span
+                                                                    >
+                                                                </td>
+                                                                <td>
+                                                                    <span
+                                                                        style="
+                                                                            font-size: 12px;
+                                                                            color: #666;
+                                                                        "
+                                                                        th:text="|${actor.filmCount} filmes|"
+                                                                        >5
+                                                                        filmes</span
+                                                                    >
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                        <!-- Mini filmstrip -->
+                                                        <table
+                                                            role="presentation"
+                                                            class="filmstrip"
+                                                            cellspacing="0"
+                                                            cellpadding="0"
+                                                            border="0"
+                                                            style="
+                                                                margin-top: 10px;
+                                                            "
+                                                            th:if="${actor.topMedia != null and !#lists.isEmpty(actor.topMedia)}"
+                                                        >
+                                                            <tr>
+                                                                <th:block
+                                                                    th:each="film : ${actor.topMedia}"
+                                                                >
+                                                                    <td
+                                                                        style="
+                                                                            padding-right: 6px;
+                                                                        "
+                                                                    >
+                                                                        <div
+                                                                            th:if="${film.posterUrl != null}"
+                                                                            style="
+                                                                                width: 40px;
+                                                                                height: 60px;
+                                                                                border-radius: 6px;
+                                                                                overflow: hidden;
+                                                                                border: 1px
+                                                                                    solid
+                                                                                    #2a2a35;
+                                                                            "
+                                                                        >
+                                                                            <img
+                                                                                th:src="${film.posterUrl}"
+                                                                                alt=""
+                                                                                width="40"
+                                                                                height="60"
+                                                                                style="
+                                                                                    width: 40px;
+                                                                                    height: 60px;
+                                                                                    object-fit: cover;
+                                                                                    display: block;
+                                                                                "
+                                                                            />
+                                                                        </div>
+                                                                    </td>
+                                                                </th:block>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- EMPTY -->
+                        <tr
+                            th:if="${data.actors == null or #lists.isEmpty(data.actors)}"
+                        >
+                            <td
+                                class="email-body-padding"
+                                style="padding: 0 48px"
+                            >
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                    width="100%"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                background: #151520;
+                                                border-radius: 14px;
+                                                border: 1px dashed #2a2a35;
+                                                padding: 40px;
+                                                text-align: center;
+                                            "
+                                        >
+                                            <p
+                                                style="
+                                                    margin: 0;
+                                                    font-size: 36px;
+                                                "
+                                            >
+                                                🎭
+                                            </p>
+                                            <p
+                                                style="
+                                                    margin: 14px 0 0;
+                                                    font-size: 14px;
+                                                    color: #555;
+                                                "
+                                            >
+                                                Nenhum ator encontrado com dados
+                                                suficientes.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- CTA -->
+                        <tr>
+                            <td style="padding: 40px 48px" align="center">
+                                <table
+                                    role="presentation"
+                                    cellspacing="0"
+                                    cellpadding="0"
+                                    border="0"
+                                >
+                                    <tr>
+                                        <td
+                                            style="
+                                                border-radius: 10px;
+                                                background: linear-gradient(
+                                                    135deg,
+                                                    #10b981,
+                                                    #059669
+                                                );
+                                                box-shadow: 0 4px 20px
+                                                    rgba(16, 185, 129, 0.35);
+                                            "
+                                        >
+                                            <a
+                                                th:href="${baseUrl}"
+                                                style="
+                                                    display: inline-block;
+                                                    padding: 15px 40px;
+                                                    color: #fff;
+                                                    text-decoration: none;
+                                                    font-size: 15px;
+                                                    font-weight: 700;
+                                                    border-radius: 10px;
+                                                "
+                                            >
+                                                Ver no CineLog &nbsp;→
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- FOOTER -->
+                        <tr>
+                            <td
+                                style="
+                                    background: #08080c;
+                                    border-top: 1px solid #1a1a22;
+                                    padding: 28px 48px;
+                                    text-align: center;
+                                "
+                            >
+                                <p
+                                    style="
+                                        margin: 0 0 8px;
+                                        font-size: 12px;
+                                        color: #333;
+                                    "
+                                >
+                                    Você recebeu este e-mail por ter uma conta
+                                    no
+                                    <a
+                                        th:href="${baseUrl}"
+                                        style="
+                                            color: #555;
+                                            text-decoration: none;
+                                        "
+                                        th:text="${appName}"
+                                        >CineLog</a
+                                    >.
+                                </p>
+                                <p
+                                    style="
+                                        margin: 0;
+                                        font-size: 11px;
+                                        color: #222;
+                                    "
+                                >
+                                    © 2026 CineLog · Todos os direitos
+                                    reservados
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

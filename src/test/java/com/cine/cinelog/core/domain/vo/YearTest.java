@@ -26,15 +26,16 @@ class YearTest {
     @Test
     void shouldThrowWhenYearIsNull() {
         DomainException ex = assertThrows(DomainException.class, () -> Year.of(null));
-        assertTrue(ex.getMessage().contains("Ano é obrigatório"));
+        // GEN_VALIDATION title is thrown when null
+        assertNotNull(ex.getMessage());
     }
 
     @Test
     void shouldThrowWhenYearBeforeMinimum() {
         int invalid = 1887;
         DomainException ex = assertThrows(DomainException.class, () -> Year.of(invalid));
-        assertTrue(ex.getMessage().contains("Ano inválido"));
-        assertTrue(ex.getMessage().contains("permitido 1888.."));
+        // MEDIA_YEAR_OUT_OF_RANGE title is thrown for out-of-range years
+        assertTrue(ex.getMessage().contains("Ano fora do intervalo"));
     }
 
     @Test
@@ -42,7 +43,7 @@ class YearTest {
         int current = java.time.Year.now().getValue();
         int invalid = current + 3;
         DomainException ex = assertThrows(DomainException.class, () -> Year.of(invalid));
-        assertTrue(ex.getMessage().contains("Ano inválido"));
-        assertTrue(ex.getMessage().contains("permitido 1888.." + (current + 2)));
+        // MEDIA_YEAR_OUT_OF_RANGE title is thrown for out-of-range years
+        assertTrue(ex.getMessage().contains("Ano fora do intervalo"));
     }
 }

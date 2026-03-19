@@ -73,7 +73,7 @@ class RetryStrategyTest {
         RetryStrategy strategy = RetryStrategy.builder()
                 .baseDelaySeconds(60)
                 .maxDelaySeconds(600) // 10 minutos max
-                .maxAttempts(10)
+                .maxAttempts(20)
                 .jitterPercent(0)
                 .build();
 
@@ -135,13 +135,13 @@ class RetryStrategyTest {
 
     @ParameterizedTest
     @CsvSource({
-            "0, 60", // 60 * 2^0
-            "1, 120", // 60 * 2^1
-            "2, 240", // 60 * 2^2
-            "3, 480", // 60 * 2^3
-            "4, 960", // 60 * 2^4
-            "5, 1920", // 60 * 2^5
-            "6, 3600" // 60 * 2^6 = 3840, mas cap em 3600
+            "1, 60", // 60 * 2^0 (attempt 1 = first retry)
+            "2, 120", // 60 * 2^1
+            "3, 240", // 60 * 2^2
+            "4, 480", // 60 * 2^3
+            "5, 960", // 60 * 2^4
+            "6, 1920", // 60 * 2^5
+            "7, 3600" // 60 * 2^6 = 3840, mas cap em 3600
     })
     @DisplayName("Deve estimar delays corretamente para diferentes tentativas")
     void shouldEstimateDelaysCorrectly(int attemptNumber, long expectedDelay) {

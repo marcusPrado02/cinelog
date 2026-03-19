@@ -4,6 +4,7 @@ import com.cine.cinelog.core.application.ports.in.person.CreatePersonUseCase;
 import com.cine.cinelog.core.application.ports.in.person.DeletePersonUseCase;
 import com.cine.cinelog.core.application.ports.in.person.GetPersonUseCase;
 import com.cine.cinelog.core.application.ports.in.person.ListPeopleUseCase;
+import com.cine.cinelog.core.application.ports.in.person.SearchPeopleUseCase;
 import com.cine.cinelog.core.application.ports.in.person.UpdatePersonUseCase;
 import com.cine.cinelog.core.domain.model.Person;
 import com.cine.cinelog.features.people.mapper.PersonMapper;
@@ -36,14 +37,18 @@ class PersonControllerTest {
     @Mock
     private DeletePersonUseCase deleteUC;
     @Mock
+    private SearchPeopleUseCase searchUC;
+    @Mock
     private PersonMapper mapper;
+    @Mock
+    private BusinessMetricsService metricsService;
 
     private PersonController controller;
-    private BusinessMetricsService metricsService;
 
     @BeforeEach
     void setUp() {
-        controller = new PersonController(createUC, updateUC, getUC, listUC, deleteUC, mapper, metricsService);
+        controller = new PersonController(createUC, updateUC, getUC, listUC, deleteUC, searchUC, mapper,
+                metricsService);
     }
 
     @Test
@@ -53,6 +58,7 @@ class PersonControllerTest {
         Person created = mock(Person.class);
         PersonResponse response = mock(PersonResponse.class);
 
+        when(req.name()).thenReturn("Test Person");
         when(mapper.toDomain(req)).thenReturn(domain);
         when(createUC.execute(domain)).thenReturn(created);
         when(created.getId()).thenReturn(42L);
@@ -76,6 +82,7 @@ class PersonControllerTest {
         Person updated = mock(Person.class);
         PersonResponse response = mock(PersonResponse.class);
 
+        when(req.name()).thenReturn("Updated Person");
         when(mapper.toDomain(req)).thenReturn(domain);
         when(updateUC.execute(id, domain)).thenReturn(updated);
         when(mapper.toResponse(updated)).thenReturn(response);

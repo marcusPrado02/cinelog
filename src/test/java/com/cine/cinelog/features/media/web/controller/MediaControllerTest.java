@@ -85,7 +85,7 @@ class MediaControllerTest {
         ResponseEntity<MediaResponse> response = controller.createUC(req);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertEquals(URI.create("/api/media/42"), response.getHeaders().getLocation());
+        assertEquals(URI.create("/api/v1/media/42"), response.getHeaders().getLocation());
         assertSame(respDto, response.getBody());
 
         verify(mapper).toDomain(req);
@@ -161,7 +161,7 @@ class MediaControllerTest {
 
             assertEquals(HttpStatus.OK, response.getStatusCode());
             assertSame(mockedPageResponse, response.getBody());
-            utilities.verify(() -> PageResponseMapper.from(mockedResult, mapper::toResponse));
+            utilities.verify(() -> PageResponseMapper.from(eq(mockedResult), any()));
             verify(listUC).execute(any(PageQuery.class));
         }
     }
@@ -216,7 +216,7 @@ class MediaControllerTest {
         ProblemDetail pd = controller.notFound(ex);
 
         assertNotNull(pd);
-        assertEquals(HttpStatus.NOT_FOUND, pd.getStatus());
+        assertEquals(404, pd.getStatus());
         assertEquals("not found", pd.getDetail());
     }
 }

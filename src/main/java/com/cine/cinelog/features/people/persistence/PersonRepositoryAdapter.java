@@ -83,4 +83,22 @@ public class PersonRepositoryAdapter implements PersonRepositoryPort {
     public Optional<Person> findByName(String name) {
         return jpa.findByNameIgnoreCase(name).map(personMapper::toDomain);
     }
+
+    @Override
+    public PageResult<Person> searchByName(String name, PageQuery pageQuery) {
+        Pageable pageable = PageRequest.of(
+                pageQuery.page(),
+                pageQuery.size(),
+                Sort.by(Sort.Direction.fromString(pageQuery.direction()), pageQuery.sort()));
+        Page<PersonEntity> page = jpa.findByNameContainingIgnoreCase(name, pageable);
+        return PageResultMapper.from(page, personMapper::toDomain);
+    }
+
+    @Override
+    public List<Person> findAllMissingProfile() {
+        return jpa.findAllMissingProfile()
+                .stream()
+                .map(personMapper::toDomain)
+                .toList();
+    }
 }

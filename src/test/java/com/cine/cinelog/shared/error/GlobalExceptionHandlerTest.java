@@ -3,12 +3,12 @@ package com.cine.cinelog.shared.error;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.MDC;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -21,10 +21,21 @@ import java.net.URI;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 
 class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler handler = new GlobalExceptionHandler(Mockito.mock(MessageSource.class));
+    private MessageSource messageSource;
+    private GlobalExceptionHandler handler;
+
+    @BeforeEach
+    void setUp() {
+        messageSource = Mockito.mock(MessageSource.class);
+        // Make the MessageSource return the default message (3rd argument) for any key
+        when(messageSource.getMessage(anyString(), any(), anyString(), any()))
+                .thenAnswer(inv -> inv.getArgument(2));
+        handler = new GlobalExceptionHandler(messageSource);
+    }
 
     @AfterEach
     void tearDown() {
@@ -54,7 +65,7 @@ class GlobalExceptionHandlerTest {
         assertEquals("Payload inválido.", pd.getDetail());
         assertEquals(URI.create("https://api.cinelog.com/errors/validation"), pd.getType());
         assertEquals("/api/test", pd.getProperties().get("path"));
-        assertEquals("validation_error", pd.getProperties().get("errorCode"));
+        assertEquals("GEN-001", pd.getProperties().get("errorCode"));
         assertEquals("tid-123", pd.getProperties().get("traceId"));
         assertTrue(pd.getProperties().containsKey("timestamp"));
 
@@ -119,12 +130,12 @@ class GlobalExceptionHandlerTest {
         assertEquals("Bad request", pd.getTitle());
         assertEquals("Requisição malformada ou tipos incompatíveis.", pd.getDetail());
         assertEquals(URI.create("https://api.cinelog.com/errors/bad-request"), pd.getType());
-        assertEquals("bad_request", pd.getProperties().get("errorCode"));
+        assertEquals("GEN-001", pd.getProperties().get("errorCode"));
         assertEquals("/api/json", pd.getProperties().get("path"));
     }
 
     @Test
-    void handleIntegrity_shouldIncludeDbMessage_truncatedWhenLong() {
+    void handleIntegrity_shouldReturnConflictWithoutExposingDbDetails() {
         String longMsg = "A".repeat(1000);
         DataIntegrityViolationException ex = new DataIntegrityViolationException("viol", new RuntimeException(longMsg));
         HttpServletRequest req = mock(HttpServletRequest.class);
@@ -135,20 +146,18 @@ class GlobalExceptionHandlerTest {
         assertEquals("Conflict", pd.getTitle());
         assertEquals("Operação violou uma restrição de integridade.", pd.getDetail());
         assertEquals(URI.create("https://api.cinelog.com/errors/conflict"), pd.getType());
-        assertEquals("integrity_violation", pd.getProperties().get("errorCode"));
+        assertEquals("GEN-002", pd.getProperties().get("errorCode"));
 
-        Object dbMessageObj = pd.getProperties().get("dbMessage");
-        assertNotNull(dbMessageObj);
-        String dbMessage = dbMessageObj.toString();
-        assertTrue(dbMessage.length() < longMsg.length());
-        assertTrue(dbMessage.endsWith("...(trunc)"));
+        // Handler does NOT expose raw DB details to client (security: A02)
+        assertNull(pd.getProperties().get("dbMessage"));
     }
 
     @Test
     void handleErrorResponseException_shouldFillMissingTypeAndTitle_andKeepBody() {
         ErrorResponseException ex = mock(ErrorResponseException.class);
         ProblemDetail body = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        // ensure body has no type and no title
+        // Spring sets "about:blank" type and "Bad Request" title by default; handler
+        // will override type
         when(ex.getBody()).thenReturn(body);
         when(ex.getStatusCode()).thenReturn(HttpStatus.BAD_REQUEST);
 
@@ -159,8 +168,10 @@ class GlobalExceptionHandlerTest {
 
         assertSame(body, pd);
         assertEquals(URI.create("https://api.cinelog.com/errors/bad-request"), pd.getType());
-        assertEquals(HttpStatus.BAD_REQUEST.toString(), pd.getTitle());
-        assertEquals("spring_error", pd.getProperties().get("errorCode"));
+        // Spring's forStatus sets title to "Bad Request"; handler only overrides if
+        // null
+        assertNotNull(pd.getTitle());
+        assertEquals("SPRING_ERROR", pd.getProperties().get("errorCode"));
         assertEquals("/api/spring", pd.getProperties().get("path"));
     }
 
@@ -175,7 +186,7 @@ class GlobalExceptionHandlerTest {
         assertEquals("Internal error", pd.getTitle());
         assertEquals("Ocorreu um erro inesperado.", pd.getDetail());
         assertEquals(URI.create("https://api.cinelog.com/errors/internal"), pd.getType());
-        assertEquals("internal_error", pd.getProperties().get("errorCode"));
+        assertEquals("GEN-000", pd.getProperties().get("errorCode"));
         assertEquals("/api/unknown", pd.getProperties().get("path"));
     }
 }

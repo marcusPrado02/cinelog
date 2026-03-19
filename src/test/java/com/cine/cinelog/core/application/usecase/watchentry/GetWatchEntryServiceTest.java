@@ -1,8 +1,8 @@
 package com.cine.cinelog.core.application.usecase.watchentry;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.util.Optional;
@@ -40,7 +40,7 @@ class GetWatchEntryServiceTest {
 
         GetWatchEntryService service = new GetWatchEntryService(repo);
         DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
-        assertEquals("WatchEntry não encontrado: " + id, ex.getMessage());
+        assertTrue(ex.getMessage().contains("WatchEntry not found: " + id));
         verify(repo).findById(id);
     }
 }

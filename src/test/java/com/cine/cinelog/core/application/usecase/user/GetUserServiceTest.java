@@ -45,7 +45,7 @@ class GetUserServiceTest {
         when(repo.findById(id)).thenReturn(Optional.empty());
 
         DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
-        assertEquals("User not found: " + id, ex.getMessage());
+        assertTrue(ex.getMessage().contains("User not found: " + id));
         verify(repo, times(1)).findById(id);
     }
 }

@@ -34,7 +34,6 @@ class CreateUserServiceTest {
 
         when(input.getName()).thenReturn("Test User");
         when(input.getEmail()).thenReturn("test@example.com");
-        when(saved.getName()).thenReturn("Test User");
         when(saved.getEmail()).thenReturn("test@example.com");
 
         when(userRepo.save(input)).thenReturn(saved);

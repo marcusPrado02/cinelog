@@ -105,7 +105,7 @@ class EpisodeRepositoryAdapterTest {
         PageResult<Episode> expected = (PageResult<Episode>) mock(PageResult.class);
 
         try (MockedStatic<PageResultMapper> mocked = mockStatic(PageResultMapper.class)) {
-            mocked.when(() -> PageResultMapper.from(page, mapper::toDomain)).thenReturn(expected);
+            mocked.when(() -> PageResultMapper.from(eq(page), any())).thenReturn(expected);
 
             PageResult<Episode> result = adapter.findAll(query);
 
@@ -120,7 +120,7 @@ class EpisodeRepositoryAdapterTest {
             assertNotNull(order);
             assertEquals(Sort.Direction.ASC, order.getDirection());
 
-            mocked.verify(() -> PageResultMapper.from(page, mapper::toDomain));
+            mocked.verify(() -> PageResultMapper.from(eq(page), any()));
         }
     }
 

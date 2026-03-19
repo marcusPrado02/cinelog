@@ -32,6 +32,9 @@ public class ReportEmailService {
     private final RecommendationsQueryService recommendations;
     private final TrendingQueryService trending;
     private final PlatformReportQueryService platform;
+    private final TopActorsQueryService topActors;
+    private final NewReleasesQueryService newReleases;
+    private final GenreSpotlightQueryService genreSpotlight;
     private final UserJpaRepository userRepository;
 
     public ReportEmailService(EmailService emailService,
@@ -40,6 +43,9 @@ public class ReportEmailService {
             RecommendationsQueryService recommendations,
             TrendingQueryService trending,
             PlatformReportQueryService platform,
+            TopActorsQueryService topActors,
+            NewReleasesQueryService newReleases,
+            GenreSpotlightQueryService genreSpotlight,
             UserJpaRepository userRepository) {
         this.emailService = emailService;
         this.weeklyDigest = weeklyDigest;
@@ -47,6 +53,9 @@ public class ReportEmailService {
         this.recommendations = recommendations;
         this.trending = trending;
         this.platform = platform;
+        this.topActors = topActors;
+        this.newReleases = newReleases;
+        this.genreSpotlight = genreSpotlight;
         this.userRepository = userRepository;
     }
 
@@ -54,7 +63,7 @@ public class ReportEmailService {
     // Weekly Digest
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Async
+    @Async("reportTaskExecutor")
     public void sendWeeklyDigest(Long userId) {
         try {
             WeeklyDigestData data = weeklyDigest.buildForUser(userId);
@@ -68,7 +77,7 @@ public class ReportEmailService {
         }
     }
 
-    @Async
+    @Async("reportTaskExecutor")
     public void sendWeeklyDigestToAll() {
         List<UserEntity> users = userRepository.findAll();
         log.info("Sending weekly digest to {} users", users.size());
@@ -79,7 +88,7 @@ public class ReportEmailService {
     // Top Rated
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Async
+    @Async("reportTaskExecutor")
     public void sendTopRated(String toEmail, int limit) {
         TopRatedData data = topRated.build(limit);
         emailService.sendHtml(
@@ -93,7 +102,7 @@ public class ReportEmailService {
     // Recommendations
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Async
+    @Async("reportTaskExecutor")
     public void sendRecommendations(Long userId) {
         try {
             RecommendationsData data = recommendations.buildForUser(userId);
@@ -111,7 +120,7 @@ public class ReportEmailService {
     // Trending
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Async
+    @Async("reportTaskExecutor")
     public void sendTrending(String toEmail) {
         TrendingData data = trending.build();
         emailService.sendHtml(
@@ -121,7 +130,7 @@ public class ReportEmailService {
                 Map.of("data", data));
     }
 
-    @Async
+    @Async("reportTaskExecutor")
     public void sendTrendingToAll() {
         List<UserEntity> users = userRepository.findAll();
         log.info("Sending trending report to {} users", users.size());
@@ -132,13 +141,55 @@ public class ReportEmailService {
     // Platform Report (admin)
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Async
+    @Async("reportTaskExecutor")
     public void sendPlatformReport(String toEmail) {
         PlatformReportData data = platform.build();
         emailService.sendHtml(
                 toEmail,
                 "📊 Relatório da plataforma CineLog",
                 "platform-report",
+                Map.of("data", data));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Top Actors (actors with highest-rated films)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Async("reportTaskExecutor")
+    public void sendTopActors(String toEmail, int limit) {
+        TopActorsData data = topActors.build(limit);
+        emailService.sendHtml(
+                toEmail,
+                "🌟 Top " + limit + " atores com filmes mais bem avaliados no CineLog",
+                "top-actors",
+                Map.of("data", data));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // New Releases (recently added media)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Async("reportTaskExecutor")
+    public void sendNewReleases(String toEmail, int days, int limit) {
+        NewReleasesData data = newReleases.build(days, limit);
+        emailService.sendHtml(
+                toEmail,
+                "🎬 " + data.getTotalNewMedia() + " novos títulos nos últimos " + days + " dias no CineLog",
+                "new-releases",
+                Map.of("data", data));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Genre Spotlight (deep dive into a genre)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Async("reportTaskExecutor")
+    public void sendGenreSpotlight(String toEmail, String genreName) {
+        GenreSpotlightData data = genreSpotlight.build(genreName);
+        emailService.sendHtml(
+                toEmail,
+                "🎯 Gênero em destaque: " + data.getGenreName() + " — CineLog",
+                "genre-spotlight",
                 Map.of("data", data));
     }
 }

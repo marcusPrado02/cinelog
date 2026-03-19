@@ -8,6 +8,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -15,60 +17,48 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Filtro de Rate Limiting por IP usando algoritmo de janela fixa (Fixed
- * Window).
+ * Filtro de Rate Limiting por IP usando algoritmo de janela fixa (Fixed Window)
+ * com contadores persistidos no Redis.
  *
- * <h3>A04 (OWASP) — Insecure Design: por que Rate Limiting é questão de
- * design?</h3>
+ * <h3>A04 (OWASP) — Insecure Design: por que Rate Limiting é questão de design?</h3>
  * <p>
- * Sem rate limiting, um sistema está <b>arquiteturalmente</b> vulnerável a
- * abuso,
+ * Sem rate limiting, um sistema está <b>arquiteturalmente</b> vulnerável a abuso,
  * independente de quão bem o código está escrito. Mesmo que cada endpoint tenha
  * autenticação, validação e prepared statements perfeitos, um atacante pode:
  * </p>
  * <ul>
- * <li><b>Brute force</b>: testar milhares de senhas/segundo no endpoint de
- * login</li>
- * <li><b>Credential stuffing</b>: testar credenciais vazadas de outros
- * serviços</li>
- * <li><b>DoS (Denial of Service)</b>: sobrecarregar o servidor com requests
- * legítimas</li>
+ * <li><b>Brute force</b>: testar milhares de senhas/segundo no endpoint de login</li>
+ * <li><b>Credential stuffing</b>: testar credenciais vazadas de outros serviços</li>
+ * <li><b>DoS (Denial of Service)</b>: sobrecarregar o servidor com requests</li>
  * <li><b>Scraping</b>: extrair todos os dados da API programaticamente</li>
  * </ul>
  *
- * <h3>Algoritmo: Fixed Window</h3>
+ * <h3>Algoritmo: Fixed Window com Redis</h3>
  * <p>
- * Divide o tempo em janelas fixas (ex: 60 segundos). Cada IP recebe um contador
- * por janela. Quando a janela expira, o contador reseta.
+ * Divide o tempo em janelas fixas (60 segundos). Cada IP recebe uma chave Redis
+ * com TTL = janela. O contador é incrementado atomicamente via script Lua.
  * </p>
  *
  * <p>
- * <b>Vantagens:</b> simples, baixo consumo de memória, fácil de entender.<br/>
- * <b>Desvantagem:</b> na fronteira entre duas janelas, um cliente pode alcançar
- * até 2x o limite (ex: 100 no final da janela 1 + 100 no início da janela 2).
- * Em produção, considerar Sliding Window ou Token Bucket.
- * </p>
- *
- * <h3>Por que por IP?</h3>
- * <p>
- * É a forma mais básica de identificação pré-autenticação. Em produção,
- * pode ser combinado com rate limit por usuário autenticado e por API key.
+ * <b>Multi-instância:</b> os contadores são compartilhados entre todas as
+ * instâncias via Redis — o rate limit funciona corretamente em escala horizontal.
  * </p>
  *
  * <p>
- * <b>Nota:</b> em ambientes com múltiplas instâncias, esta implementação
- * in-memory deve ser substituída por Redis (chave = IP, valor = contador,
- * TTL = janela) para que o rate limit seja compartilhado entre instâncias.
+ * <b>Fallback:</b> se o Redis estiver indisponível, o filtro recai em contadores
+ * in-memory por instância. Isso preserva disponibilidade às custas de enforcement
+ * menos preciso durante falhas do Redis.
  * </p>
  *
- * @since 1.1
+ * @since 1.2 (Redis-backed)
  * @see InputSanitizer
- * @see SqlInjectionFilter
  */
 @Component
 @Slf4j
@@ -83,11 +73,35 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** Duração da janela em segundos. */
     private static final long WINDOW_SECONDS = 60;
 
+    /** Prefixo das chaves Redis para isolamento do namespace. */
+    private static final String KEY_PREFIX = "ratelimit:";
+
     /**
-     * Contadores por IP. Em produção com múltiplas instâncias,
-     * seria substituído por Redis (chave = IP, valor = contador, TTL = janela).
+     * Script Lua para incremento atômico com TTL.
+     *
+     * <p>
+     * Atomicidade garante que INCR e EXPIRE sejam executados como operação única,
+     * sem race condition entre múltiplas instâncias.
+     * </p>
+     *
+     * <pre>
+     * KEYS[1] = chave Redis (ex: ratelimit:192.168.1.1:auth)
+     * ARGV[1] = duração da janela em segundos
+     * Retorna: contagem atual após incremento
+     * </pre>
      */
-    private final Map<String, WindowCounter> counters = new ConcurrentHashMap<>();
+    private static final DefaultRedisScript<Long> INCR_SCRIPT;
+
+    static {
+        INCR_SCRIPT = new DefaultRedisScript<>();
+        INCR_SCRIPT.setScriptText(
+                "local current = redis.call('INCR', KEYS[1]) " +
+                "if current == 1 then " +
+                "  redis.call('EXPIRE', KEYS[1], ARGV[1]) " +
+                "end " +
+                "return current");
+        INCR_SCRIPT.setResultType(Long.class);
+    }
 
     /** A09:2025 — Logger de eventos de segurança. */
     private final SecurityEventLogger securityEventLogger;
@@ -95,10 +109,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** A09:2025 — Métricas de segurança. */
     private final SecurityMetricsService securityMetrics;
 
+    /** Redis template para contadores distribuídos. */
+    private final StringRedisTemplate redisTemplate;
+
+    /**
+     * Fallback in-memory para quando Redis estiver indisponível.
+     * Garante continuidade do serviço — rate limit pode ser menos preciso durante
+     * falhas do Redis.
+     */
+    private final Map<String, WindowCounter> fallbackCounters = new ConcurrentHashMap<>();
+
     public RateLimitFilter(SecurityEventLogger securityEventLogger,
-            SecurityMetricsService securityMetrics) {
+            SecurityMetricsService securityMetrics,
+            StringRedisTemplate redisTemplate) {
         this.securityEventLogger = securityEventLogger;
         this.securityMetrics = securityMetrics;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -108,16 +134,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String clientIp = resolveClientIp(request);
         String path = request.getRequestURI();
-        String key = clientIp + ":" + classifyPath(path);
+        String bucket = classifyPath(path);
+        String redisKey = KEY_PREFIX + clientIp + ":" + bucket;
         int limit = getLimit(path);
 
-        WindowCounter counter = counters.computeIfAbsent(key, k -> new WindowCounter());
-        int currentCount = counter.incrementAndGet(WINDOW_SECONDS);
+        RateLimitResult result = increment(redisKey);
+        int currentCount = result.count();
+        long resetEpoch = result.resetEpoch();
 
         // Headers informativos (RFC 6585 / draft-ietf-httpapi-ratelimit-headers)
         response.setHeader("X-RateLimit-Limit", String.valueOf(limit));
         response.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, limit - currentCount)));
-        response.setHeader("X-RateLimit-Reset", String.valueOf(counter.getWindowResetEpoch(WINDOW_SECONDS)));
+        response.setHeader("X-RateLimit-Reset", String.valueOf(resetEpoch));
 
         if (currentCount > limit) {
             log.warn("A04-RateLimit: Limite excedido — IP={}, path={}, count={}/{}",
@@ -131,17 +159,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
                     "path", InputSanitizer.sanitizeForLog(path),
                     "count", currentCount,
                     "limit", limit));
-            securityMetrics.incrementRateLimit(classifyPath(path));
+            securityMetrics.incrementRateLimit(bucket);
 
+            long retryAfter = Math.max(0, resetEpoch - Instant.now().getEpochSecond());
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setHeader("Retry-After",
-                    String.valueOf(counter.getSecondsUntilReset(WINDOW_SECONDS)));
+            response.setHeader("Retry-After", String.valueOf(retryAfter));
             response.getWriter().write(
-                    "{\"type\":\"about:blank\","
-                            + "\"title\":\"Too Many Requests\","
-                            + "\"status\":429,"
-                            + "\"detail\":\"Limite de requisições excedido. Tente novamente em breve.\"}");
+                    "{\"type\":\"about:blank\"," +
+                    "\"title\":\"Too Many Requests\"," +
+                    "\"status\":429," +
+                    "\"detail\":\"Limite de requisições excedido. Tente novamente em breve.\"}");
             return;
         }
 
@@ -149,11 +177,38 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
+     * Incrementa o contador no Redis. Em caso de falha, usa o fallback in-memory.
+     *
+     * @param key chave Redis do contador
+     * @return {@link RateLimitResult} com contagem atual e epoch de reset
+     */
+    private RateLimitResult increment(String key) {
+        try {
+            Long count = redisTemplate.execute(
+                    INCR_SCRIPT,
+                    List.of(key),
+                    String.valueOf(WINDOW_SECONDS));
+
+            long currentCount = (count != null) ? count : 1L;
+            Long ttl = redisTemplate.getExpire(key);
+            long secondsUntilReset = (ttl != null && ttl > 0) ? ttl : WINDOW_SECONDS;
+            long resetEpoch = Instant.now().getEpochSecond() + secondsUntilReset;
+
+            return new RateLimitResult((int) currentCount, resetEpoch);
+
+        } catch (Exception ex) {
+            log.warn("Redis rate limit indisponível, usando fallback in-memory: {}", ex.getMessage());
+            WindowCounter counter = fallbackCounters.computeIfAbsent(key, k -> new WindowCounter());
+            int count = counter.incrementAndGet(WINDOW_SECONDS);
+            long resetEpoch = counter.getWindowResetEpoch(WINDOW_SECONDS);
+            return new RateLimitResult(count, resetEpoch);
+        }
+    }
+
+    /**
      * Resolve o IP real do cliente, considerando proxies reversos.
      *
-     * <p>
-     * <b>Ordem de prioridade:</b>
-     * </p>
+     * <p><b>Ordem de prioridade:</b></p>
      * <ol>
      * <li>{@code X-Forwarded-For} — padrão de proxies (Nginx, ALB, CloudFlare)</li>
      * <li>{@code X-Real-IP} — configuração alternativa do Nginx</li>
@@ -181,7 +236,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Classifica o path para agrupar rate limits em buckets separados.
+     * Classifica o path para buckets separados de rate limit.
      * Endpoints de auth têm bucket próprio com limite menor.
      */
     private String classifyPath(String path) {
@@ -216,12 +271,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Contador com janela temporal fixa (Fixed Window).
+     * Resultado de uma operação de rate limit.
      *
-     * <p>
-     * <b>Thread-safety:</b> usa {@link AtomicInteger} para o contador e
-     * {@code synchronized} para o reset da janela (operação composta).
-     * </p>
+     * @param count      contagem atual nesta janela
+     * @param resetEpoch epoch Unix em que a janela atual expira
+     */
+    record RateLimitResult(int count, long resetEpoch) {
+    }
+
+    /**
+     * Contador in-memory de fallback. Usado apenas quando Redis está indisponível.
+     *
+     * <p><b>Thread-safety:</b> usa {@link AtomicInteger} para o contador e
+     * {@code synchronized} para reset da janela (operação composta).</p>
      */
     static class WindowCounter {
         private final AtomicInteger count = new AtomicInteger(0);

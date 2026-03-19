@@ -86,7 +86,7 @@ public class WatchlistController {
     @ResponseStatus(HttpStatus.CREATED)
     @Measured("cinelog.controller.watchlist.add")
     @AuditableAction(module = "WATCHLIST", action = "ADD", description = "Adição à watchlist via API")
-    public ResponseEntity<WatchlistResponse> add(@RequestBody WatchlistAddRequest request) {
+    public ResponseEntity<WatchlistResponse> add(@Valid @RequestBody WatchlistAddRequest request) {
         log.debug("Iniciando add. Parâmetros: {}", Map.of("mediaId", request.mediaId()));
         try {
             var it = addUseCase.add(new AddToWatchlistUseCase.AddCommand(request.mediaId()));

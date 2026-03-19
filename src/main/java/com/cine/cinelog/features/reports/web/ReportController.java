@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -62,19 +63,28 @@ public class ReportController {
     private final RecommendationsQueryService recommendationsQuery;
     private final TrendingQueryService trendingQuery;
     private final PlatformReportQueryService platformQuery;
+    private final TopActorsQueryService topActorsQuery;
+    private final NewReleasesQueryService newReleasesQuery;
+    private final GenreSpotlightQueryService genreSpotlightQuery;
 
     public ReportController(ReportEmailService reportEmailService,
                             WeeklyDigestQueryService weeklyDigestQuery,
                             TopRatedQueryService topRatedQuery,
                             RecommendationsQueryService recommendationsQuery,
                             TrendingQueryService trendingQuery,
-                            PlatformReportQueryService platformQuery) {
+                            PlatformReportQueryService platformQuery,
+                            TopActorsQueryService topActorsQuery,
+                            NewReleasesQueryService newReleasesQuery,
+                            GenreSpotlightQueryService genreSpotlightQuery) {
         this.reportEmailService = reportEmailService;
         this.weeklyDigestQuery = weeklyDigestQuery;
         this.topRatedQuery = topRatedQuery;
         this.recommendationsQuery = recommendationsQuery;
         this.trendingQuery = trendingQuery;
         this.platformQuery = platformQuery;
+        this.topActorsQuery = topActorsQuery;
+        this.newReleasesQuery = newReleasesQuery;
+        this.genreSpotlightQuery = genreSpotlightQuery;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -155,7 +165,7 @@ public class ReportController {
     })
     public ResponseEntity<Map<String, String>> sendTopRated(
             @AuthenticationPrincipal CinelogUserDetails user,
-            @RequestBody(required = false) SendReportRequest body) {
+            @Valid @RequestBody(required = false) SendReportRequest body) {
         int limit = body != null ? body.effectiveLimit() : 10;
         String toEmail = (body != null && body.email() != null) ? body.email() : user.getUsername();
         log.debug("Iniciando sendTopRated. Parâmetros: {}", Map.of("toEmail", toEmail, "limit", limit));
@@ -245,7 +255,7 @@ public class ReportController {
     })
     public ResponseEntity<Map<String, String>> sendTrending(
             @AuthenticationPrincipal CinelogUserDetails user,
-            @RequestBody(required = false) SendReportRequest body) {
+            @Valid @RequestBody(required = false) SendReportRequest body) {
         String toEmail = (body != null && body.email() != null) ? body.email() : user.getUsername();
         log.debug("Iniciando sendTrending. Parâmetros: {}", Map.of("toEmail", toEmail));
         try {
@@ -260,13 +270,124 @@ public class ReportController {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Top Actors — preview (GET) + envio por e-mail (POST)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @GetMapping("/api/v1/reports/top-actors")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.top_actors.preview")
+    @Operation(summary = "Preview dos atores com filmes mais bem avaliados", responses = {
+            @ApiResponse(responseCode = "200", description = "Dados dos top actors"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<TopActorsData> previewTopActors(
+            @RequestParam(defaultValue = "10") int limit) {
+        log.debug("Iniciando previewTopActors. Parâmetros: {}", Map.of("limit", limit));
+        TopActorsData data = topActorsQuery.build(limit);
+        log.info("Preview top-actors gerado com sucesso. Limite: {}", limit);
+        return ResponseEntity.ok(data);
+    }
+
+    @PostMapping("/api/v1/reports/top-actors")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.top_actors.send")
+    @Operation(summary = "Envia relatório de top actors por e-mail", responses = {
+            @ApiResponse(responseCode = "202", description = "E-mail enfileirado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<Map<String, String>> sendTopActors(
+            @AuthenticationPrincipal CinelogUserDetails user,
+            @Valid @RequestBody(required = false) SendReportRequest body) {
+        int limit = body != null ? body.effectiveLimit() : 10;
+        String toEmail = (body != null && body.email() != null) ? body.email() : user.getUsername();
+        log.debug("Iniciando sendTopActors. Parâmetros: {}", Map.of("toEmail", toEmail, "limit", limit));
+        reportEmailService.sendTopActors(toEmail, limit);
+        log.info("Relatório top-actors enfileirado com sucesso. Para: {}", toEmail);
+        return ResponseEntity.accepted().body(Map.of("message", "Relatório top-actors enfileirado para envio."));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // New Releases — preview (GET) + envio por e-mail (POST)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @GetMapping("/api/v1/reports/new-releases")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.new_releases.preview")
+    @Operation(summary = "Preview dos novos lançamentos adicionados ao catálogo", responses = {
+            @ApiResponse(responseCode = "200", description = "Dados dos novos lançamentos"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<NewReleasesData> previewNewReleases(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "20") int limit) {
+        log.debug("Iniciando previewNewReleases. Parâmetros: {}", Map.of("days", days, "limit", limit));
+        NewReleasesData data = newReleasesQuery.build(days, limit);
+        log.info("Preview new-releases gerado com sucesso. Dias: {}, Limite: {}", days, limit);
+        return ResponseEntity.ok(data);
+    }
+
+    @PostMapping("/api/v1/reports/new-releases")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.new_releases.send")
+    @Operation(summary = "Envia relatório de novos lançamentos por e-mail", responses = {
+            @ApiResponse(responseCode = "202", description = "E-mail enfileirado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<Map<String, String>> sendNewReleases(
+            @AuthenticationPrincipal CinelogUserDetails user,
+            @Valid @RequestBody(required = false) SendReportRequest body) {
+        String toEmail = (body != null && body.email() != null) ? body.email() : user.getUsername();
+        log.debug("Iniciando sendNewReleases. Parâmetros: {}", Map.of("toEmail", toEmail));
+        reportEmailService.sendNewReleases(toEmail, 30, 20);
+        log.info("Relatório new-releases enfileirado com sucesso. Para: {}", toEmail);
+        return ResponseEntity.accepted().body(Map.of("message", "Relatório new-releases enfileirado para envio."));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Genre Spotlight — preview (GET) + envio por e-mail (POST)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @GetMapping("/api/v1/reports/genre-spotlight")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.genre_spotlight.preview")
+    @Operation(summary = "Preview do gênero em destaque (auto-seleciona ou especifica)", responses = {
+            @ApiResponse(responseCode = "200", description = "Dados do gênero em destaque"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<GenreSpotlightData> previewGenreSpotlight(
+            @RequestParam(required = false) String genre) {
+        log.debug("Iniciando previewGenreSpotlight. Parâmetros: {}", Map.of("genre", genre != null ? genre : "auto"));
+        GenreSpotlightData data = genreSpotlightQuery.build(genre);
+        log.info("Preview genre-spotlight gerado com sucesso. Gênero: {}", data.getGenreName());
+        return ResponseEntity.ok(data);
+    }
+
+    @PostMapping("/api/v1/reports/genre-spotlight")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.genre_spotlight.send")
+    @Operation(summary = "Envia relatório de gênero em destaque por e-mail", responses = {
+            @ApiResponse(responseCode = "202", description = "E-mail enfileirado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<Map<String, String>> sendGenreSpotlight(
+            @AuthenticationPrincipal CinelogUserDetails user,
+            @RequestParam(required = false) String genre,
+            @Valid @RequestBody(required = false) SendReportRequest body) {
+        String toEmail = (body != null && body.email() != null) ? body.email() : user.getUsername();
+        log.debug("Iniciando sendGenreSpotlight. Parâmetros: {}", Map.of("toEmail", toEmail, "genre", genre != null ? genre : "auto"));
+        reportEmailService.sendGenreSpotlight(toEmail, genre);
+        log.info("Relatório genre-spotlight enfileirado com sucesso. Para: {}", toEmail);
+        return ResponseEntity.accepted().body(Map.of("message", "Relatório genre-spotlight enfileirado para envio."));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Relatórios de admin
     // ─────────────────────────────────────────────────────────────────────────
 
     @GetMapping("/api/v1/admin/reports/platform")
     @PreAuthorize("hasRole('ADMIN')")
     @Measured("cinelog.controller.reports.platform.preview")
-    @SecureOperation(module = "REPORTS", value = "REPORT_ADMIN")
+    @SecureOperation(module = "REPORTS", value = "ADMIN")
     @Operation(summary = "Preview das métricas da plataforma (somente admin)", responses = {
             @ApiResponse(responseCode = "200", description = "Dados da plataforma"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")
@@ -286,14 +407,14 @@ public class ReportController {
     @PostMapping("/api/v1/admin/reports/platform")
     @PreAuthorize("hasRole('ADMIN')")
     @Measured("cinelog.controller.reports.platform.send")
-    @SecureOperation(module = "REPORTS", value = "REPORT_ADMIN")
+    @SecureOperation(module = "REPORTS", value = "ADMIN")
     @Operation(summary = "Envia relatório de métricas da plataforma por e-mail (somente admin)", responses = {
             @ApiResponse(responseCode = "202", description = "E-mail enfileirado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")
     })
     public ResponseEntity<Map<String, String>> sendPlatformReport(
             @AuthenticationPrincipal CinelogUserDetails user,
-            @RequestBody(required = false) SendReportRequest body) {
+            @Valid @RequestBody(required = false) SendReportRequest body) {
         String toEmail = (body != null && body.email() != null) ? body.email() : user.getUsername();
         log.debug("Iniciando sendPlatformReport. Parâmetros: {}", Map.of("toEmail", toEmail));
         try {
@@ -310,7 +431,7 @@ public class ReportController {
     @PostMapping("/api/v1/admin/reports/send-to-all")
     @PreAuthorize("hasRole('ADMIN')")
     @Measured("cinelog.controller.reports.trending.send_to_all")
-    @SecureOperation(module = "REPORTS", value = "REPORT_ADMIN")
+    @SecureOperation(module = "REPORTS", value = "ADMIN")
     @Operation(summary = "Envia relatório de trending a TODOS os usuários ativos (somente admin)", responses = {
             @ApiResponse(responseCode = "202", description = "E-mails enfileirados"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")

@@ -60,7 +60,7 @@ class UpdateSeasonServiceTest {
 
         DomainException ex = assertThrows(DomainException.class,
                 () -> service.execute(id, new Season()));
-        assertEquals("Season not found: " + id, ex.getMessage());
+        assertTrue(ex.getMessage().contains("Season not found: " + id));
 
         verify(repo, never()).save(any());
     }

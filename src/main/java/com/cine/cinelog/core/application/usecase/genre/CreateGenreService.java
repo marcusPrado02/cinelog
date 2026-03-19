@@ -58,7 +58,7 @@ public class CreateGenreService implements CreateGenreUseCase {
     @CacheEvict(value = "genresPage", allEntries = true)
     public Genre execute(Genre genre) {
         log.debug("Iniciando criação de gênero no service. Dados: {}",
-                Map.of("name", genre.getName()));
+                Map.of("name", String.valueOf(genre.getName())));
 
         try {
             // Validação de negócio: nome não pode ser vazio

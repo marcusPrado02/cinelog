@@ -336,7 +336,8 @@ public class GlobalExceptionHandler {
                 if (pd == null) {
                         pd = ProblemDetail.forStatus(ex.getStatusCode());
                 }
-                if (pd.getType() == null) {
+                // Spring sets "about:blank" as default type when no specific type is provided
+                if (pd.getType() == null || "about:blank".equals(pd.getType().toString())) {
                         pd.setType(TYPE_BAD_REQUEST);
                 }
                 if (pd.getTitle() == null) {

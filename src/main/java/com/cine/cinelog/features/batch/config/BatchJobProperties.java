@@ -72,6 +72,9 @@ public class BatchJobProperties {
         private JobConfig importTvShows = new JobConfig("0 0 4 * * SUN", true, 10);
         private JobConfig importCredits = new JobConfig("0 30 4 * * SUN", true, 0);
         private JobConfig importSeasons = new JobConfig("0 0 5 * * SUN", true, 0);
+        private JobConfig syncReviews = new JobConfig("0 30 5 * * SUN", true, 0);
+        private JobConfig enrichMediaImages = new JobConfig("0 0 6 * * SUN", true, 0);
+        private JobConfig enrichPersonProfiles = new JobConfig("0 30 6 * * SUN", true, 0);
 
         public JobConfig getSyncGenres() {
             return syncGenres;
@@ -111,6 +114,30 @@ public class BatchJobProperties {
 
         public void setImportSeasons(JobConfig importSeasons) {
             this.importSeasons = importSeasons;
+        }
+
+        public JobConfig getSyncReviews() {
+            return syncReviews;
+        }
+
+        public void setSyncReviews(JobConfig syncReviews) {
+            this.syncReviews = syncReviews;
+        }
+
+        public JobConfig getEnrichMediaImages() {
+            return enrichMediaImages;
+        }
+
+        public void setEnrichMediaImages(JobConfig enrichMediaImages) {
+            this.enrichMediaImages = enrichMediaImages;
+        }
+
+        public JobConfig getEnrichPersonProfiles() {
+            return enrichPersonProfiles;
+        }
+
+        public void setEnrichPersonProfiles(JobConfig enrichPersonProfiles) {
+            this.enrichPersonProfiles = enrichPersonProfiles;
         }
     }
 

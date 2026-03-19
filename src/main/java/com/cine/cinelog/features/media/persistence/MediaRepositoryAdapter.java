@@ -126,4 +126,12 @@ public class MediaRepositoryAdapter implements MediaRepositoryPort {
                 .map(mapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<Media> findAllMissingImages() {
+        return repository.findAllMissingImages()
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }

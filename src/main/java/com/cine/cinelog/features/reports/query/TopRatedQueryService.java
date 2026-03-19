@@ -33,21 +33,25 @@ public class TopRatedQueryService {
      */
     public TopRatedData build(int limit) {
         List<MediaItem> items = jdbc.query(
-                "SELECT m.id, m.title, m.type, m.poster_url, "
+                "SELECT m.id, m.title, m.type, m.poster_url, m.backdrop_url, "
                         + "mp.avg_rating, mp.watch_count, m.release_year "
                         + "FROM media_popularity mp "
                         + "JOIN media m ON m.id = mp.media_id "
                         + "WHERE mp.ratings_count > 0 "
                         + "ORDER BY mp.avg_rating DESC, mp.ratings_count DESC "
                         + "LIMIT ?",
-                (rs, rn) -> new MediaItem(
-                        rs.getLong("id"),
-                        rs.getString("title"),
-                        rs.getString("type"),
-                        rs.getString("poster_url"),
-                        rs.getBigDecimal("avg_rating"),
-                        rs.getObject("watch_count", Long.class),
-                        rs.getObject("release_year", Integer.class)),
+                (rs, rn) -> {
+                    MediaItem mi = new MediaItem(
+                            rs.getLong("id"),
+                            rs.getString("title"),
+                            rs.getString("type"),
+                            rs.getString("poster_url"),
+                            rs.getBigDecimal("avg_rating"),
+                            rs.getObject("watch_count", Long.class),
+                            rs.getObject("release_year", Integer.class));
+                    mi.setBackdropUrl(rs.getString("backdrop_url"));
+                    return mi;
+                },
                 limit);
 
         return new TopRatedData(items, LocalDateTime.now(), limit);

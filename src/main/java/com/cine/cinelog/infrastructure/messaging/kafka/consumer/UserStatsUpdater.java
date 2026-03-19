@@ -3,11 +3,14 @@ package com.cine.cinelog.infrastructure.messaging.kafka.consumer;
 import com.cine.cinelog.core.domain.events.watchentry.WatchEntryCreatedEvent;
 import com.cine.cinelog.features.readmodels.persistence.entity.UserStatsEntity;
 import com.cine.cinelog.features.readmodels.repository.UserStatsRepository;
+import com.cine.cinelog.features.watchentry.repository.WatchEntryJpaRepository;
 import com.cine.cinelog.infrastructure.messaging.events.EventEnvelope;
 import com.cine.cinelog.infrastructure.messaging.events.EventEnvelopeValidator;
 import com.cine.cinelog.infrastructure.persistence.inbox.InboxEventEntity;
 import com.cine.cinelog.infrastructure.persistence.inbox.InboxEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,16 +59,19 @@ public class UserStatsUpdater extends BaseKafkaConsumer {
     private final InboxEventRepository inboxRepository;
     private final EventEnvelopeValidator envelopeValidator;
     private final ObjectMapper objectMapper;
+    private final WatchEntryJpaRepository watchEntryRepository;
 
     public UserStatsUpdater(
             UserStatsRepository userStatsRepository,
             InboxEventRepository inboxRepository,
             EventEnvelopeValidator envelopeValidator,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            WatchEntryJpaRepository watchEntryRepository) {
         this.userStatsRepository = userStatsRepository;
         this.inboxRepository = inboxRepository;
         this.envelopeValidator = envelopeValidator;
         this.objectMapper = objectMapper;
+        this.watchEntryRepository = watchEntryRepository;
     }
 
     @KafkaListener(topics = "${kafka.topics.watch-entry-created}", groupId = "${kafka.consumer.group-id}-user-stats", containerFactory = "kafkaListenerContainerFactory")
@@ -191,16 +197,9 @@ public class UserStatsUpdater extends BaseKafkaConsumer {
      * @param userId ID do usuário
      */
     private void recalculateAverageRating(UserStatsEntity stats, Long userId) {
-        // TODO: Em produção, usar query otimizada ou agregação incremental
-        // Por enquanto, vamos usar uma abordagem simplificada
-
-        // Como não temos acesso direto ao WatchEntryRepository aqui,
-        // vamos fazer uma agregação via query SQL raw ou usar um approach diferente
-
-        // Para MVP, vamos apenas atualizar baseado no evento atual
-        // Em versões futuras, implementar agregação real
-
-        log.warn("Recálculo de avg_rating não implementado nesta versão. " +
-                "Será implementado com agregação incremental em PR futuro.");
+        watchEntryRepository.averageRatingByUserId(userId).ifPresent(avg -> {
+            stats.setAvgRating(BigDecimal.valueOf(avg).setScale(2, RoundingMode.HALF_UP));
+            log.debug("avg_rating recalculado para userId={}: {}", userId, avg);
+        });
     }
 }

@@ -10,6 +10,8 @@ import com.cine.cinelog.core.domain.model.tmdb.TmdbImageConfig;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaDetails;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaSummary;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSearchResult;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbPersonDetails;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbReviewsPage;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSeasonDetails;
 
 /**
@@ -183,4 +185,34 @@ public interface TmdbClientPort {
      * @return detalhes da temporada, ou vazio se não encontrado
      */
     Optional<TmdbSeasonDetails> fetchTvSeason(Long tvId, int seasonNumber);
+
+    // ================== Reviews ==================
+
+    /**
+     * Busca reviews de um filme do TMDb (GET /movie/{id}/reviews).
+     *
+     * @param movieTmdbId ID TMDB do filme
+     * @param page        página (1-based)
+     * @return página de reviews
+     */
+    TmdbReviewsPage fetchMovieReviews(Long movieTmdbId, int page);
+
+    /**
+     * Busca reviews de uma série do TMDb (GET /tv/{id}/reviews).
+     *
+     * @param tvTmdbId ID TMDB da série
+     * @param page     página (1-based)
+     * @return página de reviews
+     */
+    TmdbReviewsPage fetchTvReviews(Long tvTmdbId, int page);
+
+    // ================== Detalhes de Pessoa ==================
+
+    /**
+     * Busca detalhes completos de uma pessoa (GET /person/{id}).
+     *
+     * @param tmdbPersonId ID TMDB da pessoa
+     * @return Optional com detalhes, ou vazio se não encontrada
+     */
+    Optional<TmdbPersonDetails> fetchPersonDetails(Long tmdbPersonId);
 }

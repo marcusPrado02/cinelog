@@ -55,9 +55,9 @@ public class CreateEpisodeService implements CreateEpisodeUseCase {
     @CacheEvict(value = "episodesPage", allEntries = true)
     public Episode execute(Episode episode) {
         log.debug("Iniciando criação de episódio. Parâmetros: {}",
-                Map.of("name", episode.getName(),
-                        "episodeNumber", episode.getEpisodeNumber(),
-                        "seasonId", episode.getSeasonId()));
+                Map.of("name", String.valueOf(episode.getName()),
+                        "episodeNumber", String.valueOf(episode.getEpisodeNumber()),
+                        "seasonId", String.valueOf(episode.getSeasonId())));
 
         try {
             Episode saved = repo.save(episode);

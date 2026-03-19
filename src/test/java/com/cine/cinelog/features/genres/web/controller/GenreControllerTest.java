@@ -60,6 +60,7 @@ class GenreControllerTest {
         Genre domain = mock(Genre.class);
         GenreResponse resp = mock(GenreResponse.class);
 
+        when(req.name()).thenReturn("Drama");
         when(mapper.toDomain(eq(req))).thenReturn(domain);
         when(createUC.execute(eq(domain))).thenReturn(domain);
         when(domain.getId()).thenReturn(1L);
@@ -83,6 +84,7 @@ class GenreControllerTest {
         Genre domain = mock(Genre.class);
         GenreResponse resp = mock(GenreResponse.class);
 
+        when(req.name()).thenReturn("Comedy");
         when(mapper.toDomain(eq(req))).thenReturn(domain);
         when(updateUC.execute(eq(id), eq(domain))).thenReturn(domain);
         when(mapper.toResponse(eq(domain))).thenReturn(resp);
@@ -125,6 +127,9 @@ class GenreControllerTest {
         List<Genre> domains = Arrays.asList(domain1, domain2);
         PageResult<Genre> pageResult = mock(PageResult.class);
         Pageable pageable = mock(Pageable.class);
+        when(pageable.getSort()).thenReturn(org.springframework.data.domain.Sort.unsorted());
+        when(pageable.getPageNumber()).thenReturn(0);
+        when(pageable.getPageSize()).thenReturn(20);
         when(pageResult.content()).thenReturn(domains);
         when(listUC.execute(any(PageQuery.class))).thenReturn(pageResult);
         when(mapper.toResponse(eq(domain1))).thenReturn(resp1);

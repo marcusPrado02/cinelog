@@ -19,65 +19,73 @@ import java.util.List;
 @Service
 public class TrendingQueryService {
 
-    private static final int DEFAULT_DAYS = 7;
-    private static final int DEFAULT_LIMIT = 10;
-    private final JdbcTemplate jdbc;
+        private static final int DEFAULT_DAYS = 7;
+        private static final int DEFAULT_LIMIT = 10;
+        private final JdbcTemplate jdbc;
 
-    public TrendingQueryService(JdbcTemplate jdbc) {
-        this.jdbc = jdbc;
-    }
-
-    /**
-     * Returns the trending media for the last {@code days} days.
-     *
-     * @param days  how many days back to consider
-     * @param limit maximum number of items
-     * @return populated {@link TrendingData}
-     */
-    public TrendingData build(int days, int limit) {
-        LocalDateTime since = LocalDateTime.now().minusDays(days);
-        List<MediaItem> items = jdbc.query(
-                "SELECT m.id, m.title, m.type, m.poster_url, "
-                        + "mp.avg_rating, mp.watch_count, m.release_year "
-                        + "FROM media_popularity mp "
-                        + "JOIN media m ON m.id = mp.media_id "
-                        + "WHERE mp.last_watched_at >= ? "
-                        + "ORDER BY mp.watch_count DESC, mp.last_watched_at DESC "
-                        + "LIMIT ?",
-                (rs, rn) -> new MediaItem(
-                        rs.getLong("id"),
-                        rs.getString("title"),
-                        rs.getString("type"),
-                        rs.getString("poster_url"),
-                        rs.getBigDecimal("avg_rating"),
-                        rs.getObject("watch_count", Long.class),
-                        rs.getObject("release_year", Integer.class)),
-                since, limit);
-
-        // fall back to overall trending if no recent data
-        if (items.isEmpty()) {
-            items = jdbc.query(
-                    "SELECT m.id, m.title, m.type, m.poster_url, "
-                            + "mp.avg_rating, mp.watch_count, m.release_year "
-                            + "FROM media_popularity mp "
-                            + "JOIN media m ON m.id = mp.media_id "
-                            + "ORDER BY mp.watch_count DESC "
-                            + "LIMIT ?",
-                    (rs, rn) -> new MediaItem(
-                            rs.getLong("id"),
-                            rs.getString("title"),
-                            rs.getString("type"),
-                            rs.getString("poster_url"),
-                            rs.getBigDecimal("avg_rating"),
-                            rs.getObject("watch_count", Long.class),
-                            rs.getObject("release_year", Integer.class)),
-                    limit);
+        public TrendingQueryService(JdbcTemplate jdbc) {
+                this.jdbc = jdbc;
         }
 
-        return new TrendingData(items, LocalDateTime.now(), days);
-    }
+        /**
+         * Returns the trending media for the last {@code days} days.
+         *
+         * @param days  how many days back to consider
+         * @param limit maximum number of items
+         * @return populated {@link TrendingData}
+         */
+        public TrendingData build(int days, int limit) {
+                LocalDateTime since = LocalDateTime.now().minusDays(days);
+                List<MediaItem> items = jdbc.query(
+                                "SELECT m.id, m.title, m.type, m.poster_url, m.backdrop_url, "
+                                                + "mp.avg_rating, mp.watch_count, m.release_year "
+                                                + "FROM media_popularity mp "
+                                                + "JOIN media m ON m.id = mp.media_id "
+                                                + "WHERE mp.last_watched_at >= ? "
+                                                + "ORDER BY mp.watch_count DESC, mp.last_watched_at DESC "
+                                                + "LIMIT ?",
+                                (rs, rn) -> {
+                                        MediaItem mi = new MediaItem(
+                                                        rs.getLong("id"),
+                                                        rs.getString("title"),
+                                                        rs.getString("type"),
+                                                        rs.getString("poster_url"),
+                                                        rs.getBigDecimal("avg_rating"),
+                                                        rs.getObject("watch_count", Long.class),
+                                                        rs.getObject("release_year", Integer.class));
+                                        mi.setBackdropUrl(rs.getString("backdrop_url"));
+                                        return mi;
+                                },
+                                since, limit);
 
-    public TrendingData build() {
-        return build(DEFAULT_DAYS, DEFAULT_LIMIT);
-    }
+                // fall back to overall trending if no recent data
+                if (items.isEmpty()) {
+                        items = jdbc.query(
+                                        "SELECT m.id, m.title, m.type, m.poster_url, m.backdrop_url, "
+                                                        + "mp.avg_rating, mp.watch_count, m.release_year "
+                                                        + "FROM media_popularity mp "
+                                                        + "JOIN media m ON m.id = mp.media_id "
+                                                        + "ORDER BY mp.watch_count DESC "
+                                                        + "LIMIT ?",
+                                        (rs, rn) -> {
+                                                MediaItem mi = new MediaItem(
+                                                                rs.getLong("id"),
+                                                                rs.getString("title"),
+                                                                rs.getString("type"),
+                                                                rs.getString("poster_url"),
+                                                                rs.getBigDecimal("avg_rating"),
+                                                                rs.getObject("watch_count", Long.class),
+                                                                rs.getObject("release_year", Integer.class));
+                                                mi.setBackdropUrl(rs.getString("backdrop_url"));
+                                                return mi;
+                                        },
+                                        limit);
+                }
+
+                return new TrendingData(items, LocalDateTime.now(), days);
+        }
+
+        public TrendingData build() {
+                return build(DEFAULT_DAYS, DEFAULT_LIMIT);
+        }
 }

@@ -1,167 +1,373 @@
-### CineLog — Observability / Actuator Endpoints
-### Base URL: http://localhost:8080
-### Nota: endpoints do actuator ficam em /actuator/*
-
-@base = http://localhost:8080
-
-# ─────────────────────────────────────────────────────────────
-# HEALTH
-# ─────────────────────────────────────────────────────────────
-
-### Health geral (público)
-GET {{base}}/actuator/health
-
-###
-
-### Health — detalhes (requer role ADMIN via ActuatorSecurityConfig)
-# GET {{base}}/actuator/health
-# Accept: application/json
-
-# ─────────────────────────────────────────────────────────────
-# INFO
-# ─────────────────────────────────────────────────────────────
-
-### App info (nome, versão)
-GET {{base}}/actuator/info
-
-# ─────────────────────────────────────────────────────────────
-# MÉTRICAS — Prometheus scrape format
-# ─────────────────────────────────────────────────────────────
-
-### Todas as métricas no formato Prometheus
-GET {{base}}/actuator/prometheus
-
-###
-
-### Métricas — endpoint JSON (lista todos os meters disponíveis)
-GET {{base}}/actuator/metrics
-
-###
-
-### Métricas — timer de execução de métodos (gerado pelo MetricsAspect)
-GET {{base}}/actuator/metrics/cinelog.method.execution
-
-###
-
-### Métricas — erros em métodos instrumentados
-GET {{base}}/actuator/metrics/cinelog.method.execution.errors
-
-###
-
-### Métricas — usuários registrados
-GET {{base}}/actuator/metrics/cinelog.business.user.registered
-
-###
-
-### Métricas — logins (com tag success)
-GET {{base}}/actuator/metrics/cinelog.business.auth.login
-
-###
-
-### Métricas — mídias criadas
-GET {{base}}/actuator/metrics/cinelog.business.media.created
-
-###
-
-### JVM — heap memory usado
-GET {{base}}/actuator/metrics/jvm.memory.used
-
-###
-
-### JVM — threads ativas
-GET {{base}}/actuator/metrics/jvm.threads.live
-
-###
-
-### HTTP — latência das requisições (percentis p50, p95, p99)
-GET {{base}}/actuator/metrics/http.server.requests
-
-# ─────────────────────────────────────────────────────────────
-# LOGGERS — controle dinâmico de log level
-# ─────────────────────────────────────────────────────────────
-
-### Listar todos os loggers configurados
-GET {{base}}/actuator/loggers
-
-###
-
-### Ver nível do root logger
-GET {{base}}/actuator/loggers/ROOT
-
-###
-
-### Ver nível do logger de observabilidade
-GET {{base}}/actuator/loggers/com.cine.cinelog.shared.observability
-
-###
-
-### Ver nível do logger de request_summary
-GET {{base}}/actuator/loggers/request_summary
-
-###
-
-### Alterar root logger para DEBUG (temporário — útil em diagnóstico)
-# POST {{base}}/actuator/loggers/ROOT
-# Content-Type: application/json
+# =============================================================================
+# CineLog API – Observabilidade & Métricas                [observability.http]
+# =============================================================================
 #
-# { "configuredLevel": "DEBUG" }
-
-###
-
-### Aumentar verbosidade do MetricsAspect para DEBUG
-# POST {{base}}/actuator/loggers/com.cine.cinelog.shared.observability.aop.MetricsAspect
-# Content-Type: application/json
+#  Endpoints cobertos:
+#   GET /actuator/health              → Liveness / readiness da aplicação
+#   GET /actuator/info                → Metadados do build
+#   GET /actuator/metrics             → Lista todas as métricas Micrometer
+#   GET /actuator/metrics/{name}      → Valor de uma métrica específica
+#   GET /actuator/prometheus          → Scrape endpoint para Prometheus
+#   GET /actuator/caches              → Estado das caches Redis/Caffeine
+#   POST /actuator/loggers/{name}     → Altera nível de log em runtime
 #
-# { "configuredLevel": "DEBUG" }
-
-###
-
-### Restaurar root logger para INFO
-# POST {{base}}/actuator/loggers/ROOT
-# Content-Type: application/json
+#  Métricas de segurança (cinelog.security.*):
+#   auth_failures_total  · account_lockouts_total · jwt_failures_total
+#   rate_limit_total     · sqli_attempts_total    · access_denied_total
+#   tamper_detected_total · sensitive_access_total
 #
-# { "configuredLevel": "INFO" }
+#  Métricas de negócio (cinelog.business.*):
+#   watch_entries_created_total · reports_sent_total
+#   recommendations_generated_total · searches_total
+#
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │ PRÉ-REQUISITOS                                                           │
+# │  1. Faça login em auth.http → copie o accessToken → cole em @token      │
+# │  2. Para rate-limit: execute os blocos "rateLimitTrigger" em sequência  │
+# │  3. Grafana local: http://localhost:3000  (admin/admin)                  │
+# └──────────────────────────────────────────────────────────────────────────┘
+# =============================================================================
 
-# ─────────────────────────────────────────────────────────────
-# CACHES (Redis)
-# ─────────────────────────────────────────────────────────────
+# ─── Variáveis ────────────────────────────────────────────────────────────────
+@baseUrl    = http://localhost:8080
+@token      = REPLACE_AFTER_LOGIN
+@adminToken = REPLACE_WITH_ADMIN_TOKEN
 
-### Listar todos os caches registrados
-GET {{base}}/actuator/caches
 
-###
-
-### Ver cache específico (ex: media)
-# GET {{base}}/actuator/caches/media
-
-###
-
-### Evict cache (limpar tudo — usar com cuidado em prod)
-# DELETE {{base}}/actuator/caches
-
-# ─────────────────────────────────────────────────────────────
-# TRACING — verificar propagação de trace headers
-# ─────────────────────────────────────────────────────────────
-
-### Qualquer request — verificar headers X-Trace-Id, X-Span-Id, X-Request-Id na resposta
-# Use junto com "Response Headers" na aba de resultado
-GET {{base}}/actuator/health
-X-Trace-Id: test-trace-00000001
-X-Span-Id: test-span-0001
+# =============================================================================
+# ACTUATOR – Saúde & Informações
+# =============================================================================
 
 ###
+# @name health
+# Health check completo (db + redis + kafka + disk).
+# Espera: 200 OK + status UP para todos os componentes
+GET {{baseUrl}}/actuator/health
+Accept: application/json
 
-### Verificar correlação de logs — request com trace id customizado
-GET {{base}}/api/media?page=0&size=5
-X-Trace-Id: correlation-test-trace
+###
+# @name healthLiveness
+# Liveness probe (Kubernetes-style).
+GET {{baseUrl}}/actuator/health/liveness
+Accept: application/json
 
-# ─────────────────────────────────────────────────────────────
-# STACKS — observabilidade externa
-# ─────────────────────────────────────────────────────────────
-# Grafana:    http://localhost:3000        (admin/admin)
-# Prometheus: http://localhost:9090
-# Loki:       http://localhost:3100/ready
-# Tempo:      http://localhost:3200/ready
-# Jaeger UI:  http://localhost:16686
-# Kibana:     http://localhost:5601
-# MailHog:    http://localhost:8025
+###
+# @name healthReadiness
+# Readiness probe.
+GET {{baseUrl}}/actuator/health/readiness
+Accept: application/json
+
+###
+# @name info
+# Metadados do build (versão, git commit, Java version).
+GET {{baseUrl}}/actuator/info
+Accept: application/json
+
+
+# =============================================================================
+# ACTUATOR – Métricas (Micrometer)
+# =============================================================================
+
+###
+# @name metricsList
+# Lista todas as métricas registradas no Micrometer.
+# Espera: 200 OK + { "names": [...] }
+GET {{baseUrl}}/actuator/metrics
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name metricsHttpRequests
+# Total de requisições HTTP por status/método/URI.
+GET {{baseUrl}}/actuator/metrics/http.server.requests
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name metricsJvmMemory
+# Uso de memória JVM (heap utilizado).
+GET {{baseUrl}}/actuator/metrics/jvm.memory.used
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name metricsJvmThreads
+# Número de threads JVM ativas.
+GET {{baseUrl}}/actuator/metrics/jvm.threads.live
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+# =============================================================================
+# MÉTRICAS DE SEGURANÇA (cinelog.security.*)
+# =============================================================================
+
+###
+# @name securityAuthFailures
+# Total de falhas de autenticação (todas as razões).
+GET {{baseUrl}}/actuator/metrics/cinelog.security.auth_failures_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securityAuthFailuresInvalidCredentials
+# Falhas por credenciais inválidas — filtra pela tag reason.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.auth_failures_total?tag=reason:invalid_credentials
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securityAccountLockouts
+# Total de bloqueios de conta por brute-force.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.account_lockouts_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securityJwtFailures
+# Total de falhas de validação JWT.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.jwt_failures_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securityJwtFailuresExpired
+# JWT expirado.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.jwt_failures_total?tag=reason:expired
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securityRateLimit
+# Total de requisições bloqueadas por rate-limit.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.rate_limit_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securitySqlInjection
+# Tentativas de SQL Injection detectadas.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.sqli_attempts_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securityAccessDenied
+# Total de acessos negados (403).
+GET {{baseUrl}}/actuator/metrics/cinelog.security.access_denied_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securityTamperDetected
+# Tentativas de adulteração detectadas.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.tamper_detected_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name securitySensitiveAccess
+# Acessos a recursos sensíveis rastreados.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.sensitive_access_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+# =============================================================================
+# MÉTRICAS DE NEGÓCIO (cinelog.business.*)
+# =============================================================================
+
+###
+# @name businessWatchEntries
+# Total de entries de watch registradas.
+GET {{baseUrl}}/actuator/metrics/cinelog.business.watch_entries_created_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name businessReportsSent
+# Total de relatórios enviados por e-mail (todos os tipos).
+GET {{baseUrl}}/actuator/metrics/cinelog.business.reports_sent_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name businessRecommendations
+# Total de recomendações geradas.
+GET {{baseUrl}}/actuator/metrics/cinelog.business.recommendations_generated_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name businessSearches
+# Total de buscas realizadas.
+GET {{baseUrl}}/actuator/metrics/cinelog.business.searches_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+
+# =============================================================================
+# PROMETHEUS SCRAPE
+# =============================================================================
+
+###
+# @name prometheusScrape
+# Endpoint de scrape no formato Prometheus (text/plain).
+# Espera: 200 OK + linhas "# HELP / # TYPE / cinelog_..."
+GET {{baseUrl}}/actuator/prometheus
+Authorization: Bearer {{adminToken}}
+Accept: text/plain
+
+
+# =============================================================================
+# CACHES
+# =============================================================================
+
+###
+# @name cachesList
+# Lista todas as caches registradas (Redis + Caffeine).
+GET {{baseUrl}}/actuator/caches
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name cacheEvictAll
+# Invalida TODAS as caches. Use com cuidado em produção!
+# Espera: 200 OK sem body
+DELETE {{baseUrl}}/actuator/caches
+Authorization: Bearer {{adminToken}}
+
+
+# =============================================================================
+# LOG LEVELS (runtime)
+# =============================================================================
+
+###
+# @name logLevelRoot
+# Consulta o nível de log atual do logger raiz.
+GET {{baseUrl}}/actuator/loggers/ROOT
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name logLevelSecurity
+# Consulta o nível do logger de segurança CineLog.
+GET {{baseUrl}}/actuator/loggers/com.cinelog.infrastructure.security
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+###
+# @name setLogLevelDebug
+# Eleva o log de segurança para DEBUG em runtime (sem restart).
+# Espera: 204 No Content
+POST {{baseUrl}}/actuator/loggers/com.cinelog.infrastructure.security
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "configuredLevel": "DEBUG"
+}
+
+###
+# @name resetLogLevelInfo
+# Retorna o log de segurança para INFO.
+POST {{baseUrl}}/actuator/loggers/com.cinelog.infrastructure.security
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "configuredLevel": "INFO"
+}
+
+
+# =============================================================================
+# RATE-LIMIT TRIGGER
+# Execute estes blocos em sequência rápida para acionar o bloqueio e verificar
+# o contador cinelog.security.rate_limit_total (deve incrementar após o 10º).
+# =============================================================================
+
+###
+# @name rateLimitTrigger01
+# Disparo 1/11 — credencial errada proposital
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger02
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger03
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger04
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger05
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger06
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger07
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger08
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger09
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger10
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name rateLimitTrigger11
+# 11ª tentativa → deve retornar 429 Too Many Requests
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ratelimit_test_user", "password": "wrong_pass" }
+
+###
+# @name verifyRateLimitCounter
+# O counter deve ter incrementado após os disparos acima.
+GET {{baseUrl}}/actuator/metrics/cinelog.security.rate_limit_total
+Authorization: Bearer {{adminToken}}
+Accept: application/json

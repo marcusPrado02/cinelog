@@ -1,5 +1,6 @@
 package com.cine.cinelog.infrastructure.messaging.events;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -114,6 +115,7 @@ public class EventEnvelope<T> {
      *
      * @return true se válido, false caso contrário
      */
+    @JsonIgnore
     public boolean isValid() {
         return eventId != null
                 && type != null && !type.isBlank()
@@ -153,6 +155,7 @@ public class EventEnvelope<T> {
      *
      * @return correlationId ou null
      */
+    @JsonIgnore
     public String getCorrelationId() {
         return getMetadata("correlationId");
     }
@@ -162,6 +165,7 @@ public class EventEnvelope<T> {
      *
      * @return causationId ou null
      */
+    @JsonIgnore
     public String getCausationId() {
         return getMetadata("causationId");
     }
@@ -171,6 +175,7 @@ public class EventEnvelope<T> {
      *
      * @return traceparent ou null
      */
+    @JsonIgnore
     public String getTraceparent() {
         return getMetadata("traceparent");
     }

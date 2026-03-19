@@ -56,7 +56,7 @@ public class CreditsItemWriter implements ItemWriter<TmdbCreditsBundle> {
             if (member.getTmdbPersonId() == null || member.getName() == null)
                 continue;
             try {
-                Person person = upsertPerson(member.getTmdbPersonId(), member.getName());
+                Person person = upsertPerson(member.getTmdbPersonId(), member.getName(), member.getProfileUrl());
                 String role = Role.ACTOR.name();
                 if (!creditRepository.existsByMediaIdAndPersonIdAndRole(bundle.getMediaId(), person.getId(), role)) {
                     Credit credit = new Credit();
@@ -87,7 +87,7 @@ public class CreditsItemWriter implements ItemWriter<TmdbCreditsBundle> {
                 continue;
 
             try {
-                Person person = upsertPerson(member.getTmdbPersonId(), member.getName());
+                Person person = upsertPerson(member.getTmdbPersonId(), member.getName(), member.getProfileUrl());
                 String roleStr = role.name();
                 if (!creditRepository.existsByMediaIdAndPersonIdAndRole(bundle.getMediaId(), person.getId(), roleStr)) {
                     Credit credit = new Credit();
@@ -102,12 +102,21 @@ public class CreditsItemWriter implements ItemWriter<TmdbCreditsBundle> {
         }
     }
 
-    private Person upsertPerson(Long tmdbPersonId, String name) {
+    private Person upsertPerson(Long tmdbPersonId, String name, String profileUrl) {
         return personRepository.findByTmdbPersonId(tmdbPersonId)
+                .map(existing -> {
+                    if (profileUrl != null
+                            && (existing.getProfileUrl() == null || existing.getProfileUrl().isBlank())) {
+                        existing.setProfileUrl(profileUrl);
+                        return personRepository.save(existing);
+                    }
+                    return existing;
+                })
                 .orElseGet(() -> {
                     Person p = new Person();
                     p.setName(name);
                     p.setTmdbPersonId(tmdbPersonId);
+                    p.setProfileUrl(profileUrl);
                     return personRepository.save(p);
                 });
     }

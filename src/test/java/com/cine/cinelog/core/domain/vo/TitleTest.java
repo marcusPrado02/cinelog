@@ -28,7 +28,7 @@ class TitleTest {
     void of_tooLongShouldThrowDomainExceptionWithTooLongMessage() {
         String tooLong = "a".repeat(201);
         DomainException ex = assertThrows(DomainException.class, () -> Title.of(tooLong));
-        assertEquals("Título excede 200 caracteres", ex.getMessage());
+        assertTrue(ex.getMessage().contains("Título excede o tamanho máximo permitido"));
     }
 
     @Test

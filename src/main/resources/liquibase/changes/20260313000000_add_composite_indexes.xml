@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <!--
+        Adiciona índices compostos nas tabelas com maior volume de queries filtradas.
+
+        Rationale:
+        - watch_entry filtra quase sempre por (user_id, status_type): lista de
+          pendências, histórico por status, etc.
+        - watch_entry filtra por (user_id, media_id) ao verificar "já adicionei?".
+        - media filtra por (type, tmdb_id) nos jobs de sincronização TMDB (Batch)
+          para fazer upsert eficiente sem full-table-scan.
+
+        Todas as colunas já têm índice individual gerado pelo FK ou PK; estes
+        são compostos adicionais para queries multi-coluna.
+    -->
+
+    <changeSet id="20260313000000-1" author="cinelog">
+        <comment>Índice composto em watch_entry(user_id, status_type) para listagens por usuário+status</comment>
+        <createIndex tableName="watch_entry"
+                     indexName="idx_we_user_status">
+            <column name="user_id"/>
+            <column name="status_type"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260313000000-2" author="cinelog">
+        <comment>Índice composto em watch_entry(user_id, media_id) para verificação de duplicidade e consultas por usuário+mídia</comment>
+        <createIndex tableName="watch_entry"
+                     indexName="idx_we_user_media">
+            <column name="user_id"/>
+            <column name="media_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20260313000000-3" author="cinelog">
+        <comment>Índice composto em media(type, tmdb_id) para upsert eficiente nos jobs de sincronização TMDB</comment>
+        <createIndex tableName="media"
+                     indexName="idx_media_type_tmdb">
+            <column name="type"/>
+            <column name="tmdb_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

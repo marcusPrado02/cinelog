@@ -58,4 +58,21 @@ public interface PersonRepositoryPort {
      * @return Optional com a pessoa encontrada, ou vazio
      */
     Optional<Person> findByName(String name);
+
+    /**
+     * Busca pessoas pelo nome (paginado, case-insensitive, por substring).
+     *
+     * @param name      termo de busca
+     * @param pageQuery parâmetros de paginação
+     * @return página de pessoas encontradas
+     */
+    PageResult<Person> searchByName(String name, PageQuery pageQuery);
+
+    /**
+     * Retorna todas as pessoas com tmdbPersonId definido mas sem profileUrl ou
+     * biography.
+     *
+     * @return lista de pessoas para enriquecimento de perfil
+     */
+    List<Person> findAllMissingProfile();
 }

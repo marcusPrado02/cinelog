@@ -296,6 +296,44 @@ public class DeadLetterService {
         return repository.countByStatusAndCreatedAtBetween(status, startTime, endTime);
     }
 
+    /**
+     * Persist a raw (unparsed) failed event to the DLQ registry.
+     *
+     * <p>
+     * Used when the event envelope could not be deserialized. Stores the raw
+     * JSON and the failure reason so it can be inspected via the admin API.
+     *
+     * @param originalTopic Kafka topic from which the event came
+     * @param consumerGroup Consumer group that encountered the failure
+     * @param envelopeJson  Raw JSON payload (may be malformed)
+     * @param reason        Human-readable reason for DLQ routing
+     */
+    @Transactional
+    public void persistRawFailedEvent(
+            String originalTopic,
+            String consumerGroup,
+            String envelopeJson,
+            String reason) {
+        // Synthetic eventId to provide basic deduplication
+        String eventId = "raw-" + Integer.toHexString(envelopeJson.hashCode())
+                + "-" + System.currentTimeMillis();
+
+        DeadLetterEventEntity entity = DeadLetterEventEntity.builder()
+                .originalTopic(originalTopic)
+                .consumerGroup(consumerGroup)
+                .eventId(eventId)
+                .eventType("UNKNOWN_RAW")
+                .envelopeJson(truncateIfNeeded(envelopeJson, 65535))
+                .errorMessage(reason)
+                .errorClass("RawEventFailure")
+                .status(DlqStatus.PENDING_REPLAY)
+                .build();
+
+        repository.save(entity);
+        log.info("Persisted raw DLQ event: eventId={}, topic={}, reason={}",
+                eventId, originalTopic, reason);
+    }
+
     // ========== Helper Methods ==========
 
     private String getStackTraceAsString(Throwable throwable) {

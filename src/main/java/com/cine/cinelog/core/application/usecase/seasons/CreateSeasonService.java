@@ -69,8 +69,8 @@ public class CreateSeasonService implements CreateSeasonUseCase {
     @CacheEvict(value = "seasonsPage", allEntries = true)
     public Season execute(Season season) {
         log.debug("Iniciando criação de temporada. Parâmetros: {}",
-                Map.of("seasonNumber", season.getSeasonNumber(),
-                        "mediaId", season.getMediaId(),
+                Map.of("seasonNumber", String.valueOf(season.getSeasonNumber()),
+                        "mediaId", String.valueOf(season.getMediaId()),
                         "name", season.getName() != null ? season.getName() : "null"));
 
         try {

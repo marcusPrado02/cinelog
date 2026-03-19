@@ -91,4 +91,13 @@ public interface MediaRepositoryPort {
      * @return lista de mídias com tmdbId não nulo
      */
     List<Media> findAllWithTmdbId(MediaType type);
+
+    /**
+     * Retorna todas as mídias que possuem tmdbId mas estão sem imagens (poster ou
+     * backdrop).
+     *
+     * @return lista de mídias com tmdbId não nulo e poster_url ou backdrop_url
+     *         nulos
+     */
+    List<Media> findAllMissingImages();
 }

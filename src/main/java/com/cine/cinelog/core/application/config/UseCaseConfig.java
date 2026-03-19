@@ -31,6 +31,7 @@ import com.cine.cinelog.core.application.ports.in.person.CreatePersonUseCase;
 import com.cine.cinelog.core.application.ports.in.person.DeletePersonUseCase;
 import com.cine.cinelog.core.application.ports.in.person.GetPersonUseCase;
 import com.cine.cinelog.core.application.ports.in.person.ListPeopleUseCase;
+import com.cine.cinelog.core.application.ports.in.person.SearchPeopleUseCase;
 import com.cine.cinelog.core.application.ports.in.person.UpdatePersonUseCase;
 import com.cine.cinelog.core.application.ports.in.season.CreateSeasonUseCase;
 import com.cine.cinelog.core.application.ports.in.season.DeleteSeasonUseCase;
@@ -90,6 +91,7 @@ import com.cine.cinelog.core.application.usecase.people.CreatePersonService;
 import com.cine.cinelog.core.application.usecase.people.DeletePersonService;
 import com.cine.cinelog.core.application.usecase.people.GetPersonService;
 import com.cine.cinelog.core.application.usecase.people.ListPeopleService;
+import com.cine.cinelog.core.application.usecase.people.SearchPeopleService;
 import com.cine.cinelog.core.application.usecase.people.UpdatePersonService;
 import com.cine.cinelog.core.application.usecase.seasons.UpdateSeasonService;
 import com.cine.cinelog.core.application.usecase.seasons.CreateSeasonService;
@@ -296,6 +298,11 @@ public class UseCaseConfig {
     @Bean
     public DeletePersonUseCase deletePersonUseCase(PersonRepositoryPort repo) {
         return new DeletePersonService(repo);
+    }
+
+    @Bean
+    public SearchPeopleUseCase searchPeopleUseCase(PersonRepositoryPort repo) {
+        return new SearchPeopleService(repo);
     }
 
     // ===== CREDITS =====

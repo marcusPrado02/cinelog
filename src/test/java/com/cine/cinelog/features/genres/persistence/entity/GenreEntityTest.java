@@ -68,7 +68,7 @@ class GenreEntityTest {
         GeneratedValue gv = idField.getAnnotation(GeneratedValue.class);
         assertEquals(GenerationType.IDENTITY, gv.strategy(), "GeneratedValue strategy should be IDENTITY");
 
-        assertEquals(Short.class, idField.getType(), "id field should be of type Short");
+        assertEquals(Long.class, idField.getType(), "id field should be of type Long");
     }
 
     @Test

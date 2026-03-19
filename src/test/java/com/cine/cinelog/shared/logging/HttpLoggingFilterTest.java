@@ -64,8 +64,9 @@ public class HttpLoggingFilterTest {
     void mask_hidesBearerAndEmailAndPassword_and_truncates() throws Exception {
         HttpLoggingFilter f = new HttpLoggingFilter();
 
-        // set maxLen small to exercise truncation
-        setPrivateField(f, "maxLen", 10);
+        // maxLen large enough to include masked-bearer/email/password but small enough
+        // to truncate the tail
+        setPrivateField(f, "maxLen", 50);
 
         String input = "Authorization: Bearer ABCDEFGHIJKLMNOPQRSTUVWXYZ user@example.com {\"password\":\"secretpass\"} longtext12345";
         String masked = (String) invokePrivate(f, "mask", new Class[] { String.class }, new Object[] { input });

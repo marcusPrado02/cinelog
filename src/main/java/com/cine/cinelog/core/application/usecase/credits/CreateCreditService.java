@@ -66,9 +66,9 @@ public class CreateCreditService implements CreateCreditUseCase {
     @CacheEvict(value = "creditsPage", allEntries = true)
     public Credit execute(Credit credit) {
         log.debug("Iniciando criação de crédito. Parâmetros: {}",
-                Map.of("personId", credit.getPersonId(),
-                        "mediaId", credit.getMediaId(),
-                        "role", credit.getRole()));
+                Map.of("personId", String.valueOf(credit.getPersonId()),
+                        "mediaId", String.valueOf(credit.getMediaId()),
+                        "role", String.valueOf(credit.getRole())));
 
         try {
             Credit saved = repo.save(credit);

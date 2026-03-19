@@ -83,7 +83,7 @@ public class CreateWatchEntryService implements CreateWatchEntryUseCase {
     @CacheEvict(value = "watchEntriesPage", allEntries = true)
     public WatchEntry execute(WatchEntry entry) {
         log.debug("Iniciando criação de watch entry. Parâmetros: {}",
-                Map.of("userId", entry.getUserId(),
+                Map.of("userId", String.valueOf(entry.getUserId()),
                         "mediaId", entry.getMediaId() != null ? entry.getMediaId() : "null",
                         "episodeId", entry.getEpisodeId() != null ? entry.getEpisodeId() : "null"));
 
@@ -93,7 +93,7 @@ public class CreateWatchEntryService implements CreateWatchEntryUseCase {
             // antes da validação de política (que usa setRating() state-aware).
             if (entry.getRating() != null || entry.getWatchedAt() != null) {
                 LocalDate userWatchedAt = entry.getWatchedAt();
-                entry.startWatching();       // PLANNING → WATCHING
+                entry.startWatching(); // PLANNING → WATCHING
                 entry.markAsCompleted(null); // WATCHING → COMPLETED (watchedAt = today)
                 if (userWatchedAt != null) {
                     entry.setWatchedAt(userWatchedAt); // preserva data fornecida pelo usuário

@@ -66,7 +66,8 @@ class UpdateUserServiceTest {
         when(repo.findById(id)).thenReturn(Optional.empty());
 
         DomainException ex = assertThrows(DomainException.class, () -> service.execute(id, incoming));
-        assertTrue(ex.getMessage().contains("User not found: " + id));
+        // USER_NOT_FOUND.title = "Usuário não encontrado"
+        assertTrue(ex.getMessage().contains("Usu\u00e1rio n\u00e3o encontrado"));
         verify(repo).findById(id);
         verifyNoMoreInteractions(repo);
     }

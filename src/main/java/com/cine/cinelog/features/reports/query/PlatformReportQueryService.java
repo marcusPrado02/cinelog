@@ -37,14 +37,14 @@ public class PlatformReportQueryService {
 
         Long totalUsers = jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class);
         Long totalMedia = jdbc.queryForObject("SELECT COUNT(*) FROM media", Long.class);
-        Long totalWatchEntries = jdbc.queryForObject("SELECT COUNT(*) FROM watch_entries", Long.class);
+        Long totalWatchEntries = jdbc.queryForObject("SELECT COUNT(*) FROM watch_entry", Long.class);
 
         Long newUsersThisWeek = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM users WHERE created_at >= ?", Long.class, weekAgoDate);
         Long newMediaThisWeek = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM media WHERE created_at >= ?", Long.class, weekAgoDate);
         Long newWatchEntriesThisWeek = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM watch_entries WHERE watched_at >= ?", Long.class, weekAgo.toLocalDate());
+                "SELECT COUNT(*) FROM watch_entry WHERE watched_at >= ?", Long.class, weekAgo.toLocalDate());
 
         List<MediaItem> topRated = topRatedQueryService.build(5).getItems();
         List<MediaItem> trending = trendingQueryService.build(7, 5).getItems();

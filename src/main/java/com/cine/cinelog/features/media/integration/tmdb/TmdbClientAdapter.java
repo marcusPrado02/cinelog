@@ -1,6 +1,8 @@
 package com.cine.cinelog.features.media.integration.tmdb;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +17,9 @@ import com.cine.cinelog.core.domain.model.tmdb.TmdbGenre;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbImageConfig;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaDetails;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaSummary;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbPersonDetails;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbReviewResult;
+import com.cine.cinelog.core.domain.model.tmdb.TmdbReviewsPage;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSearchResult;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSeasonDetails;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbConfigurationResponse;
@@ -22,6 +27,8 @@ import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbCreditsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbGenreListResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbMovieDetailsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbMovieSearchResponse;
+import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbPersonDetailsResponse;
+import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbReviewListResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbSeasonDetailsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbTvDetailsResponse;
 import com.cine.cinelog.features.media.integration.tmdb.dto.TmdbTvSearchResponse;
@@ -861,5 +868,151 @@ public class TmdbClientAdapter implements TmdbClientPort {
             return "https://image.tmdb.org/t/p/" + size + path;
         }
         return config.buildProfileUrl(size, path);
+    }
+
+    // ================== Reviews ==================
+
+    @Override
+    @Retry(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchMovieReviews")
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchMovieReviews")
+    @Bulkhead(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchMovieReviews")
+    public TmdbReviewsPage fetchMovieReviews(Long movieTmdbId, int page) {
+        log.debug("Fetching movie reviews tmdbId={} page={}", movieTmdbId, page);
+        TmdbReviewListResponse resp = tmdbWebClient.get()
+                .uri(u -> u.path("/movie/{id}/reviews")
+                        .queryParam("language", properties.getLanguage())
+                        .queryParam("page", page)
+                        .build(movieTmdbId))
+                .retrieve()
+                .bodyToMono(TmdbReviewListResponse.class)
+                .block();
+        return mapReviewsPage(resp, movieTmdbId);
+    }
+
+    public TmdbReviewsPage fallbackFetchMovieReviews(Long movieTmdbId, int page, Throwable t) {
+        log.warn("Fallback fetchMovieReviews tmdbId={} page={}: {}", movieTmdbId, page, t.getMessage());
+        return emptyReviewsPage(movieTmdbId);
+    }
+
+    @Override
+    @Retry(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchTvReviews")
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchTvReviews")
+    @Bulkhead(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchTvReviews")
+    public TmdbReviewsPage fetchTvReviews(Long tvTmdbId, int page) {
+        log.debug("Fetching TV reviews tmdbId={} page={}", tvTmdbId, page);
+        TmdbReviewListResponse resp = tmdbWebClient.get()
+                .uri(u -> u.path("/tv/{id}/reviews")
+                        .queryParam("language", properties.getLanguage())
+                        .queryParam("page", page)
+                        .build(tvTmdbId))
+                .retrieve()
+                .bodyToMono(TmdbReviewListResponse.class)
+                .block();
+        return mapReviewsPage(resp, tvTmdbId);
+    }
+
+    public TmdbReviewsPage fallbackFetchTvReviews(Long tvTmdbId, int page, Throwable t) {
+        log.warn("Fallback fetchTvReviews tmdbId={} page={}: {}", tvTmdbId, page, t.getMessage());
+        return emptyReviewsPage(tvTmdbId);
+    }
+
+    // ================== Detalhes de Pessoa ==================
+
+    @Override
+    @Retry(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchPersonDetails")
+    @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchPersonDetails")
+    @Bulkhead(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchPersonDetails")
+    public Optional<TmdbPersonDetails> fetchPersonDetails(Long tmdbPersonId) {
+        log.debug("Fetching person details tmdbPersonId={}", tmdbPersonId);
+        try {
+            TmdbPersonDetailsResponse resp = tmdbWebClient.get()
+                    .uri(u -> u.path("/person/{id}")
+                            .queryParam("language", properties.getLanguage())
+                            .build(tmdbPersonId))
+                    .retrieve()
+                    .onStatus(HttpStatusCode::is4xxClientError, r -> {
+                        log.warn("Person not found tmdbPersonId={} status={}", tmdbPersonId, r.statusCode());
+                        return r.createException();
+                    })
+                    .bodyToMono(TmdbPersonDetailsResponse.class)
+                    .block();
+            if (resp == null)
+                return Optional.empty();
+            TmdbImageConfig config = fetchImageConfig();
+            TmdbPersonDetails details = new TmdbPersonDetails();
+            details.setTmdbPersonId(resp.getId());
+            details.setName(resp.getName());
+            details.setBiography(resp.getBiography());
+            details.setBirthday(parseDate(resp.getBirthday()));
+            details.setDeathday(parseDate(resp.getDeathday()));
+            details.setGender(resp.getGender());
+            details.setHomepage(resp.getHomepage());
+            details.setImdbId(resp.getImdbId());
+            details.setKnownForDepartment(resp.getKnownForDepartment());
+            details.setPlaceOfBirth(resp.getPlaceOfBirth());
+            details.setPopularity(resp.getPopularity());
+            details.setProfilePath(buildProfileUrl(config, resp.getProfilePath()));
+            return Optional.of(details);
+        } catch (WebClientResponseException.NotFound e) {
+            log.warn("Person not found on TMDB tmdbPersonId={}", tmdbPersonId);
+            return Optional.empty();
+        }
+    }
+
+    public Optional<TmdbPersonDetails> fallbackFetchPersonDetails(Long tmdbPersonId, Throwable t) {
+        log.warn("Fallback fetchPersonDetails tmdbPersonId={}: {}", tmdbPersonId, t.getMessage());
+        return Optional.empty();
+    }
+
+    // ================== Helpers ==================
+
+    private TmdbReviewsPage mapReviewsPage(TmdbReviewListResponse resp, Long tmdbMediaId) {
+        TmdbReviewsPage page = new TmdbReviewsPage();
+        page.setTmdbMediaId(tmdbMediaId);
+        if (resp == null) {
+            page.setResults(Collections.emptyList());
+            return page;
+        }
+        page.setPage(resp.getPage());
+        page.setTotalPages(resp.getTotalPages());
+        page.setTotalResults(resp.getTotalResults());
+        List<TmdbReviewResult> results = new ArrayList<>();
+        if (resp.getResults() != null) {
+            for (TmdbReviewListResponse.ReviewItem item : resp.getResults()) {
+                TmdbReviewResult r = new TmdbReviewResult();
+                r.setId(item.getId());
+                r.setAuthor(item.getAuthor());
+                r.setContent(item.getContent());
+                r.setUrl(item.getUrl());
+                if (item.getCreatedAt() != null) {
+                    try {
+                        r.setCreatedAt(OffsetDateTime.parse(item.getCreatedAt()));
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (item.getUpdatedAt() != null) {
+                    try {
+                        r.setUpdatedAt(OffsetDateTime.parse(item.getUpdatedAt()));
+                    } catch (Exception ignored) {
+                    }
+                }
+                TmdbReviewListResponse.AuthorDetails ad = item.getAuthorDetails();
+                if (ad != null) {
+                    r.setAuthorUsername(ad.getUsername());
+                    r.setAuthorAvatarPath(ad.getAvatarPath());
+                    r.setAuthorRating(ad.getRating());
+                }
+                results.add(r);
+            }
+        }
+        page.setResults(results);
+        return page;
+    }
+
+    private TmdbReviewsPage emptyReviewsPage(Long tmdbMediaId) {
+        TmdbReviewsPage p = new TmdbReviewsPage();
+        p.setTmdbMediaId(tmdbMediaId);
+        p.setResults(Collections.emptyList());
+        return p;
     }
 }

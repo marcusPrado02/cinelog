@@ -21,10 +21,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * Controlador REST para disparo manual dos batch jobs de sincronização com o TMDB.
+ * Controlador REST para disparo manual dos batch jobs de sincronização com o
+ * TMDB.
  *
- * <p>Todos os endpoints requerem papel ADMIN e lançam jobs de forma assíncrona.
- * Retorna o executionId para rastreamento.</p>
+ * <p>
+ * Todos os endpoints requerem papel ADMIN e lançam jobs de forma assíncrona.
+ * Retorna o executionId para rastreamento.
+ * </p>
  */
 @Tag(name = "Admin Batch", description = "Gerenciamento dos batch jobs de importação TMDB")
 @RestController
@@ -41,6 +44,9 @@ public class BatchJobController {
     private final Job importTvShowsJob;
     private final Job importCreditsJob;
     private final Job importSeasonsJob;
+    private final Job syncReviewsJob;
+    private final Job enrichMediaImagesJob;
+    private final Job enrichPersonProfilesJob;
 
     public BatchJobController(
             JobLauncher jobLauncher,
@@ -49,7 +55,10 @@ public class BatchJobController {
             @Qualifier("importMoviesJob") Job importMoviesJob,
             @Qualifier("importTvShowsJob") Job importTvShowsJob,
             @Qualifier("importCreditsJob") Job importCreditsJob,
-            @Qualifier("importSeasonsJob") Job importSeasonsJob) {
+            @Qualifier("importSeasonsJob") Job importSeasonsJob,
+            @Qualifier("syncReviewsJob") Job syncReviewsJob,
+            @Qualifier("enrichMediaImagesJob") Job enrichMediaImagesJob,
+            @Qualifier("enrichPersonProfilesJob") Job enrichPersonProfilesJob) {
         this.jobLauncher = jobLauncher;
         this.batchProperties = batchProperties;
         this.syncGenresJob = syncGenresJob;
@@ -57,6 +66,9 @@ public class BatchJobController {
         this.importTvShowsJob = importTvShowsJob;
         this.importCreditsJob = importCreditsJob;
         this.importSeasonsJob = importSeasonsJob;
+        this.syncReviewsJob = syncReviewsJob;
+        this.enrichMediaImagesJob = enrichMediaImagesJob;
+        this.enrichPersonProfilesJob = enrichPersonProfilesJob;
     }
 
     @Operation(summary = "Sincronizar gêneros do TMDB")
@@ -119,6 +131,36 @@ public class BatchJobController {
         return buildResponse(execution);
     }
 
+    @Operation(summary = "Sincronizar reviews do TMDB para watch_entry")
+    @PostMapping("/reviews")
+    public ResponseEntity<Map<String, Object>> syncReviews() throws Exception {
+        JobParameters params = new JobParametersBuilder()
+                .addLong("run.id", System.currentTimeMillis())
+                .toJobParameters();
+        JobExecution execution = jobLauncher.run(syncReviewsJob, params);
+        return buildResponse(execution);
+    }
+
+    @Operation(summary = "Enriquecer imagens de mídias via TMDB")
+    @PostMapping("/enrich-images")
+    public ResponseEntity<Map<String, Object>> enrichMediaImages() throws Exception {
+        JobParameters params = new JobParametersBuilder()
+                .addLong("run.id", System.currentTimeMillis())
+                .toJobParameters();
+        JobExecution execution = jobLauncher.run(enrichMediaImagesJob, params);
+        return buildResponse(execution);
+    }
+
+    @Operation(summary = "Enriquecer perfis de pessoas via TMDB")
+    @PostMapping("/enrich-profiles")
+    public ResponseEntity<Map<String, Object>> enrichPersonProfiles() throws Exception {
+        JobParameters params = new JobParametersBuilder()
+                .addLong("run.id", System.currentTimeMillis())
+                .toJobParameters();
+        JobExecution execution = jobLauncher.run(enrichPersonProfilesJob, params);
+        return buildResponse(execution);
+    }
+
     // -------------------------------------------------------------------------
 
     private ResponseEntity<Map<String, Object>> buildResponse(JobExecution execution) {
@@ -129,8 +171,7 @@ public class BatchJobController {
         return ResponseEntity.ok(Map.of(
                 "executionId", execution.getId(),
                 "jobName", execution.getJobInstance().getJobName(),
-                "status", execution.getStatus().toString()
-        ));
+                "status", execution.getStatus().toString()));
     }
 
     private int effectiveMaxPages(BatchJobProperties.JobConfig jobConfig) {

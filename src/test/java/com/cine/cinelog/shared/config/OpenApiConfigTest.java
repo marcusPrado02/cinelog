@@ -19,7 +19,7 @@ class OpenApiConfigTest {
         // Info assertions
         assertNotNull(openAPI.getInfo());
         assertEquals("CineLog API", openAPI.getInfo().getTitle());
-        assertEquals("Backend para registrar e recomendar filmes/séries", openAPI.getInfo().getDescription());
+        assertTrue(openAPI.getInfo().getDescription().startsWith("Backend para registrar e recomendar filmes/séries"));
         assertEquals("v1", openAPI.getInfo().getVersion());
 
         assertNotNull(openAPI.getInfo().getLicense());

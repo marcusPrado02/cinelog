@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Novos Lançamentos — CineLog</title>
+  <style type="text/css">
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
+    img{-ms-interpolation-mode:bicubic;border:0;display:block;outline:none;text-decoration:none;}
+    body{margin:0!important;padding:0!important;background-color:#08080C;}
+    @media only screen and (max-width:640px){
+      .email-body-padding{padding:0 16px!important;}
+      .media-grid-td{display:block!important;width:100%!important;padding-right:0!important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#08080C;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#08080C;line-height:1px;"
+     th:text="|${data.totalNewMedia} novos títulos adicionados nos últimos ${data.days} dias|">
+  Confira os últimos lançamentos no catálogo CineLog.
+</div>
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#08080C;">
+<tr><td align="center" style="padding:32px 16px;">
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="620"
+       style="background-color:#111118;border-radius:20px;overflow:hidden;border:1px solid #1E1E28;box-shadow:0 8px 40px rgba(0,0,0,0.8);">
+
+  <!-- ACCENT BAR -->
+  <tr><td height="5" style="background:linear-gradient(90deg,#06B6D4,#0891B2,#22D3EE);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  <!-- HERO SECTION -->
+  <tr>
+    <td style="background:linear-gradient(175deg,#001A24 0%,#000D14 45%,#0A0A10 100%);padding:40px 48px 28px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td valign="middle" style="width:36px;">
+            <div style="width:4px;height:36px;background:#06B6D4;border-radius:2px;"></div>
+          </td>
+          <td valign="middle" style="padding-left:10px;">
+            <span style="font-size:22px;font-weight:900;color:#FFFFFF;letter-spacing:-0.5px;" th:text="${appName}">CineLog</span>
+          </td>
+          <td align="right" valign="middle">
+            <span style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;">Lançamentos</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:24px 0 0;font-size:32px;font-weight:800;color:#FFFFFF;line-height:1.15;letter-spacing:-0.5px;">
+        Novos <span style="color:#22D3EE;">Lançamentos</span> 🎬
+      </p>
+      <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.45);"
+         th:text="|Títulos adicionados nos últimos ${data.days} dias|">
+        Títulos adicionados nos últimos 30 dias
+      </p>
+      <!-- STAT PILL -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
+        <tr>
+          <td style="background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.22);border-radius:24px;padding:8px 20px;">
+            <span style="color:#22D3EE;font-size:22px;font-weight:800;" th:text="${data.totalNewMedia}">42</span>
+            <span style="color:rgba(255,255,255,0.5);font-size:12px;margin-left:6px;"
+                  th:text="|novos títulos nos últimos ${data.days} dias|">novos títulos</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- SEPARATOR -->
+  <tr>
+    <td style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin:8px 0 24px;">
+        <tr><td style="border-bottom:1px solid #1E1E28;padding-bottom:12px;">
+          <span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;">
+            🆕 Adicionados recentemente
+          </span>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- MEDIA CARDS -->
+  <tr th:if="${data.items != null and !#lists.isEmpty(data.items)}">
+    <td class="email-body-padding" style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr th:each="item : ${data.items}">
+          <td style="padding-bottom:16px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                   style="background:#151520;border-radius:16px;border:1px solid #1E1E28;overflow:hidden;">
+              <!-- BACKDROP -->
+              <tr th:if="${item.backdropUrl != null and !#strings.isEmpty(item.backdropUrl)}">
+                <td style="position:relative;height:160px;">
+                  <img th:src="${item.backdropUrl}" alt=""
+                       width="620" height="160"
+                       style="width:100%;height:160px;object-fit:cover;display:block;opacity:0.7;"/>
+                  <!-- GRADIENT OVERLAY via nested table -->
+                  <div style="position:absolute;bottom:0;left:0;right:0;height:80px;
+                              background:linear-gradient(transparent, #151520);"></div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0 20px 18px 20px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                    <tr>
+                      <!-- POSTER THUMB -->
+                      <td width="56" valign="top" style="width:56px;padding-top:12px;">
+                        <div th:if="${item.posterUrl != null}" style="width:48px;height:72px;border-radius:8px;overflow:hidden;border:1px solid #2A2A35;box-shadow:0 2px 12px rgba(0,0,0,0.5);">
+                          <img th:src="${item.posterUrl}" alt="" width="48" height="72"
+                               style="width:48px;height:72px;object-fit:cover;display:block;"/>
+                        </div>
+                        <div th:unless="${item.posterUrl != null}" style="width:48px;height:72px;border-radius:8px;
+                             background:linear-gradient(135deg,#252535,#1A1A25);border:1px solid #333;text-align:center;line-height:72px;">
+                          <span style="font-size:24px;opacity:0.4;">🎞️</span>
+                        </div>
+                      </td>
+                      <!-- TEXT -->
+                      <td style="padding:14px 0 0 14px;vertical-align:top;">
+                        <p style="margin:0 0 4px;font-size:16px;font-weight:700;color:#FFFFFF;line-height:1.2;"
+                           th:text="${item.title}">Media Title</p>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:4px;">
+                          <tr>
+                            <td style="padding-right:12px;">
+                              <span style="font-size:11px;color:#06B6D4;font-weight:700;background:rgba(6,182,212,0.12);
+                                    border:1px solid rgba(6,182,212,0.22);border-radius:4px;padding:2px 8px;"
+                              th:text="${item.type != null ? (item.type == 'MOVIE' ? 'FILME' : 'SÉRIE') : '—'}">FILME</span>
+                            </td>
+                            <td th:if="${item.avgRating != null}" style="padding-right:12px;">
+                              <span style="color:#F5C518;font-size:13px;font-weight:700;">★</span>
+                              <span style="color:#F5C518;font-size:13px;font-weight:600;margin-left:2px;"
+                                    th:text="${#numbers.formatDecimal(item.avgRating, 1, 1)}">7.5</span>
+                            </td>
+                            <td th:if="${item.releaseYear != null}">
+                              <span style="font-size:11px;color:#666;"
+                                    th:text="${item.releaseYear}">2026</span>
+                            </td>
+                          </tr>
+                        </table>
+                        <p th:if="${item.overview != null and !#strings.isEmpty(item.overview)}"
+                           style="margin:8px 0 0;font-size:12px;color:rgba(255,255,255,0.35);line-height:1.5;"
+                           th:text="${#strings.length(item.overview) > 120 ? #strings.substring(item.overview, 0, 120) + '...' : item.overview}">
+                          Overview text…
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- EMPTY -->
+  <tr th:if="${data.items == null or #lists.isEmpty(data.items)}">
+    <td class="email-body-padding" style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr><td style="background:#151520;border-radius:14px;border:1px dashed #2A2A35;padding:40px;text-align:center;">
+          <p style="margin:0;font-size:36px;">📭</p>
+          <p style="margin:14px 0 0;font-size:14px;color:#555;">Nenhum título novo encontrado no período.</p>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CTA -->
+  <tr>
+    <td style="padding:40px 48px;" align="center">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+        <tr><td style="border-radius:10px;background:linear-gradient(135deg,#06B6D4,#0891B2);box-shadow:0 4px 20px rgba(6,182,212,0.35);">
+          <a th:href="${baseUrl}" style="display:inline-block;padding:15px 40px;color:#FFF;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">
+            Explorar Catálogo &nbsp;→
+          </a>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#08080C;border-top:1px solid #1A1A22;padding:28px 48px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:12px;color:#333;">
+        Você recebeu este e-mail por ter uma conta no
+        <a th:href="${baseUrl}" style="color:#555;text-decoration:none;" th:text="${appName}">CineLog</a>.
+      </p>
+      <p style="margin:0;font-size:11px;color:#222;">© 2026 CineLog · Todos os direitos reservados</p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

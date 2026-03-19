@@ -9,6 +9,7 @@ import com.cine.cinelog.core.domain.model.WatchEntry;
 import com.cine.cinelog.features.watchentry.mapper.WatchEntryMapper;
 import com.cine.cinelog.features.watchentry.web.dto.WatchEntryCreateRequest;
 import com.cine.cinelog.features.watchentry.web.dto.WatchEntryResponse;
+import com.cine.cinelog.core.application.pagination.PageResult;
 import com.cine.cinelog.shared.web.dto.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import java.time.LocalDate;
@@ -93,10 +93,10 @@ class WatchEntryControllerTest {
         WatchEntry entry = mock(WatchEntry.class);
         WatchEntryResponse dto = mock(WatchEntryResponse.class);
 
-        var pageImpl = new PageImpl<>(List.of(entry), PageRequest.of(page, size), 1);
+        var pageResult = new PageResult<>(List.of(entry), page, size, 1L, 1);
         when(listUC.execute(eq(userId), eq(mediaId), eq(episodeId), eq(minRating), eq(from), eq(to),
                 any(PageRequest.class)))
-                .thenAnswer((org.mockito.stubbing.Answer) invocation -> pageImpl);
+                .thenReturn(pageResult);
         when(watchEntryMapper.toResponse(entry)).thenReturn(dto);
 
         ResponseEntity<PageResponse<WatchEntryResponse>> response = controller.list(userId, mediaId, episodeId,

@@ -74,8 +74,9 @@ spring:
         username: ${MAIL_USER:}
         password: ${MAIL_PASS:}
         properties:
-            mail.smtp.auth: false
-            mail.smtp.starttls.enable: false
+            mail.smtp.auth: ${MAIL_AUTH:false}
+            mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
+            mail.smtp.starttls.required: ${MAIL_STARTTLS:false}
 
 springdoc:
     api-docs:
@@ -192,7 +193,7 @@ cinelog:
             allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
             max-age-seconds: 3600
         jwt:
-            secret: ${CINELOG_SECURITY_JWT_SECRET:MINHA_CHAVE_MEGA_SECRETA_DE_NO_MINIMO_32_CHARS}
+            secret: ${CINELOG_SECURITY_JWT_SECRET:CHANGE_ME_SET_CINELOG_SECURITY_JWT_SECRET_IN_ENV}
             expiration-seconds: ${CINELOG_SECURITY_JWT_EXPIRATION_SECONDS:3600}
         auth:
             # A07:2025 — Account lockout
@@ -224,7 +225,7 @@ cinelog:
         base-url: https://api.themoviedb.org/3
         # Use o "API Read Access Token" (JWT longo) da página TMDb → Settings → API
         # OU a v3 API Key curta — ambas funcionam como Bearer token
-        bearer-token: ${TMDB_API_KEY:coloque_sua_key_aqui}
+        bearer-token: ${TMDB_API_KEY:CHANGE_ME_SET_TMDB_API_KEY_IN_ENV}
         language: pt-BR
         region: BR
         timeout-ms: 3000

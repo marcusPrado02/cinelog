@@ -14,10 +14,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 /**
  * Agendador dos batch jobs de importação do TMDB.
  *
- * <p>Cada método é controlado pelo cron e flag {@code enabled} definidos em
+ * <p>
+ * Cada método é controlado pelo cron e flag {@code enabled} definidos em
  * {@code cinelog.batch.jobs.*} no {@code application.yml}.
  * Os crons são lidos diretamente das propriedades via SpEL no atributo
- * {@code cron} da anotação {@code @Scheduled}.</p>
+ * {@code cron} da anotação {@code @Scheduled}.
+ * </p>
  */
 @Configuration
 public class BatchSchedulerConfig {
@@ -31,6 +33,9 @@ public class BatchSchedulerConfig {
     private final Job importTvShowsJob;
     private final Job importCreditsJob;
     private final Job importSeasonsJob;
+    private final Job syncReviewsJob;
+    private final Job enrichMediaImagesJob;
+    private final Job enrichPersonProfilesJob;
 
     public BatchSchedulerConfig(
             JobLauncher jobLauncher,
@@ -39,7 +44,10 @@ public class BatchSchedulerConfig {
             @Qualifier("importMoviesJob") Job importMoviesJob,
             @Qualifier("importTvShowsJob") Job importTvShowsJob,
             @Qualifier("importCreditsJob") Job importCreditsJob,
-            @Qualifier("importSeasonsJob") Job importSeasonsJob) {
+            @Qualifier("importSeasonsJob") Job importSeasonsJob,
+            @Qualifier("syncReviewsJob") Job syncReviewsJob,
+            @Qualifier("enrichMediaImagesJob") Job enrichMediaImagesJob,
+            @Qualifier("enrichPersonProfilesJob") Job enrichPersonProfilesJob) {
         this.jobLauncher = jobLauncher;
         this.batchProperties = batchProperties;
         this.syncGenresJob = syncGenresJob;
@@ -47,6 +55,9 @@ public class BatchSchedulerConfig {
         this.importTvShowsJob = importTvShowsJob;
         this.importCreditsJob = importCreditsJob;
         this.importSeasonsJob = importSeasonsJob;
+        this.syncReviewsJob = syncReviewsJob;
+        this.enrichMediaImagesJob = enrichMediaImagesJob;
+        this.enrichPersonProfilesJob = enrichPersonProfilesJob;
     }
 
     @Scheduled(cron = "${cinelog.batch.jobs.sync-genres.cron:0 0 3 * * SUN}")
@@ -106,6 +117,39 @@ public class BatchSchedulerConfig {
             return;
         }
         runJob(importSeasonsJob, new JobParametersBuilder()
+                .addLong("run.id", System.currentTimeMillis())
+                .toJobParameters());
+    }
+
+    @Scheduled(cron = "${cinelog.batch.jobs.sync-reviews.cron:0 30 5 * * SUN}")
+    public void scheduleSyncReviews() {
+        if (!batchProperties.getJobs().getSyncReviews().isEnabled()) {
+            log.debug("syncReviewsJob is disabled, skipping.");
+            return;
+        }
+        runJob(syncReviewsJob, new JobParametersBuilder()
+                .addLong("run.id", System.currentTimeMillis())
+                .toJobParameters());
+    }
+
+    @Scheduled(cron = "${cinelog.batch.jobs.enrich-media-images.cron:0 0 6 * * SUN}")
+    public void scheduleEnrichMediaImages() {
+        if (!batchProperties.getJobs().getEnrichMediaImages().isEnabled()) {
+            log.debug("enrichMediaImagesJob is disabled, skipping.");
+            return;
+        }
+        runJob(enrichMediaImagesJob, new JobParametersBuilder()
+                .addLong("run.id", System.currentTimeMillis())
+                .toJobParameters());
+    }
+
+    @Scheduled(cron = "${cinelog.batch.jobs.enrich-person-profiles.cron:0 30 6 * * SUN}")
+    public void scheduleEnrichPersonProfiles() {
+        if (!batchProperties.getJobs().getEnrichPersonProfiles().isEnabled()) {
+            log.debug("enrichPersonProfilesJob is disabled, skipping.");
+            return;
+        }
+        runJob(enrichPersonProfilesJob, new JobParametersBuilder()
                 .addLong("run.id", System.currentTimeMillis())
                 .toJobParameters());
     }

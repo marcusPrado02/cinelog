@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.23.xsd">
+
+    <changeSet id="20260314000000-1" author="cinelog">
+        <comment>Adiciona colunas de enriquecimento de pessoas vindas da API TMDB /person/{id}</comment>
+
+        <addColumn tableName="people">
+            <column name="biography" type="TEXT"
+                remarks="Biografia da pessoa (TMDB)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="known_for_department" type="VARCHAR(100)"
+                remarks="Departamento principal (Acting, Directing, etc.)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="gender" type="INT"
+                remarks="Gênero TMDB: 0=não especificado, 1=feminino, 2=masculino, 3=não-binário">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="popularity" type="DECIMAL(10,3)"
+                remarks="Índice de popularidade TMDB">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="imdb_id" type="VARCHAR(20)"
+                remarks="ID IMDB da pessoa (ex: nm0000093)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="homepage" type="VARCHAR(500)"
+                remarks="Site pessoal da pessoa">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+
+        <addColumn tableName="people">
+            <column name="deathday" type="DATE"
+                remarks="Data de falecimento (caso aplicável)">
+                <constraints nullable="true" />
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

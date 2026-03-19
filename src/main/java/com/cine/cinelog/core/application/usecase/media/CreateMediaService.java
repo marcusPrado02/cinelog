@@ -90,7 +90,7 @@ public class CreateMediaService implements CreateMediaUseCase {
     @CacheEvict(value = "mediaPage", allEntries = true)
     public Media execute(Media media) {
         log.debug("Iniciando criação de mídia no service. Dados: {}",
-                Map.of("title", media.getTitle(), "type", media.getType(),
+                Map.of("title", String.valueOf(media.getTitle()), "type", String.valueOf(media.getType()),
                         "releaseYear", media.getReleaseYear() != null ? media.getReleaseYear() : "N/A"));
 
         try {

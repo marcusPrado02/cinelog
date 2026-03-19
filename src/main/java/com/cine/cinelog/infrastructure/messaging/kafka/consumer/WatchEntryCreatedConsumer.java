@@ -1,5 +1,6 @@
 package com.cine.cinelog.infrastructure.messaging.kafka.consumer;
 
+import com.cine.cinelog.core.application.services.DeadLetterService;
 import com.cine.cinelog.infrastructure.messaging.events.EventEnvelope;
 import com.cine.cinelog.infrastructure.messaging.events.EventEnvelopeValidator;
 import com.cine.cinelog.infrastructure.messaging.kafka.KafkaTopics;
@@ -7,6 +8,8 @@ import com.cine.cinelog.infrastructure.persistence.inbox.InboxEventEntity;
 import com.cine.cinelog.infrastructure.persistence.inbox.InboxEventRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,14 +86,20 @@ public class WatchEntryCreatedConsumer extends BaseKafkaConsumer {
     private final InboxEventRepository inboxRepository;
     private final ObjectMapper objectMapper;
     private final EventEnvelopeValidator envelopeValidator;
+    private final DeadLetterService deadLetterService;
+    private final CacheManager cacheManager;
 
     public WatchEntryCreatedConsumer(
             InboxEventRepository inboxRepository,
             ObjectMapper objectMapper,
-            EventEnvelopeValidator envelopeValidator) {
+            EventEnvelopeValidator envelopeValidator,
+            DeadLetterService deadLetterService,
+            CacheManager cacheManager) {
         this.inboxRepository = inboxRepository;
         this.objectMapper = objectMapper;
         this.envelopeValidator = envelopeValidator;
+        this.deadLetterService = deadLetterService;
+        this.cacheManager = cacheManager;
     }
 
     /**
@@ -211,10 +220,11 @@ public class WatchEntryCreatedConsumer extends BaseKafkaConsumer {
     private void sendToDLQ(String envelopeJson, String reason) {
         log.error("Enviando evento para DLQ: reason={}, payload={}", reason,
                 envelopeJson.substring(0, Math.min(500, envelopeJson.length())));
-        // TODO PR3: Implementar envio para DLQ (cinelog.dlq)
-        // - Persistir em tabela dlq_event
-        // - Publicar no tópico cinelog.dlq
-        // - Incluir metadata: reason, consumer, timestamp, originalTopic
+        deadLetterService.persistRawFailedEvent(
+                KafkaTopics.WATCH_ENTRY_CREATED_V1,
+                CONSUMER_NAME,
+                envelopeJson,
+                reason);
     }
 
     /**
@@ -239,12 +249,12 @@ public class WatchEntryCreatedConsumer extends BaseKafkaConsumer {
             log.info("Processando WatchEntry criado: watchEntryId={}, userId={}, mediaId={}",
                     watchEntryId, userId, mediaId);
 
-            // TODO: Implementar lógica de negócio real
-            // Exemplos:
-            // - cacheService.invalidateUserStats(userId);
-            // - notificationService.sendPushNotification(userId, "Filme adicionado!");
-            // - elasticsearchService.indexWatchEntry(watchEntryId);
-            // - statisticsService.incrementWatchCount(userId);
+            // Evict userStats cache so next read reflects the new entry
+            Cache userStatsCache = cacheManager.getCache("userStats");
+            if (userStatsCache != null) {
+                userStatsCache.evict(userId);
+                log.debug("Cache 'userStats' evicted for userId={}", userId);
+            }
 
         } catch (Exception ex) {
             log.error("Erro ao processar lógica de negócio: {}", ex.getMessage(), ex);

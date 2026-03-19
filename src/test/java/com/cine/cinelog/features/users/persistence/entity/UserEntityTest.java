@@ -44,7 +44,7 @@ public class UserEntityTest {
     @Test
     void prePersistShouldNotOverrideExistingCreatedAt() {
         UserEntity u = new UserEntity();
-        LocalDateTime fixed = LocalDateTime.parse("2020-01-01T10:00:00Z");
+        LocalDateTime fixed = LocalDateTime.parse("2020-01-01T10:00:00");
         u.setCreatedAt(fixed);
 
         u.pre();
@@ -80,7 +80,7 @@ public class UserEntityTest {
         assertFalse(emailCol.nullable(), "email should be not nullable");
         assertEquals(255, emailCol.length(), "email length should be 255");
 
-        Field createdAtField = UserEntity.class.getDeclaredField("createdAt");
+        Field createdAtField = com.cine.cinelog.shared.persistence.AuditableEntity.class.getDeclaredField("createdAt");
         Column createdAtCol = createdAtField.getAnnotation(Column.class);
         assertNotNull(createdAtCol, "createdAt field should have @Column");
         assertEquals("created_at", createdAtCol.name(), "createdAt column name should be 'created_at'");

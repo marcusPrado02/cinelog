@@ -109,16 +109,22 @@ class WatchEntryRepositoryAdapterTest {
 
         @SuppressWarnings("unchecked")
         Page<WatchEntryEntity> pageEntities = mock(Page.class);
-        @SuppressWarnings("unchecked")
-        Page<WatchEntry> pageDomains = mock(Page.class);
+
+        WatchEntryEntity entity = mock(WatchEntryEntity.class);
+        WatchEntry domain = mock(WatchEntry.class);
 
         when(jpa.search(userId, mediaId, episodeId, minRating, from, to, pageable)).thenReturn(pageEntities);
-        when(pageEntities.map(ArgumentMatchers.<Function<WatchEntryEntity, WatchEntry>>any())).thenReturn(pageDomains);
+        when(pageEntities.getContent()).thenReturn(java.util.List.of(entity));
+        when(pageEntities.getNumber()).thenReturn(0);
+        when(pageEntities.getSize()).thenReturn(10);
+        when(pageEntities.getTotalElements()).thenReturn(1L);
+        when(pageEntities.getTotalPages()).thenReturn(1);
 
         PageResult<WatchEntry> result = adapter.listByUser(userId, mediaId, episodeId, minRating, from, to, pageable);
 
-        assertSame(pageDomains, result);
+        assertNotNull(result);
+        assertEquals(0, result.page());
+        assertEquals(1, result.totalPages());
         verify(jpa).search(userId, mediaId, episodeId, minRating, from, to, pageable);
-        verify(pageEntities).map(any());
     }
 }

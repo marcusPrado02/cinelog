@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Gênero em Destaque — CineLog</title>
+  <style type="text/css">
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}
+    img{-ms-interpolation-mode:bicubic;border:0;display:block;outline:none;text-decoration:none;}
+    body{margin:0!important;padding:0!important;background-color:#08080C;}
+    @media only screen and (max-width:640px){
+      .email-body-padding{padding:0 16px!important;}
+      .stat-cell{display:block!important;width:100%!important;padding-bottom:8px!important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#08080C;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#08080C;line-height:1px;"
+     th:text="|Gênero em destaque: ${data.genreName} — ${data.totalMedia} títulos, nota média ${data.avgRating}|">
+  Descubra o gênero com mais destaque nesta semana.
+</div>
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#08080C;">
+<tr><td align="center" style="padding:32px 16px;">
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="620"
+       style="background-color:#111118;border-radius:20px;overflow:hidden;border:1px solid #1E1E28;box-shadow:0 8px 40px rgba(0,0,0,0.8);">
+
+  <!-- ACCENT BAR -->
+  <tr><td height="5" style="background:linear-gradient(90deg,#F59E0B,#D97706,#FBBF24);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:linear-gradient(175deg,#1A1200 0%,#120D00 45%,#0A0A10 100%);padding:40px 48px 28px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td valign="middle" style="width:36px;">
+            <div style="width:4px;height:36px;background:#F59E0B;border-radius:2px;"></div>
+          </td>
+          <td valign="middle" style="padding-left:10px;">
+            <span style="font-size:22px;font-weight:900;color:#FFFFFF;letter-spacing:-0.5px;" th:text="${appName}">CineLog</span>
+          </td>
+          <td align="right" valign="middle">
+            <span style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;">Gênero</span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:24px 0 0;font-size:32px;font-weight:800;color:#FFFFFF;line-height:1.15;letter-spacing:-0.5px;">
+        Gênero em <span style="color:#FBBF24;">Destaque</span> 🎯
+      </p>
+      <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.45);">
+        Um mergulho nos melhores títulos e talentos de um gênero
+      </p>
+      <!-- Genre Name Pill -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:18px;">
+        <tr>
+          <td style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:24px;padding:10px 24px;">
+            <span style="color:#FBBF24;font-size:24px;font-weight:800;" th:text="${data.genreName}">Drama</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- STATS ROW -->
+  <tr>
+    <td class="email-body-padding" style="padding:28px 48px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td class="stat-cell" width="25%" style="padding-right:8px;">
+            <div style="background:#151520;border:1px solid #1E1E28;border-radius:12px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:24px;font-weight:800;color:#FFFFFF;" th:text="${data.totalMedia}">120</p>
+              <p style="margin:4px 0 0;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;">Total</p>
+            </div>
+          </td>
+          <td class="stat-cell" width="25%" style="padding-right:8px;">
+            <div style="background:#151520;border:1px solid #1E1E28;border-radius:12px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:24px;font-weight:800;color:#FFFFFF;" th:text="${data.totalMovies}">80</p>
+              <p style="margin:4px 0 0;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;">Filmes</p>
+            </div>
+          </td>
+          <td class="stat-cell" width="25%" style="padding-right:8px;">
+            <div style="background:#151520;border:1px solid #1E1E28;border-radius:12px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:24px;font-weight:800;color:#FFFFFF;" th:text="${data.totalSeries}">40</p>
+              <p style="margin:4px 0 0;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;">Séries</p>
+            </div>
+          </td>
+          <td class="stat-cell" width="25%">
+            <div style="background:#151520;border:1px solid #1E1E28;border-radius:12px;padding:16px;text-align:center;">
+              <p style="margin:0;font-size:24px;font-weight:800;color:#F5C518;" th:text="${data.avgRating}">7.8</p>
+              <p style="margin:4px 0 0;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;">★ Nota</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- TOP MEDIA SECTION -->
+  <tr>
+    <td class="email-body-padding" style="padding:32px 48px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:16px;">
+        <tr><td style="border-bottom:1px solid #1E1E28;padding-bottom:12px;">
+          <span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;"
+                th:text="|🏆 Mais bem avaliados em ${data.genreName}|">🏆 Mais bem avaliados</span>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr th:if="${data.topRatedInGenre != null and !#lists.isEmpty(data.topRatedInGenre)}">
+    <td class="email-body-padding" style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr th:each="item, iter : ${data.topRatedInGenre}">
+          <td style="padding-bottom:12px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                   style="background:#151520;border-radius:14px;border:1px solid #1E1E28;overflow:hidden;">
+              <tr>
+                <!-- RANK -->
+                <td width="40" valign="middle" style="width:40px;padding:14px 0 14px 16px;">
+                  <div th:style="|background:${iter.index == 0 ? 'linear-gradient(135deg,#F5C518,#D4A30F)' : 'rgba(245,158,11,0.15)'};width:28px;height:28px;border-radius:8px;text-align:center;line-height:28px;font-size:12px;font-weight:800;color:${iter.index == 0 ? '#000' : '#F59E0B'};|"
+                       th:text="${iter.index + 1}">1</div>
+                </td>
+                <!-- POSTER -->
+                <td width="48" valign="middle" style="width:48px;padding:10px 0;">
+                  <div th:if="${item.posterUrl != null}" style="width:40px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #2A2A35;">
+                    <img th:src="${item.posterUrl}" alt="" width="40" height="60"
+                         style="width:40px;height:60px;object-fit:cover;display:block;"/>
+                  </div>
+                  <div th:unless="${item.posterUrl != null}" style="width:40px;height:60px;border-radius:6px;
+                       background:linear-gradient(135deg,#252535,#1A1A25);border:1px solid #333;text-align:center;line-height:60px;">
+                    <span style="font-size:20px;opacity:0.4;">🎬</span>
+                  </div>
+                </td>
+                <!-- TEXT -->
+                <td style="padding:14px 16px 14px 12px;">
+                  <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#FFFFFF;line-height:1.2;"
+                     th:text="${item.title}">Movie Title</p>
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:2px;">
+                    <tr>
+                      <td style="padding-right:12px;">
+                        <span style="font-size:11px;color:#F59E0B;font-weight:700;background:rgba(245,158,11,0.12);
+                              border:1px solid rgba(245,158,11,0.22);border-radius:4px;padding:2px 8px;"
+                              th:text="${item.type != null ? (item.type == 'MOVIE' ? 'FILME' : 'SÉRIE') : '—'}">FILME</span>
+                      </td>
+                      <td th:if="${item.avgRating != null}">
+                        <span style="color:#F5C518;font-size:12px;font-weight:700;">★</span>
+                        <span style="color:#F5C518;font-size:12px;font-weight:600;"
+                              th:text="${#numbers.formatDecimal(item.avgRating, 1, 1)}">8.5</span>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- TOP ACTORS IN GENRE -->
+  <tr th:if="${data.topActorsInGenre != null and !#lists.isEmpty(data.topActorsInGenre)}">
+    <td class="email-body-padding" style="padding:28px 48px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom:16px;">
+        <tr><td style="border-bottom:1px solid #1E1E28;padding-bottom:12px;">
+          <span style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;"
+                th:text="|🎭 Atores destaque em ${data.genreName}|">🎭 Atores destaque</span>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr th:if="${data.topActorsInGenre != null and !#lists.isEmpty(data.topActorsInGenre)}">
+    <td class="email-body-padding" style="padding:0 48px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <!-- Horizontal actor chips -->
+        <tr>
+          <td>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr th:each="actor : ${data.topActorsInGenre}">
+                <td style="padding-bottom:10px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                         style="background:#151520;border-radius:12px;border:1px solid #1E1E28;">
+                    <tr>
+                      <!-- PHOTO -->
+                      <td width="52" valign="middle" style="width:52px;padding:12px 0 12px 14px;">
+                        <div th:if="${actor.profileUrl != null and !#strings.isEmpty(actor.profileUrl)}"
+                             style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid #F59E0B;">
+                          <img th:src="${actor.profileUrl}" alt="" width="44" height="44"
+                               style="width:44px;height:44px;object-fit:cover;display:block;"/>
+                        </div>
+                        <div th:unless="${actor.profileUrl != null and !#strings.isEmpty(actor.profileUrl)}"
+                             style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#252535,#1A1A25);
+                                    border:2px solid #333;text-align:center;line-height:44px;">
+                          <span style="font-size:20px;opacity:0.4;">🎭</span>
+                        </div>
+                      </td>
+                      <!-- NAME + STATS -->
+                      <td style="padding:12px 14px 12px 10px;vertical-align:middle;">
+                        <p style="margin:0;font-size:14px;font-weight:700;color:#FFFFFF;line-height:1.2;"
+                           th:text="${actor.name}">Actor Name</p>
+                        <p style="margin:3px 0 0;font-size:11px;color:#666;">
+                          <span th:text="|${actor.filmCount} filmes|">5 filmes</span>
+                          <span style="margin:0 5px;color:#333;">•</span>
+                          <span style="color:#F5C518;">★ <span th:text="${actor.avgRating}">8.0</span></span>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CTA -->
+  <tr>
+    <td style="padding:40px 48px;" align="center">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+        <tr><td style="border-radius:10px;background:linear-gradient(135deg,#F59E0B,#D97706);box-shadow:0 4px 20px rgba(245,158,11,0.35);">
+          <a th:href="${baseUrl}" style="display:inline-block;padding:15px 40px;color:#FFF;text-decoration:none;font-size:15px;font-weight:700;border-radius:10px;">
+            Explorar Gênero &nbsp;→
+          </a>
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#08080C;border-top:1px solid #1A1A22;padding:28px 48px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:12px;color:#333;">
+        Você recebeu este e-mail por ter uma conta no
+        <a th:href="${baseUrl}" style="color:#555;text-decoration:none;" th:text="${appName}">CineLog</a>.
+      </p>
+      <p style="margin:0;font-size:11px;color:#222;">© 2026 CineLog · Todos os direitos reservados</p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

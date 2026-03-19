@@ -5,15 +5,26 @@ import com.cine.cinelog.features.batch.jobs.credits.MediaWithTmdbIdItemReader;
 import com.cine.cinelog.features.batch.jobs.credits.TmdbCreditsBundle;
 import com.cine.cinelog.features.batch.jobs.credits.TmdbCreditsItemProcessor;
 import com.cine.cinelog.features.batch.jobs.genres.SyncGenresTasklet;
+import com.cine.cinelog.features.batch.jobs.images.MediaImageUpdateWriter;
+import com.cine.cinelog.features.batch.jobs.images.MediaMissingImagesItemReader;
+import com.cine.cinelog.features.batch.jobs.images.TmdbMediaImageProcessor;
 import com.cine.cinelog.features.batch.jobs.media.MediaItemWriter;
 import com.cine.cinelog.features.batch.jobs.media.MediaWithGenres;
 import com.cine.cinelog.features.batch.jobs.media.TmdbMediaItemProcessor;
 import com.cine.cinelog.features.batch.jobs.media.TmdbMediaPageReader;
+import com.cine.cinelog.features.batch.jobs.people.PersonMissingProfileItemReader;
+import com.cine.cinelog.features.batch.jobs.people.PersonProfileUpdateWriter;
+import com.cine.cinelog.features.batch.jobs.people.TmdbPersonDetailsProcessor;
+import com.cine.cinelog.features.batch.jobs.reviews.ReviewsBundle;
+import com.cine.cinelog.features.batch.jobs.reviews.ReviewsMediaItemReader;
+import com.cine.cinelog.features.batch.jobs.reviews.TmdbReviewsItemProcessor;
+import com.cine.cinelog.features.batch.jobs.reviews.TmdbReviewsItemWriter;
 import com.cine.cinelog.features.batch.jobs.seasons.SeasonsEpisodesItemWriter;
 import com.cine.cinelog.features.batch.jobs.seasons.TmdbSeasonsBundle;
 import com.cine.cinelog.features.batch.jobs.seasons.TmdbSeasonsItemProcessor;
 import com.cine.cinelog.features.batch.jobs.seasons.TvSeriesItemReader;
 import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.core.domain.model.Person;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaSummary;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -27,8 +38,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 /**
  * Configuração central dos Spring Batch Jobs para importação de dados do TMDB.
  *
- * <p>Cada job utiliza o padrão Spring Batch 5 com JobBuilder/StepBuilder
- * injetando JobRepository e PlatformTransactionManager diretamente.</p>
+ * <p>
+ * Cada job utiliza o padrão Spring Batch 5 com JobBuilder/StepBuilder
+ * injetando JobRepository e PlatformTransactionManager diretamente.
+ * </p>
  */
 @Configuration
 public class BatchJobsConfig {
@@ -45,7 +58,7 @@ public class BatchJobsConfig {
 
     @Bean
     public Job syncGenresJob(JobRepository jobRepository,
-                             Step syncGenresStep) {
+            Step syncGenresStep) {
         return new JobBuilder("syncGenresJob", jobRepository)
                 .start(syncGenresStep)
                 .build();
@@ -53,8 +66,8 @@ public class BatchJobsConfig {
 
     @Bean
     public Step syncGenresStep(JobRepository jobRepository,
-                               PlatformTransactionManager txManager,
-                               SyncGenresTasklet syncGenresTasklet) {
+            PlatformTransactionManager txManager,
+            SyncGenresTasklet syncGenresTasklet) {
         return new StepBuilder("syncGenresStep", jobRepository)
                 .tasklet(syncGenresTasklet, txManager)
                 .build();
@@ -66,7 +79,7 @@ public class BatchJobsConfig {
 
     @Bean
     public Job importMoviesJob(JobRepository jobRepository,
-                               Step importMoviesStep) {
+            Step importMoviesStep) {
         return new JobBuilder("importMoviesJob", jobRepository)
                 .start(importMoviesStep)
                 .build();
@@ -74,10 +87,10 @@ public class BatchJobsConfig {
 
     @Bean
     public Step importMoviesStep(JobRepository jobRepository,
-                                 PlatformTransactionManager txManager,
-                                 TmdbMediaPageReader tmdbMediaPageReader,
-                                 TmdbMediaItemProcessor tmdbMediaItemProcessor,
-                                 MediaItemWriter mediaItemWriter) {
+            PlatformTransactionManager txManager,
+            TmdbMediaPageReader tmdbMediaPageReader,
+            TmdbMediaItemProcessor tmdbMediaItemProcessor,
+            MediaItemWriter mediaItemWriter) {
         return new StepBuilder("importMoviesStep", jobRepository)
                 .<TmdbMediaSummary, MediaWithGenres>chunk(props.getChunkSize(), txManager)
                 .reader(tmdbMediaPageReader)
@@ -95,7 +108,7 @@ public class BatchJobsConfig {
 
     @Bean
     public Job importTvShowsJob(JobRepository jobRepository,
-                                Step importTvShowsStep) {
+            Step importTvShowsStep) {
         return new JobBuilder("importTvShowsJob", jobRepository)
                 .start(importTvShowsStep)
                 .build();
@@ -103,10 +116,10 @@ public class BatchJobsConfig {
 
     @Bean
     public Step importTvShowsStep(JobRepository jobRepository,
-                                  PlatformTransactionManager txManager,
-                                  TmdbMediaPageReader tmdbMediaPageReader,
-                                  TmdbMediaItemProcessor tmdbMediaItemProcessor,
-                                  MediaItemWriter mediaItemWriter) {
+            PlatformTransactionManager txManager,
+            TmdbMediaPageReader tmdbMediaPageReader,
+            TmdbMediaItemProcessor tmdbMediaItemProcessor,
+            MediaItemWriter mediaItemWriter) {
         return new StepBuilder("importTvShowsStep", jobRepository)
                 .<TmdbMediaSummary, MediaWithGenres>chunk(props.getChunkSize(), txManager)
                 .reader(tmdbMediaPageReader)
@@ -124,7 +137,7 @@ public class BatchJobsConfig {
 
     @Bean
     public Job importCreditsJob(JobRepository jobRepository,
-                                Step importCreditsStep) {
+            Step importCreditsStep) {
         return new JobBuilder("importCreditsJob", jobRepository)
                 .start(importCreditsStep)
                 .build();
@@ -132,10 +145,10 @@ public class BatchJobsConfig {
 
     @Bean
     public Step importCreditsStep(JobRepository jobRepository,
-                                  PlatformTransactionManager txManager,
-                                  MediaWithTmdbIdItemReader mediaWithTmdbIdItemReader,
-                                  TmdbCreditsItemProcessor tmdbCreditsItemProcessor,
-                                  CreditsItemWriter creditsItemWriter) {
+            PlatformTransactionManager txManager,
+            MediaWithTmdbIdItemReader mediaWithTmdbIdItemReader,
+            TmdbCreditsItemProcessor tmdbCreditsItemProcessor,
+            CreditsItemWriter creditsItemWriter) {
         return new StepBuilder("importCreditsStep", jobRepository)
                 .<Media, TmdbCreditsBundle>chunk(props.getChunkSize(), txManager)
                 .reader(mediaWithTmdbIdItemReader)
@@ -153,7 +166,7 @@ public class BatchJobsConfig {
 
     @Bean
     public Job importSeasonsJob(JobRepository jobRepository,
-                                Step importSeasonsStep) {
+            Step importSeasonsStep) {
         return new JobBuilder("importSeasonsJob", jobRepository)
                 .start(importSeasonsStep)
                 .build();
@@ -161,15 +174,99 @@ public class BatchJobsConfig {
 
     @Bean
     public Step importSeasonsStep(JobRepository jobRepository,
-                                  PlatformTransactionManager txManager,
-                                  TvSeriesItemReader tvSeriesItemReader,
-                                  TmdbSeasonsItemProcessor tmdbSeasonsItemProcessor,
-                                  SeasonsEpisodesItemWriter seasonsEpisodesItemWriter) {
+            PlatformTransactionManager txManager,
+            TvSeriesItemReader tvSeriesItemReader,
+            TmdbSeasonsItemProcessor tmdbSeasonsItemProcessor,
+            SeasonsEpisodesItemWriter seasonsEpisodesItemWriter) {
         return new StepBuilder("importSeasonsStep", jobRepository)
                 .<Media, TmdbSeasonsBundle>chunk(props.getChunkSize(), txManager)
                 .reader(tvSeriesItemReader)
                 .processor(tmdbSeasonsItemProcessor)
                 .writer(seasonsEpisodesItemWriter)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(50)
+                .build();
+    }
+
+    // =========================================================================
+    // Job: syncReviewsJob
+    // =========================================================================
+
+    @Bean
+    public Job syncReviewsJob(JobRepository jobRepository, Step syncReviewsStep) {
+        return new JobBuilder("syncReviewsJob", jobRepository)
+                .start(syncReviewsStep)
+                .build();
+    }
+
+    @Bean
+    public Step syncReviewsStep(JobRepository jobRepository,
+            PlatformTransactionManager txManager,
+            ReviewsMediaItemReader reviewsMediaItemReader,
+            TmdbReviewsItemProcessor tmdbReviewsItemProcessor,
+            TmdbReviewsItemWriter tmdbReviewsItemWriter) {
+        return new StepBuilder("syncReviewsStep", jobRepository)
+                .<Media, ReviewsBundle>chunk(props.getChunkSize(), txManager)
+                .reader(reviewsMediaItemReader)
+                .processor(tmdbReviewsItemProcessor)
+                .writer(tmdbReviewsItemWriter)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(100)
+                .build();
+    }
+
+    // =========================================================================
+    // Job: enrichMediaImagesJob
+    // =========================================================================
+
+    @Bean
+    public Job enrichMediaImagesJob(JobRepository jobRepository, Step enrichMediaImagesStep) {
+        return new JobBuilder("enrichMediaImagesJob", jobRepository)
+                .start(enrichMediaImagesStep)
+                .build();
+    }
+
+    @Bean
+    public Step enrichMediaImagesStep(JobRepository jobRepository,
+            PlatformTransactionManager txManager,
+            MediaMissingImagesItemReader mediaMissingImagesItemReader,
+            TmdbMediaImageProcessor tmdbMediaImageProcessor,
+            MediaImageUpdateWriter mediaImageUpdateWriter) {
+        return new StepBuilder("enrichMediaImagesStep", jobRepository)
+                .<Media, Media>chunk(props.getChunkSize(), txManager)
+                .reader(mediaMissingImagesItemReader)
+                .processor(tmdbMediaImageProcessor)
+                .writer(mediaImageUpdateWriter)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(50)
+                .build();
+    }
+
+    // =========================================================================
+    // Job: enrichPersonProfilesJob
+    // =========================================================================
+
+    @Bean
+    public Job enrichPersonProfilesJob(JobRepository jobRepository, Step enrichPersonProfilesStep) {
+        return new JobBuilder("enrichPersonProfilesJob", jobRepository)
+                .start(enrichPersonProfilesStep)
+                .build();
+    }
+
+    @Bean
+    public Step enrichPersonProfilesStep(JobRepository jobRepository,
+            PlatformTransactionManager txManager,
+            PersonMissingProfileItemReader personMissingProfileItemReader,
+            TmdbPersonDetailsProcessor tmdbPersonDetailsProcessor,
+            PersonProfileUpdateWriter personProfileUpdateWriter) {
+        return new StepBuilder("enrichPersonProfilesStep", jobRepository)
+                .<Person, Person>chunk(props.getChunkSize(), txManager)
+                .reader(personMissingProfileItemReader)
+                .processor(tmdbPersonDetailsProcessor)
+                .writer(personProfileUpdateWriter)
                 .faultTolerant()
                 .skip(Exception.class)
                 .skipLimit(50)

@@ -4,6 +4,7 @@ import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
 import com.cine.cinelog.core.domain.model.WatchEntry;
+import com.cine.cinelog.core.domain.model.WatchEntryStatusType;
 import com.cine.cinelog.core.domain.policy.RatingPolicy;
 import com.cine.cinelog.core.domain.policy.WatchEntryPolicy;
 import com.cine.cinelog.core.domain.policy.WatchEntryReferencePolicy;
@@ -26,6 +28,8 @@ class UpdateWatchEntryServiceTest {
     private RatingPolicy ratingPolicy;
     @Mock
     private WatchEntry entry;
+    @Mock
+    private WatchEntry updated;
 
     @Mock
     private UpdateWatchEntryService service;
@@ -36,48 +40,54 @@ class UpdateWatchEntryServiceTest {
     @BeforeEach
     void setUp() {
         service = new UpdateWatchEntryService(repo, watchPolicy, ratingPolicy, referencePolicy);
+        // Always return entry when findById is called (entry.getId() = null by default
+        // from mock)
+        when(repo.findById(any())).thenReturn(Optional.of(entry));
+        // updateFrom returns the updated mock
+        when(entry.updateFrom(entry)).thenReturn(updated);
+        // updated is not in PLANNING (statusType = COMPLETED by default behavior)
+        lenient().when(updated.getStatusType()).thenReturn(WatchEntryStatusType.COMPLETED);
+        // save returns updated
+        when(repo.save(updated)).thenReturn(updated);
     }
 
     @Test
     void shouldValidateUpdate_andSave_whenNotRatingOperation() {
-        when(entry.getRating()).thenReturn(null);
-        when(entry.getComment()).thenReturn("no-rating");
-        when(repo.save(entry)).thenReturn(entry);
+        when(updated.getRating()).thenReturn(null);
+        when(updated.getComment()).thenReturn("no-rating");
 
         service.execute(entry.getId(), entry, false);
 
-        verify(watchPolicy).validateUpdate(entry);
+        verify(watchPolicy).validateUpdate(updated);
         verify(ratingPolicy, never()).validateCanRate(any(), any(), any());
-        verify(entry).applyRating(null, "no-rating");
-        verify(repo).save(entry);
+        verify(updated).applyRating(null, "no-rating");
+        verify(repo).save(updated);
     }
 
     @Test
     void shouldValidateCanRate_andSave_whenRatingOperation_andRatingPresent() {
         BigDecimal rating = BigDecimal.valueOf(4);
-        when(entry.getRating()).thenReturn(rating);
-        when(entry.getComment()).thenReturn("good");
-        when(repo.save(entry)).thenReturn(entry);
+        when(updated.getRating()).thenReturn(rating);
+        when(updated.getComment()).thenReturn("good");
 
         service.execute(entry.getId(), entry, true);
 
-        verify(watchPolicy).validateUpdate(entry);
-        verify(ratingPolicy).validateCanRate(eq(entry), eq(rating), any(Instant.class));
-        verify(entry).applyRating(rating, "good");
-        verify(repo).save(entry);
+        verify(watchPolicy).validateUpdate(updated);
+        verify(ratingPolicy).validateCanRate(eq(updated), eq(rating), any(Instant.class));
+        verify(updated).applyRating(rating, "good");
+        verify(repo).save(updated);
     }
 
     @Test
     void shouldNotCallValidateCanRate_whenRatingOperation_butNoRatingPresent() {
-        when(entry.getRating()).thenReturn(null);
-        when(entry.getComment()).thenReturn("empty");
-        when(repo.save(entry)).thenReturn(entry);
+        when(updated.getRating()).thenReturn(null);
+        when(updated.getComment()).thenReturn("empty");
 
         service.execute(entry.getId(), entry, true);
 
-        verify(watchPolicy).validateUpdate(entry);
+        verify(watchPolicy).validateUpdate(updated);
         verify(ratingPolicy, never()).validateCanRate(any(), any(), any());
-        verify(entry).applyRating(null, "empty");
-        verify(repo).save(entry);
+        verify(updated).applyRating(null, "empty");
+        verify(repo).save(updated);
     }
 }

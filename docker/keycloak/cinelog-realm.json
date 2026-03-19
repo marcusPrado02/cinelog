@@ -270,6 +270,33 @@
       "requiredActions": [
         "CONFIGURE_TOTP"
       ]
+    },
+    {
+      "username": "marcus",
+      "email": "marcus@cinelog.dev",
+      "firstName": "Marcus",
+      "lastName": "Prado",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Marcus@CineLog2025!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "USER",
+        "ADMIN",
+        "CONTENT_ADMIN",
+        "MEDIA_ADMIN",
+        "USER_ADMIN",
+        "CATALOG_READ",
+        "DISCOVERY_READ"
+      ],
+      "requiredActions": [
+        "CONFIGURE_TOTP"
+      ]
     }
   ],
   "browserSecurityHeaders": {

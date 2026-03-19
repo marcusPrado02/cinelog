@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -75,7 +76,7 @@ public class WatchProgressController {
             @PathVariable("id") Long watchEntryId,
 
             @Parameter(description = "Dados de progresso", required = true)
-            @RequestBody UpdateProgressRequest request
+            @Valid @RequestBody UpdateProgressRequest request
     ) {
         boolean existed = watchProgressService.hasProgress(watchEntryId);
 

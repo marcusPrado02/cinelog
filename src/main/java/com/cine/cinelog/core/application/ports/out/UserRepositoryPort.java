@@ -59,4 +59,12 @@ public interface UserRepositoryPort {
      * @return true se o usuário existir, false caso contrário.
      */
     boolean existsByEmailAndIdNot(String email, Long id);
+
+    /**
+     * Busca um usuário pelo email.
+     *
+     * @param email o email do usuário
+     * @return Optional com o usuário encontrado, ou vazio
+     */
+    Optional<User> findByEmail(String email);
 }
