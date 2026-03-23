@@ -80,6 +80,7 @@ services:
     # ========= Observabilidade: OTEL / Tempo / Jaeger =========
     otel-collector:
         image: otel/opentelemetry-collector-contrib:0.106.0
+        container_name: cinelog-otel-collector
         command: --config=/etc/otel-collector-config.yaml
         volumes:
             - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
@@ -98,6 +99,7 @@ services:
 
     tempo:
         image: grafana/tempo:2.6.0
+        container_name: cinelog-tempo
         command: -config.file=/etc/tempo.yaml
         volumes:
             - ./observability/tempo.yaml:/etc/tempo.yaml:ro
@@ -108,6 +110,7 @@ services:
     # ========= Observabilidade: Prometheus / Grafana =========
     prometheus:
         image: prom/prometheus:v2.55.1
+        container_name: cinelog-prometheus
         command:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.retention.time=2d
@@ -236,6 +239,113 @@ services:
         ports:
             - "1025:1025" # SMTP
             - "8025:8025" # Web UI
+
+    # ========= Spring Cloud Data Flow =========
+    # SCDF Server 2.11.5 — orquestra batch jobs (tasks) via dashboard web.
+    # Suporta launch de apps Spring Boot 3 com bootVersion=3 e schemaTarget=boot3.
+    dataflow-server:
+        image: springcloud/spring-cloud-dataflow-server:2.11.5
+        container_name: cinelog-dataflow
+        user: root
+        ports:
+            - "9393:9393"
+        environment:
+            # Mesmo schema da app CineLog — disparo pelo Dashboard injeta datasource correto
+            SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/cinelog?useSSL=false&allowPublicKeyRetrieval=true&permitMysqlScheme=true
+            SPRING_DATASOURCE_USERNAME: cinelog
+            SPRING_DATASOURCE_PASSWORD: cinelog
+            SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.mariadb.jdbc.Driver
+            SPRING_SECURITY_USER_NAME: admin
+            SPRING_SECURITY_USER_PASSWORD: ${SCDF_ADMIN_PASSWORD:-Admin@CineLog2025!}
+            SPRING_CLOUD_DATAFLOW_FEATURES_STREAMS_ENABLED: "false"
+            SPRING_CLOUD_DATAFLOW_FEATURES_SCHEDULES_ENABLED: "true"
+            SPRING_CLOUD_DATAFLOW_FEATURES_TASKS_ENABLED: "true"
+            SPRING_CLOUD_SKIPPER_CLIENT_SERVER_URI: http://skipper-server:7577/api
+            # Task platform local deployer — rede Docker para containers de task
+            SPRING_CLOUD_DATAFLOW_TASK_PLATFORM_LOCAL_ACCOUNTS_DEFAULT_DOCKER_NETWORK: cinelog_default
+            SPRING_CLOUD_DATAFLOW_TASK_PLATFORM_LOCAL_ACCOUNTS_DEFAULT_DOCKER_DELETE_CONTAINER_ON_EXIT: "true"
+        depends_on:
+            db:
+                condition: service_healthy
+            skipper-server:
+                condition: service_healthy
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - ./docker/scdf/docker-cli:/usr/local/bin/docker-real:ro
+            - ./docker/scdf/docker-wrapper.sh:/usr/local/bin/docker:ro
+        healthcheck:
+            test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9393' || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 90s
+        restart: unless-stopped
+
+    # ========= SCDF Skipper Server =========
+    # Gerencia deployment de tasks via Docker Deployer.
+    # A rede Docker e configurada aqui para que os containers de task
+    # acessem db, redis, mailhog via hostname na rede cinelog_default.
+    skipper-server:
+        image: springcloud/spring-cloud-skipper-server:2.11.5
+        container_name: cinelog-skipper
+        ports:
+            - "7577:7577"
+        environment:
+            # Skipper no schema separado (evita conflito tabela app_registration com SCDF)
+            SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/scdf?useSSL=false&allowPublicKeyRetrieval=true&permitMysqlScheme=true
+            SPRING_DATASOURCE_USERNAME: cinelog
+            SPRING_DATASOURCE_PASSWORD: cinelog
+            SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.mariadb.jdbc.Driver
+            # Rede Docker para containers de task
+            SPRING_CLOUD_SKIPPER_SERVER_PLATFORM_LOCAL_ACCOUNTS_DEFAULT_DOCKER_NETWORK: cinelog_default
+            SPRING_CLOUD_SKIPPER_SERVER_PLATFORM_LOCAL_ACCOUNTS_DEFAULT_DOCKER_DELETE_CONTAINER_ON_EXIT: "true"
+        depends_on:
+            db:
+                condition: service_healthy
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - ./docker/scdf/docker-cli:/usr/local/bin/docker-real:ro
+            - ./docker/scdf/docker-wrapper.sh:/usr/local/bin/docker:ro
+        healthcheck:
+            test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/7577' || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 90s
+        restart: unless-stopped
+
+    # ========= SCDF Scheduler (cron container) =========
+    # Substitui o scheduler nativo do SCDF (nao disponivel no Local Deployer).
+    # Usa crontab para chamar a REST API do SCDF e lancar tasks agendadas.
+    # Edite docker/scdf/schedules.cron e reinicie: docker compose restart scdf-scheduler
+    scdf-scheduler:
+        image: alpine:3.20
+        container_name: cinelog-scdf-scheduler
+        entrypoint: /bin/sh
+        command:
+            - -c
+            - |
+                apk add --no-cache curl > /dev/null 2>&1
+                # Exporta env vars para o crond (Alpine crond nao herda env do pai)
+                echo "SCDF_URL=$$SCDF_URL" > /app/env.sh
+                echo "SCDF_USER=$$SCDF_USER" >> /app/env.sh
+                echo "SCDF_PASSWORD=$$SCDF_PASSWORD" >> /app/env.sh
+                # Cria crontab com source do env antes de cada job
+                sed 's|/app/scdf-schedule.sh|. /app/env.sh; /app/scdf-schedule.sh|g' /app/schedules.cron > /var/spool/cron/crontabs/root
+                chmod 0600 /var/spool/cron/crontabs/root
+                echo "SCDF Scheduler started — $$(grep -c 'scdf-schedule' /app/schedules.cron) schedules loaded"
+                crond -f -l 2
+        environment:
+            SCDF_URL: http://dataflow-server:9393
+            SCDF_USER: admin
+            SCDF_PASSWORD: ${SCDF_ADMIN_PASSWORD:-Admin@CineLog2025!}
+        depends_on:
+            dataflow-server:
+                condition: service_healthy
+        volumes:
+            - ./docker/scdf/schedules.cron:/app/schedules.cron:ro
+            - ./docker/scdf/scdf-schedule.sh:/app/scdf-schedule.sh:ro
+        restart: unless-stopped
 
 volumes:
     dbdata:

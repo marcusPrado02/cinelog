@@ -118,20 +118,20 @@ TEST_USER="testuser_${TS}"
 TEST_PASS="TestP@ss123!"
 
 subheader "Registro de usuário"
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/register" \
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/register" \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"$TEST_USER\",\"email\":\"${TEST_USER}@mailhog.local\",\"password\":\"$TEST_PASS\"}")
 STATUS=$(echo "$RESP" | tail -1)
 BODY=$(echo "$RESP" | head -n -1)
-check "POST /api/auth/register" "201" "$STATUS" "$BODY"
+check "POST /api/v1/auth/register" "201" "$STATUS" "$BODY"
 
 subheader "Login do usuário"
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/login" \
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"$TEST_USER\",\"password\":\"$TEST_PASS\"}")
 STATUS=$(echo "$RESP" | tail -1)
 BODY=$(echo "$RESP" | head -n -1)
-check "POST /api/auth/login" "200" "$STATUS" "$BODY"
+check "POST /api/v1/auth/login" "200" "$STATUS" "$BODY"
 TOKEN=$(echo "$BODY" | jq -r '.accessToken // .access_token // ""')
 REFRESH_TOKEN=$(echo "$BODY" | jq -r '.refreshToken // .refresh_token // ""')
 
@@ -142,32 +142,32 @@ fi
 
 subheader "Refresh token"
 if [[ -n "$REFRESH_TOKEN" && "$REFRESH_TOKEN" != "null" ]]; then
-    RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/refresh" \
+    RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/refresh" \
         -H "Content-Type: application/json" \
         -d "{\"refreshToken\":\"$REFRESH_TOKEN\"}")
     STATUS=$(echo "$RESP" | tail -1)
     BODY=$(echo "$RESP" | head -n -1)
-    check "POST /api/auth/refresh" "200" "$STATUS" "$BODY"
+    check "POST /api/v1/auth/refresh" "200" "$STATUS" "$BODY"
 else
-    skip "POST /api/auth/refresh" "refreshToken não disponível"
+    skip "POST /api/v1/auth/refresh" "refreshToken não disponível"
 fi
 
 subheader "Login inválido"
-RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/auth/login" \
+RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
     -d '{"username":"invalid_user_xxx","password":"wrong"}')
-check "POST /api/auth/login (credenciais inválidas)" "401" "$RESP" ""
+check "POST /api/v1/auth/login (credenciais inválidas)" "401" "$RESP" ""
 
 # Login admin
 subheader "Login admin"
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/login" \
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}")
 STATUS=$(echo "$RESP" | tail -1)
 BODY=$(echo "$RESP" | head -n -1)
 ADMIN_TOKEN=$(echo "$BODY" | jq -r '.accessToken // .access_token // ""')
 if [[ "$STATUS" == "200" && -n "$ADMIN_TOKEN" && "$ADMIN_TOKEN" != "null" ]]; then
-    echo -e "${GREEN}  ✅ PASS${RESET} [200] POST /api/auth/login (admin)"
+    echo -e "${GREEN}  ✅ PASS${RESET} [200] POST /api/v1/auth/login (admin)"
     ((PASS++))
 else
     echo -e "${YELLOW}  ⚠️  WARN${RESET} Admin login falhou (status $STATUS). Testes de admin serão pulados."
@@ -536,7 +536,7 @@ echo -e "  ${YELLOW}Disparando 12 tentativas de login para acionar rate-limit...
 HIT_429=false
 for i in $(seq 1 12); do
     RESP=$(curl -s -o /dev/null -w "%{http_code}" \
-        -X POST "$BASE_URL/api/auth/login" \
+        -X POST "$BASE_URL/api/v1/auth/login" \
         -H "Content-Type: application/json" \
         -d '{"username":"ratelimit_test_user_'"$TS"'","password":"wrong_pass_'"$i"'"}')
     if [[ "$RESP" == "429" ]]; then
@@ -560,9 +560,9 @@ header "12. LOGOUT"
 
 if [[ -n "$TOKEN" ]]; then
     RESP=$(curl -s -o /dev/null -w "%{http_code}" \
-        -X POST "$BASE_URL/api/auth/logout" \
+        -X POST "$BASE_URL/api/v1/auth/logout" \
         -H "Authorization: Bearer $TOKEN")
-    check "POST /api/auth/logout" "200|204" "$RESP" ""
+    check "POST /api/v1/auth/logout" "200|204" "$RESP" ""
 
     # Token invalidado não deve mais funcionar
     RESP=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -570,7 +570,7 @@ if [[ -n "$TOKEN" ]]; then
         -H "Authorization: Bearer $TOKEN")
     check "GET /api/watchentries (após logout → 401)" "401" "$RESP" ""
 else
-    skip "POST /api/auth/logout" "token não disponível"
+    skip "POST /api/v1/auth/logout" "token não disponível"
 fi
 
 # ═════════════════════════════════════════════════════════════════════════════

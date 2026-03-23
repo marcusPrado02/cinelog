@@ -192,6 +192,13 @@
         </logger>
     </springProfile>
 
+    <!-- Profile task: console texto simples (container efemero SCDF, sem file appenders) -->
+    <springProfile name="task">
+        <root level="INFO">
+            <appender-ref ref="PLAIN_CONSOLE" />
+        </root>
+    </springProfile>
+
     <!-- Fallback profile -->
     <springProfile name="default">
         <root level="INFO">

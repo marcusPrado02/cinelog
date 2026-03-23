@@ -40,6 +40,28 @@ else
 fi
 set +a
 
+# ── Kill processo na porta 8080 se existir ──────────────────────────────────
+PORT=8080
+PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
+if [[ -n "$PID" ]]; then
+  echo "⚠️  Porta $PORT em uso pelo PID $PID — encerrando..."
+  kill "$PID" 2>/dev/null || true
+  # Aguardar ate 5s para encerrar gracefully
+  for i in {1..10}; do
+    if ! lsof -ti :"$PORT" > /dev/null 2>&1; then
+      echo "   Processo encerrado."
+      break
+    fi
+    sleep 0.5
+  done
+  # Force kill se ainda estiver rodando
+  if lsof -ti :"$PORT" > /dev/null 2>&1; then
+    echo "   Forçando encerramento (kill -9)..."
+    kill -9 "$(lsof -ti :"$PORT")" 2>/dev/null || true
+    sleep 1
+  fi
+fi
+
 echo "Iniciando CinelogApplication com perfil: ${SPRING_PROFILES_ACTIVE:-dev}"
 
 exec "$ROOT_DIR/mvnw" spring-boot:run \

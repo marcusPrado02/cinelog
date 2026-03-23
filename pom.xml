@@ -44,7 +44,7 @@
         <springdoc.version>1.5</springdoc.version>
         <jacoco.version>0.8.14</jacoco.version>
         <jjwt.version>0.12.6</jjwt.version>
-        <resilience4j.version>2.3.0</resilience4j.version>
+        <resilience4j.version>2.2.0</resilience4j.version>
         <archunit.version>1.3.0</archunit.version>
         <kafka.version>3.9.2</kafka.version>
         <!-- A03:2025 — Supply Chain Security -->
@@ -99,6 +99,14 @@
                 <artifactId>commons-lang3</artifactId>
                 <version>3.18.0</version>
             </dependency>
+            <!-- Spring Cloud BOM — serie 2024.0.x compativel com Spring Boot 3.4/3.5 -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2024.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -106,6 +114,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-batch</artifactId>
+        </dependency>
+        <!-- Spring Cloud Task — SCDF task lifecycle management -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-task</artifactId>
+            <exclusions>
+                <!-- Evita conflito com Resilience4j 2.3.0 (RxJava3FallbackDecorator removido) -->
+                <exclusion>
+                    <groupId>org.springframework.cloud</groupId>
+                    <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -190,6 +210,11 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- OTLP metrics push for ephemeral task containers -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-otlp</artifactId>
+        </dependency>
 
         <!-- Tracing (Micrometer Tracing + OpenTelemetry) -->
         <dependency>
@@ -231,6 +256,12 @@
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>${resilience4j.version}</version>
+        </dependency>
+        <!-- Required by resilience4j-spring-boot3 fallback autoconfiguration -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-rxjava3</artifactId>
             <version>${resilience4j.version}</version>
         </dependency>
 

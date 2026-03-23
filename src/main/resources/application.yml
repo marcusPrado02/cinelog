@@ -40,6 +40,12 @@ spring:
         job:
             enabled: false # Desabilita auto-execução de jobs no startup; use a API ou o scheduler
 
+    # Spring Cloud Task autoconfig desabilitado no profile base (dev/default).
+    # Reabilitado no profile "task" via application-task.yml.
+    autoconfigure:
+        exclude:
+            - org.springframework.cloud.task.configuration.SimpleTaskAutoConfiguration
+
     mvc:
         problemdetails:
             enabled: true
@@ -246,24 +252,21 @@ cinelog:
         max-pages: 10
         sort-by: popularity.desc
         chunk-size: 20
+        # Crons removidos — agendamento gerenciado pelo SCDF Scheduler.
+        # Ver: docker/scdf/init-scdf.sh
         jobs:
             sync-genres:
                 enabled: true
-                cron: "0 0 3 * * SUN"
             import-movies:
                 enabled: true
-                cron: "0 30 3 * * SUN"
                 max-pages: ${BATCH_IMPORT_MOVIES_MAX_PAGES:10}
             import-tv-shows:
                 enabled: true
-                cron: "0 0 4 * * SUN"
                 max-pages: ${BATCH_IMPORT_TV_SHOWS_MAX_PAGES:10}
             import-credits:
                 enabled: true
-                cron: "0 30 4 * * SUN"
             import-seasons:
                 enabled: true
-                cron: "0 0 5 * * SUN"
     reports:
         enabled: true
         from-email: ${REPORT_FROM_EMAIL:noreply@cinelog.dev}

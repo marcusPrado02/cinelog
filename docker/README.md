@@ -36,7 +36,37 @@ Este arquivo configura todos os serviços necessários para executar o CineLog e
 
 -   **Porta:** 8090
 -   **Acesso:** http://localhost:8090
--   **Uso:** Visualizar tópicos, mensagens, consumidores, configuração Kafka
+-   **Uso:** Visualizar topicos, mensagens, consumidores, configuracao Kafka
+
+### 6. Skipper Server (SCDF Deployer)
+
+-   **Container:** `cinelog-skipper`
+-   **Porta:** 7577
+-   **Uso:** Gerencia o deploy de containers Docker para tasks SCDF. Utiliza o Docker Deployer
+    para lancar containers efemeros de batch jobs.
+-   **Docker CLI:** O binario estatico (`docker/scdf/docker-cli`) e montado como `docker-real`,
+    e o wrapper (`docker/scdf/docker-wrapper.sh`) e montado como `docker`. O wrapper:
+    -   Substitui `--network bridge` por `--network cinelog_default`
+    -   Injeta `--rm` em comandos `docker run` para auto-limpeza de containers
+
+### 7. Dataflow Server (SCDF Dashboard e REST API)
+
+-   **Container:** `cinelog-dataflow`
+-   **Porta:** 9393
+-   **Acesso:** http://localhost:9393/dashboard
+-   **Uso:** Dashboard web para registrar, lancar e monitorar tasks (batch jobs).
+    Expoe REST API para automacao e integracao com scripts.
+
+### 8. SCDF Scheduler (Agendamento Cron)
+
+-   **Container:** `cinelog-scdf-scheduler`
+-   **Imagem:** `alpine:3.20` (~8MB)
+-   **Uso:** Substitui o scheduler nativo do SCDF (nao disponivel no Local Deployer).
+    Usa `crond` do Alpine para chamar a REST API do SCDF nos horarios configurados.
+-   **Configuracao:** Edite `docker/scdf/schedules.cron` e reinicie com
+    `docker compose restart scdf-scheduler`
+-   **Por que existe:** O botao "Create Schedule" do Dashboard SCDF nao funciona com
+    o Docker Deployer (Local Platform). Esse container resolve a limitacao.
 
 ## 🚀 Como Usar
 

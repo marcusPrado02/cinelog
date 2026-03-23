@@ -183,20 +183,20 @@ narrate "O CineLog usa JJWT para emitir tokens JWT assinados com HS256."
 narrate "Fluxo: Register → Login → Token → Acesso autenticado."
 
 step "Registrando usuário de teste..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/register" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"Demo User ${TIMESTAMP}\",\"email\":\"demo_${TIMESTAMP}@test.com\",\"password\":\"Demo@Secure2025!\"}")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
 RESPONSE=$(echo "$BODY" | sed '$d')
-assert_status_oneOf "POST /api/auth/register (novo usuário)" "201|200" "$HTTP_STATUS" "$RESPONSE"
+assert_status_oneOf "POST /api/v1/auth/register (novo usuário)" "201|200" "$HTTP_STATUS" "$RESPONSE"
 
 step "Fazendo login para obter JWT..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/login" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"demo_${TIMESTAMP}@test.com\",\"password\":\"Demo@Secure2025!\"}")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
 RESPONSE=$(echo "$BODY" | sed '$d')
-assert_status "POST /api/auth/login" "200" "$HTTP_STATUS" "$RESPONSE"
+assert_status "POST /api/v1/auth/login" "200" "$HTTP_STATUS" "$RESPONSE"
 
 TOKEN=$(echo "$RESPONSE" | jq -r '.token // .accessToken // .access_token // empty' 2>/dev/null || true)
 REFRESH=$(echo "$RESPONSE" | jq -r '.refreshToken // .refresh_token // empty' 2>/dev/null || true)
@@ -242,40 +242,40 @@ narrate "Requisitos: min 12 chars, 1 maiúscula, 1 minúscula, 1 dígito, 1 espe
 narrate "Proteção contra senhas fracas no register."
 
 step "Testando senha fraca (curta, sem especiais)..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/register" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"Weak User\",\"email\":\"weak_${TIMESTAMP}@test.com\",\"password\":\"123\"}")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
 RESPONSE=$(echo "$BODY" | sed '$d')
-assert_status_oneOf "POST /api/auth/register (senha fraca '123') → 400/422" "400|422" "$HTTP_STATUS"
+assert_status_oneOf "POST /api/v1/auth/register (senha fraca '123') → 400/422" "400|422" "$HTTP_STATUS"
 
 step "Testando senha sem caractere especial..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/register" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"No Special\",\"email\":\"nospecial_${TIMESTAMP}@test.com\",\"password\":\"SemEspecial12345\"}")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
-assert_status_oneOf "POST /api/auth/register (sem char especial) → 400/422" "400|422" "$HTTP_STATUS"
+assert_status_oneOf "POST /api/v1/auth/register (sem char especial) → 400/422" "400|422" "$HTTP_STATUS"
 
 step "Testando registro duplicado..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/register" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"Dup User\",\"email\":\"demo_${TIMESTAMP}@test.com\",\"password\":\"Demo@Secure2025!\"}")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
-assert_status "POST /api/auth/register (duplicado) → 409" "409" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/register (duplicado) → 409" "409" "$HTTP_STATUS"
 
 step "Testando login com senha errada..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/login" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"demo_${TIMESTAMP}@test.com\",\"password\":\"SenhaErrada123!\"}")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
-assert_status "POST /api/auth/login (senha errada) → 401" "401" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/login (senha errada) → 401" "401" "$HTTP_STATUS"
 
 step "Testando login com usuário inexistente..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/login" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"naoexiste@x.com\",\"password\":\"Qualquer@12345!\"}")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
-assert_status "POST /api/auth/login (user inexistente) → 401" "401" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/login (user inexistente) → 401" "401" "$HTTP_STATUS"
 
 pause_demo
 flush_rate_limit
@@ -287,12 +287,12 @@ narrate "Token de curta duração + refresh token para rotação segura."
 
 if [[ -n "$REFRESH" ]]; then
   step "Renovando token com refresh token..."
-  BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/refresh" \
+  BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/refresh" \
     -H "Content-Type: application/json" \
     -d "{\"refreshToken\":\"$REFRESH\"}")
   HTTP_STATUS=$(echo "$BODY" | tail -1)
   RESPONSE=$(echo "$BODY" | sed '$d')
-  assert_status "POST /api/auth/refresh" "200" "$HTTP_STATUS"
+  assert_status "POST /api/v1/auth/refresh" "200" "$HTTP_STATUS"
 
   NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.token // .accessToken // empty' 2>/dev/null || true)
   if [[ -n "$NEW_TOKEN" ]]; then
@@ -301,11 +301,11 @@ if [[ -n "$REFRESH" ]]; then
   fi
 
   step "Usando refresh token inválido..."
-  BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/refresh" \
+  BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/refresh" \
     -H "Content-Type: application/json" \
     -d "{\"refreshToken\":\"token-invalido-aqui\"}")
   HTTP_STATUS=$(echo "$BODY" | tail -1)
-  assert_status_oneOf "POST /api/auth/refresh (inválido) → 401/400" "401|400|403" "$HTTP_STATUS"
+  assert_status_oneOf "POST /api/v1/auth/refresh (inválido) → 401/400" "401|400|403" "$HTTP_STATUS"
 else
   skip_test "Refresh Token" "refresh token não disponível na resposta de login"
 fi
@@ -381,10 +381,10 @@ HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/v3/api-docs")
 assert_status "GET /v3/api-docs (público)" "200" "$HTTP_STATUS"
 
 step "Auth register (público)..."
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/auth/login" \
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"x@x.x","password":"x"}')
-assert_status "POST /api/auth/login (acessível sem token)" "401" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/login (acessível sem token)" "401" "$HTTP_STATUS"
 echo -e "    ${DIM}  ↳ 401 = endpoint acessível (respondeu), credenciais inválidas${NC}"
 
 step "Recurso protegido sem token..."
@@ -398,15 +398,15 @@ flush_rate_limit
 # ─── 1.7 Logout / Revogação de Token ─────────────────────────────────────────
 
 section "1.7 — Logout e Revogação de Token"
-narrate "POST /api/auth/logout invalida o token no servidor."
+narrate "POST /api/v1/auth/logout invalida o token no servidor."
 
 LOGOUT_TOKEN="$TOKEN"
 
 step "Fazendo logout..."
-BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/auth/logout" \
+BODY=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/api/v1/auth/logout" \
   -H "Authorization: Bearer $LOGOUT_TOKEN")
 HTTP_STATUS=$(echo "$BODY" | tail -1)
-assert_status_oneOf "POST /api/auth/logout" "200|204|429" "$HTTP_STATUS"
+assert_status_oneOf "POST /api/v1/auth/logout" "200|204|429" "$HTTP_STATUS"
 
 if [[ "$HTTP_STATUS" == "429" ]]; then
   echo -e "    ${DIM}  ↳ Rate limiter ativo (muitas requests) — comportamento esperado${NC}"
@@ -424,7 +424,7 @@ fi
 # Re-login para continuar (sleep para evitar rate limit)
 step "Re-login para próximos testes..."
 sleep 2
-BODY=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+BODY=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"demo_${TIMESTAMP}@test.com\",\"password\":\"Demo@Secure2025!\"}")
 TOKEN=$(echo "$BODY" | jq -r '.token // .accessToken // .access_token // empty' 2>/dev/null || true)
@@ -542,7 +542,7 @@ if [[ "$KC_AVAILABLE" == "true" && -n "${KC_TOKEN:-}" ]]; then
     docker exec "$REDIS_CONTAINER" redis-cli EVAL "local keys = redis.call('keys','ratelimit:*'); if #keys > 0 then return redis.call('del', unpack(keys)) else return 0 end" 0 2>/dev/null || true
   fi
   sleep 1
-  FRESH_RESP=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+  FRESH_RESP=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"demo_${TIMESTAMP}@test.com\",\"password\":\"Demo@Secure2025!\"}")
   FRESH_TOKEN=$(echo "$FRESH_RESP" | jq -r '.accessToken // .token // empty' 2>/dev/null || true)
@@ -835,6 +835,6 @@ echo ""
 
 # Cleanup
 step "Limpando usuário de teste..."
-curl -s -X POST "$BASE_URL/api/auth/logout" -H "Authorization: Bearer $TOKEN" > /dev/null 2>&1 || true
+curl -s -X POST "$BASE_URL/api/v1/auth/logout" -H "Authorization: Bearer $TOKEN" > /dev/null 2>&1 || true
 
 exit $FAILED

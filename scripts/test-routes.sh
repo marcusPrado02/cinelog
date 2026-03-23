@@ -118,7 +118,7 @@ summary() {
 section "🔐 Autenticação"
 
 info "Obtendo token de usuário (alice@example.com)..."
-USER_RESP=$(curl -s --max-time "$TIMEOUT" -X POST "${BASE_URL}/api/auth/login" \
+USER_RESP=$(curl -s --max-time "$TIMEOUT" -X POST "${BASE_URL}/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"alice@example.com","password":"SecurePass123!"}' 2>/dev/null || echo "")
 
@@ -134,7 +134,7 @@ fi
 echo -e "  ${GREEN}✔${RESET} USER token obtido (userId=$USER_ID)"
 
 info "Obtendo token de admin (demo@cinelog.dev)..."
-ADMIN_RESP=$(curl -s --max-time "$TIMEOUT" -X POST "${BASE_URL}/api/auth/login" \
+ADMIN_RESP=$(curl -s --max-time "$TIMEOUT" -X POST "${BASE_URL}/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email":"demo@cinelog.dev","password":"Cinelog2025"}' 2>/dev/null || echo "")
 
@@ -193,24 +193,24 @@ check "openapi json"       200 GET "/v3/api-docs"
 # AUTH
 # =============================================================================
 run_group "auth" && {
-section "🔑 Auth (/api/auth)"
-check "register – email existente → 409"   409 POST "/api/auth/register" \
+section "🔑 Auth (/api/v1/auth)"
+check "register – email existente → 409"   409 POST "/api/v1/auth/register" \
   "${JSON[@]}" \
   -d '{"email":"alice@example.com","password":"SecurePass123!","name":"Alice"}'
 
-check "login válido"           200 POST "/api/auth/login" \
+check "login válido"           200 POST "/api/v1/auth/login" \
   "${JSON[@]}" \
   -d '{"email":"alice@example.com","password":"SecurePass123!"}'
 
-check "login senha errada → 401"  "401|403" POST "/api/auth/login" \
+check "login senha errada → 401"  "401|403" POST "/api/v1/auth/login" \
   "${JSON[@]}" \
   -d '{"email":"alice@example.com","password":"senhaerrada"}'
 
-check "refresh token"          "200|401" POST "/api/auth/refresh" \
+check "refresh token"          "200|401" POST "/api/v1/auth/refresh" \
   "${JSON[@]}" \
   -d "{\"refreshToken\":\"invalid\"}"
 
-check "logout"                 "200|204" POST "/api/auth/logout" \
+check "logout"                 "200|204" POST "/api/v1/auth/logout" \
   "${AUTH_USER[@]}" "${JSON[@]}" \
   -d '{}'
 

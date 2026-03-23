@@ -204,15 +204,15 @@ USER_NAME="Test User ${UNIQUE}"
 USER_PASS="TestPass${UNIQUE}!"
 
 print_section "Register novo usuário"
-do_request POST "${BASE_URL}/api/auth/register" \
+do_request POST "${BASE_URL}/api/v1/auth/register" \
   "{\"name\":\"${USER_NAME}\",\"email\":\"${USER_EMAIL}\",\"password\":\"${USER_PASS}\"}"
-assert_status_oneOf "POST /api/auth/register (novo usuário)" "201|200" "$HTTP_STATUS"
+assert_status_oneOf "POST /api/v1/auth/register (novo usuário)" "201|200" "$HTTP_STATUS"
 REGISTERED_USER_ID=$(json_field "$HTTP_BODY" '.id // empty')
 
 print_section "Login"
-do_request POST "${BASE_URL}/api/auth/login" \
+do_request POST "${BASE_URL}/api/v1/auth/login" \
   "{\"email\":\"${USER_EMAIL}\",\"password\":\"${USER_PASS}\"}"
-assert_status "POST /api/auth/login" "200" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/login" "200" "$HTTP_STATUS"
 TOKEN=$(json_field "$HTTP_BODY" '.accessToken // .token // empty')
 REFRESH_TOKEN=$(json_field "$HTTP_BODY" '.refreshToken // empty')
 
@@ -222,41 +222,41 @@ if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
 fi
 
 print_section "Login com credenciais inválidas"
-do_request POST "${BASE_URL}/api/auth/login" \
+do_request POST "${BASE_URL}/api/v1/auth/login" \
   "{\"email\":\"${USER_EMAIL}\",\"password\":\"SenhaErrada999\"}"
-assert_status "POST /api/auth/login (senha errada) → 401" "401" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/login (senha errada) → 401" "401" "$HTTP_STATUS"
 
-do_request POST "${BASE_URL}/api/auth/login" \
+do_request POST "${BASE_URL}/api/v1/auth/login" \
   "{\"email\":\"naoexiste_${UNIQUE}@fake.com\",\"password\":\"Qualquer123\"}"
-assert_status "POST /api/auth/login (user inexistente) → 401" "401" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/login (user inexistente) → 401" "401" "$HTTP_STATUS"
 
 print_section "Register duplicado"
-do_request POST "${BASE_URL}/api/auth/register" \
+do_request POST "${BASE_URL}/api/v1/auth/register" \
   "{\"name\":\"${USER_NAME}\",\"email\":\"${USER_EMAIL}\",\"password\":\"${USER_PASS}\"}"
-assert_status "POST /api/auth/register (duplicado) → 409" "409" "$HTTP_STATUS"
+assert_status "POST /api/v1/auth/register (duplicado) → 409" "409" "$HTTP_STATUS"
 
 print_section "Register com senha fraca"
-do_request POST "${BASE_URL}/api/auth/register" \
+do_request POST "${BASE_URL}/api/v1/auth/register" \
   "{\"name\":\"Fraco\",\"email\":\"fraco_${UNIQUE}@test.com\",\"password\":\"123\"}"
-assert_status_oneOf "POST /api/auth/register (senha fraca) → 400" "400|422" "$HTTP_STATUS"
+assert_status_oneOf "POST /api/v1/auth/register (senha fraca) → 400" "400|422" "$HTTP_STATUS"
 
 if [[ -n "$REFRESH_TOKEN" && "$REFRESH_TOKEN" != "null" ]]; then
   print_section "Refresh Token"
-  do_request POST "${BASE_URL}/api/auth/refresh" \
+  do_request POST "${BASE_URL}/api/v1/auth/refresh" \
     "{\"refreshToken\":\"${REFRESH_TOKEN}\"}"
-  assert_status "POST /api/auth/refresh" "200" "$HTTP_STATUS"
+  assert_status "POST /api/v1/auth/refresh" "200" "$HTTP_STATUS"
   # Atualiza o token se refresh deu certo
   NEW_TOKEN=$(json_field "$HTTP_BODY" '.accessToken // .token // empty')
   if [[ -n "$NEW_TOKEN" && "$NEW_TOKEN" != "null" ]]; then
     TOKEN="$NEW_TOKEN"
   fi
 else
-  skip_test "POST /api/auth/refresh" "refreshToken não disponível"
+  skip_test "POST /api/v1/auth/refresh" "refreshToken não disponível"
 fi
 
 # ─── Login Admin ──────────────────────────────────────────────────────────────
 print_section "Login Admin"
-do_request POST "${BASE_URL}/api/auth/login" \
+do_request POST "${BASE_URL}/api/v1/auth/login" \
   "{\"email\":\"admin@cinelog.com\",\"password\":\"AdminPass123!\"}"
 ADMIN_STATUS="$HTTP_STATUS"
 ADMIN_TOKEN=$(json_field "$HTTP_BODY" '.accessToken // .token // empty')
@@ -270,7 +270,7 @@ fi
 
 # ─── Login OPS ────────────────────────────────────────────────────────────────
 print_section "Login OPS"
-do_request POST "${BASE_URL}/api/auth/login" \
+do_request POST "${BASE_URL}/api/v1/auth/login" \
   "{\"email\":\"ops@cinelog.com\",\"password\":\"OpsPass123!\"}"
 OPS_STATUS="$HTTP_STATUS"
 OPS_TOKEN=$(json_field "$HTTP_BODY" '.accessToken // .token // empty')
@@ -854,8 +854,8 @@ fi
 # ─── Logout ───────────────────────────────────────────────────────────────────
 print_section "Logout"
 if [[ -n "$TOKEN" ]]; then
-  do_request POST "${BASE_URL}/api/auth/logout" "" "$TOKEN"
-  assert_status_oneOf "POST /api/auth/logout" "200|204" "$HTTP_STATUS"
+  do_request POST "${BASE_URL}/api/v1/auth/logout" "" "$TOKEN"
+  assert_status_oneOf "POST /api/v1/auth/logout" "200|204" "$HTTP_STATUS"
 fi
 
 # =============================================================================
