@@ -1,0 +1,49 @@
+# Profile "task" — ativado pelo SCDF Docker Deployer via SPRING_PROFILES_ACTIVE=task
+# Configura a app para rodar como container efemero executando um unico batch job.
+# O SCDF usa schema 'cinelog' com tabelas BOOT3_TASK_*/BOOT3_BATCH_* (Boot 3 prefix).
+
+spring:
+  main:
+    allow-bean-definition-overriding: false
+
+  # Mantem exclusao do SimpleTaskAutoConfiguration (gerenciado por TaskConfig)
+  # para evitar referencia circular com entityManagerFactory
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.task.configuration.SimpleTaskAutoConfiguration
+
+  # Desativa consumers Kafka — threads non-daemon impedem shutdown do container.
+  # NAO excluir KafkaAutoConfiguration: DeadLetterService depende de KafkaTemplate.
+  kafka:
+    listener:
+      auto-startup: false
+
+  batch:
+    job:
+      enabled: true  # Habilita JobLauncherApplicationRunner
+    jdbc:
+      table-prefix: BOOT3_BATCH_  # Prefixo Boot 3 usado pelo SCDF 2.11
+
+  cloud:
+    task:
+      close-context-enabled: true
+      execution-id-env-var: SPRING_CLOUD_TASK_EXECUTION_ID
+      table-prefix: BOOT3_TASK_   # Prefixo Boot 3 usado pelo SCDF 2.11
+      initialize-enabled: true
+
+  liquibase:
+    default-schema: cinelog
+
+# TMDB API key — carregada via env var do container ou fallback
+cinelog:
+  tmdb:
+    bearer-token: ${TMDB_API_KEY:${CINELOG_TMDB_BEARER_TOKEN:CHANGE_ME}}
+
+# OTLP push para containers efemeros (incompativeis com Prometheus pull)
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: true
+        url: ${MANAGEMENT_OTLP_METRICS_EXPORT_URL:http://otel-collector:4318/v1/metrics}
+        step: 5s

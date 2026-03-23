@@ -1,0 +1,23 @@
+# ============================================================================
+# Agendamentos dos batch jobs do CineLog via SCDF REST API.
+#
+# Edite este arquivo e reinicie o container para aplicar:
+#   docker compose restart scdf-scheduler
+#
+# Formato: M H DoM Mon DoW  comando
+# ============================================================================
+
+# ── TMDB Import (domingos) ──
+0  3 * * 0  /app/scdf-schedule.sh syncGenresJob
+30 3 * * 0  /app/scdf-schedule.sh importMoviesJob
+0  4 * * 0  /app/scdf-schedule.sh importTvShowsJob
+30 4 * * 0  /app/scdf-schedule.sh importCreditsJob
+0  5 * * 0  /app/scdf-schedule.sh importSeasonsJob
+30 5 * * 0  /app/scdf-schedule.sh syncReviewsJob
+0  6 * * 0  /app/scdf-schedule.sh enrichMediaImagesJob
+30 6 * * 0  /app/scdf-schedule.sh enrichPersonProfilesJob
+
+# ── Email Reports ──
+0  8 * * 1  /app/scdf-schedule.sh sendWeeklyDigestJob
+0 18 * * 5  /app/scdf-schedule.sh sendTrendingReportJob
+0  6 * * 0  /app/scdf-schedule.sh sendPlatformReportJob

@@ -1,0 +1,10 @@
+spring:
+  cloud:
+    dataflow:
+      task:
+        platform:
+          local:
+            accounts:
+              default:
+                docker-network: cinelog_default
+                delete-container-on-exit: true
