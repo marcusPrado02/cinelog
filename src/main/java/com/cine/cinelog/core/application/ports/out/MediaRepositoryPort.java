@@ -100,4 +100,10 @@ public interface MediaRepositoryPort {
      *         nulos
      */
     List<Media> findAllMissingImages();
+
+    /**
+     * Retorna todas as midias sem tmdbId definido (ex: dados de seed).
+     * Usadas pelo job de vinculacao TMDB para enriquecer registros legados.
+     */
+    List<Media> findAllWithoutTmdbId();
 }

@@ -3,6 +3,7 @@ package com.cine.cinelog.infrastructure.messaging.kafka.consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -86,11 +87,13 @@ public class KafkaConsumerConfig {
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
             ConsumerFactory<String, Object> consumerFactory,
-            CommonErrorHandler kafkaErrorHandler) {
+            CommonErrorHandler kafkaErrorHandler,
+            @Value("${spring.kafka.listener.auto-startup:true}") boolean autoStartup) {
 
         var factory = new ConcurrentKafkaListenerContainerFactory<String, Object>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(kafkaErrorHandler);
+        factory.setAutoStartup(autoStartup);
 
         return factory;
     }

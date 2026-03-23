@@ -77,6 +77,7 @@ public class WatchEntryController {
 
     @Operation(summary = "Cria um registro de watch")
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or #req.userId() == authentication.principal.userId")
     @ResponseStatus(HttpStatus.CREATED)
     @Measured("cinelog.controller.watchentry.create")
     @AuditableAction(module = "WATCH_ENTRY", action = "CREATE", description = "Criação de registro de visualização via API")
@@ -126,6 +127,7 @@ public class WatchEntryController {
 
     @Operation(summary = "Atualiza rating/comentário/metadata")
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @springSecurityCurrentUserProvider.ownsWatchEntry(#id)")
     @Measured("cinelog.controller.watchentry.update")
     @AuditableAction(module = "WATCH_ENTRY", action = "UPDATE", description = "Atualização de registro de visualização via API")
     public ResponseEntity<WatchEntryResponse> update(@PathVariable Long id,
@@ -143,6 +145,7 @@ public class WatchEntryController {
 
     @Operation(summary = "Remove um registro")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @springSecurityCurrentUserProvider.ownsWatchEntry(#id)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Measured("cinelog.controller.watchentry.delete")
     @AuditableAction(module = "WATCH_ENTRY", action = "DELETE", description = "Exclusão de registro de visualização via API")

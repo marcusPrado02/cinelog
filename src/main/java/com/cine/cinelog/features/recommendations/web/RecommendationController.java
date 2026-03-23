@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,8 +46,9 @@ import java.util.stream.Collectors;
  * @since 1.0 (PR6 - Fase 6)
  */
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 @Tag(name = "Recommendations", description = "Recomendações personalizadas de mídias")
+@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
 public class RecommendationController {
 
     private final RecommendationService recommendationService;
@@ -157,8 +159,8 @@ public class RecommendationController {
      * Converte Media para DTO de resposta.
      */
     private RecommendationResponse toResponse(Media media, String reason) {
-        // Score simulado (em produção viria do algoritmo)
-        double score = 0.75 + (Math.random() * 0.25); // 0.75 - 1.0
+        // Score baseado na posicao na lista de recomendacoes (deterministic)
+        double score = 1.0;
 
         return new RecommendationResponse(
                 media.getId(),

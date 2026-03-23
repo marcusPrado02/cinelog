@@ -52,7 +52,7 @@ import java.util.List;
  * @see MediaSearchCriteria
  */
 @RestController
-@RequestMapping("/api/media")
+@RequestMapping("/api/v1/media")
 @Tag(name = "Media Search", description = "Busca avançada de filmes e séries")
 public class MediaSearchController {
 

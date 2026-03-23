@@ -84,6 +84,24 @@ public class ReportEmailService {
         users.forEach(u -> sendWeeklyDigest(u.getId()));
     }
 
+    /** Blocking variant for batch/task containers that shut down after job completion. */
+    public void sendWeeklyDigestToAllBlocking() {
+        List<UserEntity> users = userRepository.findAll();
+        log.info("[BATCH-SYNC] Sending weekly digest to {} users", users.size());
+        for (UserEntity u : users) {
+            try {
+                WeeklyDigestData data = weeklyDigest.buildForUser(u.getId());
+                emailService.sendHtml(
+                        data.getUserEmail(),
+                        "\uD83C\uDFAC Seu resumo semanal no CineLog",
+                        "weekly-digest",
+                        Map.of("data", data));
+            } catch (Exception e) {
+                log.error("[BATCH-SYNC] Failed weekly digest for userId={}: {}", u.getId(), e.getMessage(), e);
+            }
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Top Rated
     // ─────────────────────────────────────────────────────────────────────────
@@ -137,6 +155,24 @@ public class ReportEmailService {
         users.forEach(u -> sendTrending(u.getEmail()));
     }
 
+    /** Blocking variant for batch/task containers. */
+    public void sendTrendingToAllBlocking() {
+        List<UserEntity> users = userRepository.findAll();
+        log.info("[BATCH-SYNC] Sending trending report to {} users", users.size());
+        for (UserEntity u : users) {
+            try {
+                TrendingData data = trending.build();
+                emailService.sendHtml(
+                        u.getEmail(),
+                        "\uD83D\uDD25 Em alta esta semana no CineLog",
+                        "trending",
+                        Map.of("data", data));
+            } catch (Exception e) {
+                log.error("[BATCH-SYNC] Failed trending for {}: {}", u.getEmail(), e.getMessage(), e);
+            }
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Platform Report (admin)
     // ─────────────────────────────────────────────────────────────────────────
@@ -147,6 +183,17 @@ public class ReportEmailService {
         emailService.sendHtml(
                 toEmail,
                 "📊 Relatório da plataforma CineLog",
+                "platform-report",
+                Map.of("data", data));
+    }
+
+    /** Blocking variant for batch/task containers. */
+    public void sendPlatformReportBlocking(String toEmail) {
+        log.info("[BATCH-SYNC] Sending platform report to {}", toEmail);
+        PlatformReportData data = platform.build();
+        emailService.sendHtml(
+                toEmail,
+                "\uD83D\uDCCA Relat\u00F3rio da plataforma CineLog",
                 "platform-report",
                 Map.of("data", data));
     }

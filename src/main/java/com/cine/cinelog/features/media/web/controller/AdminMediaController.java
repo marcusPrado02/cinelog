@@ -1,75 +1,71 @@
 package com.cine.cinelog.features.media.web.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import com.cine.cinelog.core.application.ports.in.media.CreateMediaUseCase;
+import com.cine.cinelog.core.domain.model.Media;
+import com.cine.cinelog.features.media.mapper.MediaMapper;
 import com.cine.cinelog.features.media.web.dto.MediaCreateRequest;
 import com.cine.cinelog.features.media.web.dto.MediaResponse;
 import com.cine.cinelog.shared.observability.aop.AuditableAction;
 import com.cine.cinelog.shared.observability.aop.Measured;
 import com.cine.cinelog.shared.observability.aop.SecureOperation;
-
+import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.cine.cinelog.shared.observability.metrics.BusinessMetricsService;
-import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin Media", description = "Gerenciamento de mídia para administradores")
-@Validated
-@RestController
-@PreAuthorize("hasRole('ADMIN')")
+import java.net.URI;
+
 /**
- * Controlador REST responsável por gerenciar operações de AdminMedia.
- * Fornece endpoints para criar, atualizar, buscar, listar e remover adminmedia.
+ * Controlador REST para criacao de midia por administradores.
  *
- * <p>
- * Este controlador implementa as operações CRUD completas para adminmedia,
- * incluindo paginação para listagem e validação de dados de entrada.
- * </p>
- *
- * @since 1.0
- * @see AdminMedia
+ * <p>Persiste a midia no banco via {@link CreateMediaUseCase}.</p>
  */
+@Tag(name = "Admin Media", description = "Gerenciamento de midia para administradores")
+@RestController
 @RequestMapping("/api/v1/admin/media")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminMediaController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminMediaController.class);
+
+    private final CreateMediaUseCase createMediaUseCase;
+    private final MediaMapper mapper;
     private final BusinessMetricsService metricsService;
 
-    public AdminMediaController(BusinessMetricsService metricsService) {
+    public AdminMediaController(CreateMediaUseCase createMediaUseCase,
+                                MediaMapper mapper,
+                                BusinessMetricsService metricsService) {
+        this.createMediaUseCase = createMediaUseCase;
+        this.mapper = mapper;
         this.metricsService = metricsService;
     }
 
     @PostMapping
+    @Operation(summary = "Criar midia (admin)")
+    @ApiResponse(responseCode = "201", description = "Midia criada com sucesso")
     @Measured("cinelog.controller.admin.media.create")
-    @AuditableAction(module = "ADMIN_MEDIA", action = "CREATE", description = "Criação de mídia via API admin")
+    @AuditableAction(module = "ADMIN_MEDIA", action = "CREATE", description = "Criacao de midia via API admin")
     @SecureOperation(module = "ADMIN_MEDIA", value = "MEDIA_ADMIN")
-    public ResponseEntity<MediaResponse> create(@RequestBody MediaCreateRequest request) {
-        log.debug("Admin criando mídia. Parâmetros: {}",
-                Map.of("title", request.getTitle(), "type", request.getType(),
-                        "releaseYear", request.getReleaseYear() != null ? request.getReleaseYear() : "N/A"));
-        try {
-            // apenas ADMIN cai aqui por causa do SecurityConfig
-            MediaResponse response = new MediaResponse(
-                    null, request.getTitle(), request.getType(), request.getReleaseYear(),
-                    request.getOriginalTitle(), request.getOriginalLanguage(),
-                    request.getPosterUrl(), request.getBackdropUrl(),
-                    request.getOverview(), request.getTmdbId());
-            metricsService.incrementMediaCreated(request.getType().toString());
-            log.info("Mídia criada por admin com sucesso. Tipo: {}, Título: {}",
-                    request.getType(), request.getTitle());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Erro ao criar mídia (admin). Tipo: {}, Título: {}, Erro: {}",
-                    request.getType(), request.getTitle(), e.getMessage(), e);
-            throw e;
-        }
+    public ResponseEntity<MediaResponse> create(@Valid @RequestBody MediaCreateRequest request) {
+        log.debug("Admin criando midia: title={} type={}", request.getTitle(), request.getType());
+
+        Media domain = mapper.toDomain(request);
+        Media saved = createMediaUseCase.execute(domain);
+
+        metricsService.incrementMediaCreated(request.getType().toString());
+        log.info("Midia criada por admin: id={} title={}", saved.getId(), saved.getTitle());
+
+        return ResponseEntity
+                .created(URI.create("/api/v1/media/" + saved.getId()))
+                .body(mapper.toResponse(saved));
     }
 }

@@ -198,6 +198,10 @@ public class RecommendationService {
      * Obtém estratégia por nome.
      */
     private RecommendationStrategy getStrategy(String strategyName) {
+        if (strategyName == null || strategyName.isBlank()) {
+            throw new IllegalArgumentException(
+                    "strategyName e obrigatorio. Valores validos: content-based, collaborative, hybrid");
+        }
         return switch (strategyName.toLowerCase()) {
             case "content-based", "content_based" -> contentBasedStrategy;
             case "collaborative" -> collaborativeStrategy;

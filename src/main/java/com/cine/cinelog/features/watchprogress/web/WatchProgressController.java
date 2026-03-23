@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -26,16 +27,17 @@ import java.time.Duration;
  * <p>
  * Endpoints:
  * <ul>
- *   <li>POST /api/watchentries/{id}/progress - Criar/Atualizar progresso</li>
- *   <li>GET /api/watchentries/{id}/progress - Buscar progresso</li>
- *   <li>DELETE /api/watchentries/{id}/progress - Deletar progresso</li>
+ *   <li>POST /api/v1/watch-entries/{id}/progress - Criar/Atualizar progresso</li>
+ *   <li>GET /api/v1/watch-entries/{id}/progress - Buscar progresso</li>
+ *   <li>DELETE /api/v1/watch-entries/{id}/progress - Deletar progresso</li>
  * </ul>
  *
  * @since 1.0 (PR6 - Fase 5)
  */
 @RestController
-@RequestMapping("/api/watchentries")
+@RequestMapping("/api/v1/watch-entries")
 @Tag(name = "Watch Progress", description = "Gerenciamento de progresso de visualização de séries")
+@PreAuthorize("isAuthenticated()")
 public class WatchProgressController {
 
     private final WatchProgressService watchProgressService;

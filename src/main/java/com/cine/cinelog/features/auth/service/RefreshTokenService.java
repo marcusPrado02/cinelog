@@ -31,15 +31,15 @@ import java.util.UUID;
  * Login → AccessToken + RefreshToken(v1, family=ABC)
  *   │
  *   ▼ (AccessToken expira após 1h)
- * POST /api/auth/refresh { refreshToken: v1 }
+ * POST /api/v1/auth/refresh { refreshToken: v1 }
  *   → Revoga v1, emite v2 (family=ABC) + novo AccessToken
  *   │
  *   ▼ (AccessToken expira novamente)
- * POST /api/auth/refresh { refreshToken: v2 }
+ * POST /api/v1/auth/refresh { refreshToken: v2 }
  *   → Revoga v2, emite v3 (family=ABC) + novo AccessToken
  *
  * ⚠️ Se atacante rouba v1 e tenta usar:
- * POST /api/auth/refresh { refreshToken: v1 }
+ * POST /api/v1/auth/refresh { refreshToken: v1 }
  *   → v1 já revogado! TODA família ABC é invalidada (v2 também).
  *   → Usuário legítimo é forçado a fazer login novamente.
  *   → Atacante não consegue continuar.

@@ -36,7 +36,6 @@ import java.util.Optional;
  * @since 1.0 (PR6 - Fase 5)
  */
 @Service
-@Transactional
 public class WatchProgressService {
 
     private static final Logger log = LoggerFactory.getLogger(WatchProgressService.class);
@@ -54,6 +53,7 @@ public class WatchProgressService {
      * @param progress     progresso a salvar
      * @return progresso salvo
      */
+    @Transactional
     @CacheEvict(value = "watchProgress", key = "#watchEntryId")
     public SeriesProgress saveProgress(Long watchEntryId, SeriesProgress progress) {
         log.debug("Salvando progresso para watchEntry={}: {}", watchEntryId, progress);
@@ -99,6 +99,7 @@ public class WatchProgressService {
      * @param watchedDuration novo tempo assistido
      * @return progresso atualizado
      */
+    @Transactional
     @CacheEvict(value = "watchProgress", key = "#watchEntryId")
     public Optional<SeriesProgress> updateWatchedTime(Long watchEntryId, Duration watchedDuration) {
         log.debug("Atualizando tempo assistido: watchEntry={}, duration={}", watchEntryId, watchedDuration);
@@ -129,6 +130,7 @@ public class WatchProgressService {
      * @param nextEpisodeDuration duração do próximo episódio
      * @return progresso atualizado
      */
+    @Transactional
     @CacheEvict(value = "watchProgress", key = "#watchEntryId")
     public Optional<SeriesProgress> advanceToNextEpisode(Long watchEntryId, Duration nextEpisodeDuration) {
         log.debug("Avançando para próximo episódio: watchEntry={}, duration={}", watchEntryId, nextEpisodeDuration);
@@ -161,6 +163,7 @@ public class WatchProgressService {
      * @param firstEpisodeDuration duração do primeiro episódio da nova temporada
      * @return progresso atualizado
      */
+    @Transactional
     @CacheEvict(value = "watchProgress", key = "#watchEntryId")
     public Optional<SeriesProgress> advanceToNextSeason(Long watchEntryId, Duration firstEpisodeDuration) {
         log.debug("Avançando para próxima temporada: watchEntry={}, duration={}", watchEntryId, firstEpisodeDuration);
@@ -193,6 +196,7 @@ public class WatchProgressService {
      *
      * @param watchEntryId ID do watch entry
      */
+    @Transactional
     @CacheEvict(value = "watchProgress", key = "#watchEntryId")
     public void deleteProgress(Long watchEntryId) {
         log.debug("Deletando progresso para watchEntry={}", watchEntryId);

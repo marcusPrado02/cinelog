@@ -65,4 +65,7 @@ public interface MediaJpaRepository extends JpaRepository<MediaEntity, Long>, Jp
    */
   @Query("SELECT m FROM MediaEntity m WHERE m.tmdbId IS NOT NULL AND (m.posterUrl IS NULL OR m.backdropUrl IS NULL)")
   List<MediaEntity> findAllMissingImages();
+
+  @Query("SELECT m FROM MediaEntity m WHERE m.tmdbId IS NULL")
+  List<MediaEntity> findAllWithoutTmdbId();
 }

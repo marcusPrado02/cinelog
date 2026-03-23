@@ -23,7 +23,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.access.prepost.PostAuthorize;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,8 +83,9 @@ public class UserController {
         this.metricsService = metricsService;
     }
 
-    @Operation(summary = "Cria um usuário")
+    @Operation(summary = "Cria um usuário (admin only — registro publico via /api/v1/auth/register)")
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     @Measured("cinelog.controller.user.create")
     public ResponseEntity<UserResponse> create(@Valid @RequestBody UserCreateRequest req) {
         log.debug("Iniciando create. Parâmetros: {}", Map.of("name", req.name(), "email", req.email()));
@@ -130,7 +130,7 @@ public class UserController {
     @Operation(summary = "Busca usuário por id")
     @GetMapping("/{id}")
     @Measured("cinelog.controller.user.get")
-    @PostAuthorize("hasRole('ADMIN') or returnObject.body.email == authentication.name")
+    @PreAuthorize("hasRole('ADMIN') or @springSecurityCurrentUserProvider.isCurrentUser(#id)")
     public ResponseEntity<UserResponse> getById(@PathVariable Long id) {
         log.debug("Iniciando getById. Parâmetros: {}", Map.of("id", id));
 

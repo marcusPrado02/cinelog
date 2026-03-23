@@ -8,10 +8,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Dispatcher interno de Domain Events em memória (síncrono).
@@ -57,7 +57,7 @@ public class InMemoryDomainEventDispatcher implements DomainEventPublisherPort {
         // Registra handlers automaticamente (Spring injeta todos os beans)
         eventHandlers.forEach(handler -> {
             Class<? extends DomainEvent> eventType = handler.eventType();
-            handlers.computeIfAbsent(eventType, k -> new ArrayList<>()).add(handler);
+            handlers.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>()).add(handler);
             log.info("Registered DomainEventHandler: {} for event type: {}",
                     handler.getClass().getSimpleName(), eventType.getSimpleName());
         });
@@ -94,7 +94,7 @@ public class InMemoryDomainEventDispatcher implements DomainEventPublisherPort {
      * Registra handler dinamicamente (se necessário).
      */
     public <E extends DomainEvent> void registerHandler(Class<E> eventType, DomainEventHandler<E> handler) {
-        handlers.computeIfAbsent(eventType, k -> new ArrayList<>()).add(handler);
+        handlers.computeIfAbsent(eventType, k -> new CopyOnWriteArrayList<>()).add(handler);
         log.info("Dynamically registered handler: {} for event: {}",
                 handler.getClass().getSimpleName(), eventType.getSimpleName());
     }

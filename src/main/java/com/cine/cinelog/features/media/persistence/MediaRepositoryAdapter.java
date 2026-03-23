@@ -3,6 +3,7 @@ package com.cine.cinelog.features.media.persistence;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import com.cine.cinelog.core.application.pagination.PageQuery;
@@ -88,7 +89,10 @@ public class MediaRepositoryAdapter implements MediaRepositoryPort {
 
     @Override
     public PageResult<Media> listAll(PageQuery query) {
-        PageRequest pageRequest = PageRequest.of(query.page(), query.size());
+        Sort sort = Sort.by(
+                Sort.Direction.fromString(query.direction()),
+                query.sort());
+        PageRequest pageRequest = PageRequest.of(query.page(), query.size(), sort);
         var result = repository.findAll(pageRequest);
         return PageResultMapper.from(result, mapper::toDomain);
     }
@@ -130,6 +134,14 @@ public class MediaRepositoryAdapter implements MediaRepositoryPort {
     @Override
     public List<Media> findAllMissingImages() {
         return repository.findAllMissingImages()
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Media> findAllWithoutTmdbId() {
+        return repository.findAllWithoutTmdbId()
                 .stream()
                 .map(mapper::toDomain)
                 .toList();

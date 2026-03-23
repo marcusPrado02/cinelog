@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
  * @see com.cine.cinelog.infrastructure.messaging.kafka.consumer.MediaPopularityUpdater
  */
 @RestController
-@RequestMapping("/api/media")
+@RequestMapping("/api/v1/media")
 @Tag(name = "Media Popularity", description = "Popularidade e tendências de mídias (CQRS Read Model)")
 public class MediaPopularityController {
 

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -41,8 +42,9 @@ import java.util.Map;
  * @see com.cine.cinelog.infrastructure.messaging.kafka.consumer.UserStatsUpdater
  */
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 @Tag(name = "User Insights", description = "Estatísticas e insights de usuários (CQRS Read Model)")
+@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
 public class UserInsightsController {
 
     private static final Logger log = LoggerFactory.getLogger(UserInsightsController.class);
@@ -78,13 +80,13 @@ public class UserInsightsController {
         Map<String, Object> insights = userInsightsService.getUserInsights(userId);
 
         UserInsightsResponse response = new UserInsightsResponse(
-                (Long) insights.get("userId"),
-                (Long) insights.get("totalWatched"),
-                (Long) insights.get("totalMovies"),
-                (Long) insights.get("totalSeries"),
-                (BigDecimal) insights.get("avgRating"),
-                (LocalDate) insights.get("lastWatchedAt"),
-                (LocalDateTime) insights.get("updatedAt"));
+                toLong(insights.get("userId")),
+                toLong(insights.get("totalWatched")),
+                toLong(insights.get("totalMovies")),
+                toLong(insights.get("totalSeries")),
+                toBigDecimal(insights.get("avgRating")),
+                toLocalDate(insights.get("lastWatchedAt")),
+                toLocalDateTime(insights.get("updatedAt")));
 
         log.debug("Insights retornados: totalWatched={}, avgRating={}",
                 response.totalWatched(), response.avgRating());
@@ -111,5 +113,35 @@ public class UserInsightsController {
         return hasStats
                 ? ResponseEntity.ok().build()
                 : ResponseEntity.notFound().build();
+    }
+
+    // ── Safe type conversions (Redis deserialization may return unexpected types) ──
+
+    private Long toLong(Object val) {
+        if (val == null) return null;
+        if (val instanceof Long l) return l;
+        if (val instanceof Number n) return n.longValue();
+        return Long.valueOf(val.toString());
+    }
+
+    private BigDecimal toBigDecimal(Object val) {
+        if (val == null) return null;
+        if (val instanceof BigDecimal bd) return bd;
+        if (val instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
+        return new BigDecimal(val.toString());
+    }
+
+    private LocalDate toLocalDate(Object val) {
+        if (val == null) return null;
+        if (val instanceof LocalDate ld) return ld;
+        if (val instanceof String s) return LocalDate.parse(s);
+        return null;
+    }
+
+    private LocalDateTime toLocalDateTime(Object val) {
+        if (val == null) return null;
+        if (val instanceof LocalDateTime ldt) return ldt;
+        if (val instanceof String s) return LocalDateTime.parse(s);
+        return null;
     }
 }

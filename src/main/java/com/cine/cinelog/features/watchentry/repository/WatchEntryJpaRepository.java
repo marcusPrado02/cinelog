@@ -53,6 +53,7 @@ public interface WatchEntryJpaRepository extends JpaRepository<WatchEntryEntity,
                             max(we.watchedAt) as lastWatchDate
                         from WatchEntryEntity we
                         where we.userId = :userId
+                        group by we.userId
                         """)
         UserStatsProjection computeStatsForUser(Long userId);
 
