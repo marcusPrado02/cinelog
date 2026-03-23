@@ -745,4 +745,57 @@ public Page<Media> findAll(Pageable pageable) {
 
 ---
 
-**Última atualização**: Dezembro 2025
+---
+
+## Workflow com SCDF (Spring Cloud Data Flow)
+
+O CineLog integra-se com o SCDF para orquestrar batch jobs. Esta secao descreve o fluxo
+de desenvolvimento ao trabalhar com essa integracao.
+
+### Executando batch jobs localmente vs via SCDF
+
+| Modo | Quando usar | Como executar |
+|------|-------------|---------------|
+| **Local (sem SCDF)** | Desenvolvimento e debug rapido | `./mvnw spring-boot:run` com agendamento habilitado ou disparo via endpoint `/api/v1/admin/batch/trigger/{jobName}` |
+| **Via SCDF** | Testar o fluxo real de orquestracao | Subir o stack SCDF com `docker-compose up -d`, registrar tasks e lancar pelo Dashboard |
+
+### Configuracao inicial do SCDF
+
+```bash
+# 1. Subir toda a stack (inclui skipper-server e dataflow-server)
+docker-compose up -d
+
+# 2. Registrar as tasks no SCDF (executar uma vez apos subir)
+bash docker/scdf/init-scdf.sh
+```
+
+### SCDF Dashboard
+
+Apos subir o stack, acesse o Dashboard em:
+
+- **URL:** http://localhost:9393/dashboard
+- **Funcionalidades:** Registrar tasks, lancar execucoes, ver historico, inspecionar logs
+
+### Arquivos-chave da integracao SCDF
+
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/main/java/.../batch/config/TaskConfig.java` | Configuracao do Spring Cloud Task (`CustomTaskConfigurer`, `@Primary TransactionManager`) |
+| `src/main/resources/application-task.yml` | Configuracoes especificas do profile `task` (logging, desabilita scheduler) |
+| `Dockerfile` | Imagem Docker usada pelo SCDF para lancar containers efemeros |
+| `docker/scdf/init-scdf.sh` | Script para registrar tasks no SCDF via REST API |
+| `docker-compose.yml` | Define os servicos `skipper-server` e `dataflow-server` |
+
+### Dicas de desenvolvimento
+
+- Ao alterar codigo de batch jobs, reconstrua a imagem Docker antes de lancar pelo SCDF:
+  `docker build -t cinelog/cinelog-app:latest .`
+- Use o profile `dev` para desenvolvimento local e o profile `task` e ativado automaticamente
+  pelo SCDF em execucoes orquestradas.
+- Logs dos containers efemeros podem ser consultados via `docker logs` ou pelo Dashboard SCDF.
+
+Para documentacao completa da integracao, consulte o [Guia SCDF](./SCDF-GUIDE.md).
+
+---
+
+**Ultima atualizacao**: Marco 2026

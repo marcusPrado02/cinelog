@@ -673,4 +673,43 @@ spring:
 
 ---
 
-**Última atualização**: Dezembro 2025
+---
+
+## Imagem Docker para SCDF (Batch Tasks)
+
+Alem do deploy convencional, o CineLog utiliza **Spring Cloud Data Flow (SCDF)** para orquestrar
+a execucao dos batch jobs como containers Docker efemeros.
+
+### Build da imagem
+
+```bash
+# Build da imagem usada pelo SCDF para lancar tasks
+docker build -t cinelog/cinelog-app:latest .
+```
+
+A imagem `cinelog/cinelog-app:latest` e referenciada pelo SCDF ao criar containers efemeros
+para cada execucao de batch job. O SCDF (via Skipper) inicia um container, executa o job
+e encerra o container automaticamente.
+
+### Quando reconstruir
+
+Sempre que houver alteracoes no codigo (jobs, configuracoes, dependencias), reconstrua a imagem
+antes de lancar novas execucoes pelo SCDF:
+
+```bash
+./mvnw clean package -DskipTests && docker build -t cinelog/cinelog-app:latest .
+```
+
+### Profile `task`
+
+O SCDF ativa automaticamente o profile `task` ao lancar o container. Esse profile:
+
+- Configura o `CustomTaskConfigurer` para registrar execucoes nas tabelas `TASK_EXECUTION`
+- Ajusta o logging para containers efemeros (saida em console JSON)
+- Desabilita agendamento interno (`BatchSchedulerConfig`) — o lifecycle e controlado pelo SCDF
+
+Para mais detalhes sobre a integracao SCDF, consulte o [Guia SCDF](./SCDF-GUIDE.md).
+
+---
+
+**Ultima atualizacao**: Marco 2026

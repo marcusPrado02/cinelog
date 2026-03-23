@@ -267,7 +267,7 @@ class KeycloakOAuth2IntegrationTest extends AbstractIntegrationTest {
         class AutenticacaoLocal {
 
                 @Test
-                @DisplayName("endpoint /api/auth/login deve permanecer acessível sem token")
+                @DisplayName("endpoint /api/v1/auth/login deve permanecer acessível sem token")
                 void loginLocalDeveSerAcessivel() {
                         HttpHeaders headers = new HttpHeaders();
                         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -277,11 +277,11 @@ class KeycloakOAuth2IntegrationTest extends AbstractIntegrationTest {
                         HttpEntity<String> entity = new HttpEntity<>(body, headers);
 
                         ResponseEntity<String> response = restTemplate.postForEntity(
-                                        getBaseUrl() + "/api/auth/login", entity, String.class);
+                                        getBaseUrl() + "/api/v1/auth/login", entity, String.class);
 
                         // Esperamos 401 (credenciais inválidas) — mas NÃO 404 ou 403
                         assertThat(response.getStatusCode())
-                                        .as("Endpoint /api/auth/login deve estar acessível (não 404/403)")
+                                        .as("Endpoint /api/v1/auth/login deve estar acessível (não 404/403)")
                                         .isNotEqualTo(HttpStatus.NOT_FOUND)
                                         .isNotEqualTo(HttpStatus.FORBIDDEN);
                 }

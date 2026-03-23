@@ -41,15 +41,25 @@ Novo no projeto? Comece por aqui:
 | **[❓ FAQ](./FAQ.md)**             | Perguntas frequentes e troubleshooting | Problemas e dúvidas     |
 | **[📝 CHANGELOG](./CHANGELOG.md)** | Histórico de versões e mudanças        | Ver evolução do projeto |
 
-### 4️⃣ Recursos Adicionais
+### 4️⃣ Batch Jobs e SCDF
+
+| Documento                                                       | Descrição                                             |
+| --------------------------------------------------------------- | ----------------------------------------------------- |
+| **[SCDF Guide](./SCDF-GUIDE.md)**                              | Guia completo do Spring Cloud Data Flow               |
+| **[SCDF Implementation](./SCDF-IMPLEMENTATION.md)**            | Detalhes tecnicos da implementacao SCDF               |
+| **[SCDF Dashboard Guide](./SCDF-DASHBOARD-GUIDE.md)**         | Passo a passo para executar batch jobs via Dashboard  |
+| **[Batch Performance](./BATCH-PERFORMANCE.md)**                | Metricas, SLOs e tuning dos 12 batch jobs             |
+| **[SLI Definitions](./SLI-DEFINITIONS.md)**                    | SLIs, SLOs e regras de alerta para batch e API        |
+
+### 5️⃣ Recursos Adicionais
 
 | Recurso                                                       | Descrição                            |
 | ------------------------------------------------------------- | ------------------------------------ |
-| **[API REST](./api/)**                                        | Documentação detalhada dos endpoints |
-| **[Arquitetura](./architecture/)**                            | Decisões arquiteturais e ADRs        |
-| **[Eventos](./events/)**                                      | Documentação do sistema de eventos   |
-| **[Swagger UI](http://localhost:8080/swagger-ui/index.html)** | Documentação interativa (dev)        |
-| **[OpenAPI Spec](http://localhost:8080/v3/api-docs)**         | Especificação OpenAPI 3.0            |
+| **[API REST](./api/)**                                        | Documentacao detalhada dos endpoints          |
+| **[Arquitetura](./architecture/)**                            | Decisoes arquiteturais e ADRs                 |
+| **[Eventos](./events/)**                                      | Documentacao do sistema de eventos            |
+| **[Swagger UI](http://localhost:8080/swagger-ui/index.html)** | Documentacao interativa (dev)                 |
+| **[OpenAPI Spec](http://localhost:8080/v3/api-docs)**         | Especificacao OpenAPI 3.0                     |
 
 ---
 
@@ -69,6 +79,13 @@ docs/
 │   ├── SECURITY.md             # Segurança e autenticação
 │   ├── FAQ.md                  # Perguntas frequentes
 │   └── CHANGELOG.md            # Histórico de versões
+│
+├── 📦 Batch Jobs e SCDF
+│   ├── SCDF-GUIDE.md               # Guia completo do SCDF
+│   ├── SCDF-IMPLEMENTATION.md      # Detalhes tecnicos da implementacao
+│   ├── SCDF-DASHBOARD-GUIDE.md     # Guia passo a passo do Dashboard
+│   ├── BATCH-PERFORMANCE.md        # Metricas e SLOs dos batch jobs
+│   └── SLI-DEFINITIONS.md          # SLIs e alertas
 │
 └── 📁 Recursos Especializados
     ├── api/                    # Documentação da API REST
@@ -276,7 +293,8 @@ Veja o [roadmap completo](../ROADMAP.md) para mais detalhes.
 | Design Patterns     | 5 (CQRS, Strategy, State, Template, Outbox) |
 | Migrations          | 10 changesets                               |
 | Linhas de Código    | ~15,000                                     |
-| Documentação        | 9 guias + ADRs                              |
+| Batch Jobs          | 12 (9 TMDB + 3 Email)                       |
+| Documentação        | 12 guias + ADRs                             |
 | Contributors        | 3 ativos                                    |
 
 **Performance Benchmarks:**
@@ -335,8 +353,8 @@ Se este projeto foi útil para você, considere dar uma ⭐ no GitHub!
 
 ---
 
-**Última Atualização:** Janeiro 2026  
-**Versão da Documentação:** 2.1 (Incrementada e Otimizada)  
+**Última Atualização:** Marco 2026
+**Versão da Documentação:** 3.0 (SCDF + Email Batch Jobs)
 **Mantenedores:** [@marcusPrado02](https://github.com/marcusPrado02) e time CineLog
 
 ---

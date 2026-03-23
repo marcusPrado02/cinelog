@@ -30,13 +30,13 @@ mudança de contrato de resposta. Sem uma estratégia explícita, clientes exist
 
 ### Estratégia: Versionamento por URL (Path Versioning)
 
-```
+```text
 /api/v{N}/recurso
 ```
 
 Exemplos ativos:
 
-```
+```text
 GET  /api/v1/media
 POST /api/v1/admin/media
 GET  /api/v1/users
@@ -70,7 +70,7 @@ Crie `/api/v2/...` quando houver uma **breaking change**:
 
 #### 2. Ciclo de vida de versões
 
-```
+```text
 v1 (CURRENT)  →  v2 (NEW)  →  v1 (DEPRECATED)  →  v1 (SUNSET)
                                6 meses aviso         + 3 meses
 ```
@@ -85,7 +85,7 @@ v1 (CURRENT)  →  v2 (NEW)  →  v1 (DEPRECATED)  →  v1 (SUNSET)
 
 Versões deprecated devem retornar:
 
-```
+```http
 Deprecation: true
 Sunset: Sat, 01 Jan 2027 00:00:00 GMT
 Link: <https://api.cinelog.com/api/v2/media>; rel="successor-version"
@@ -134,6 +134,59 @@ A lógica de autorização (roles) é idêntica entre versões.
 
 - Manutenção de múltiplas versões simultaneamente aumenta carga de desenvolvimento
 - Controllers duplicados temporariamente durante migração de versão
+
+## Estratégia de Evolução de DTOs
+
+### Organização de pacotes por versão
+
+Quando uma breaking change exige `/api/v2`, os DTOs da nova versão ficam em
+subpacotes separados para evitar colisão de nomes:
+
+```text
+features/media/web/dto/
+├── v1/
+│   ├── MediaResponse.java        ← versão atual (CURRENT)
+│   └── MediaCreateRequest.java
+└── v2/
+    ├── MediaResponseV2.java      ← nova versão (durante migração)
+    └── MediaCreateRequestV2.java
+```
+
+Os controllers v1 e v2 coexistem temporariamente:
+
+```java
+// v1 — mantido enquanto DEPRECATED
+@RequestMapping("/api/v1/media")
+public class MediaControllerV1 { ... }
+
+// v2 — nova versão CURRENT
+@RequestMapping("/api/v2/media")
+public class MediaControllerV2 { ... }
+```
+
+### Regras para DTOs
+
+| Mudança em DTO                      | Ação necessária          |
+|-------------------------------------|--------------------------|
+| Adicionar campo opcional            | Sem nova versão          |
+| Remover campo                       | Nova versão obrigatória  |
+| Renomear campo                      | Nova versão obrigatória  |
+| Alterar tipo (ex: String → Integer) | Nova versão obrigatória  |
+| Adicionar campo obrigatório         | Nova versão obrigatória  |
+
+### Nomenclatura
+
+- DTOs de v1 (versão atual) mantêm nome simples: `MediaResponse`
+- DTOs de versões futuras usam sufixo: `MediaResponseV2`
+- Após sunset de v1, `MediaResponseV2` pode ser renomeado para `MediaResponse`
+  em refactoring interno (sem impacto nos clientes)
+
+### Deprecação via OpenAPI
+
+```java
+@Schema(deprecated = true, description = "Deprecated: use /api/v2/media")
+public record MediaResponse(...) { }
+```
 
 ## Referências
 
