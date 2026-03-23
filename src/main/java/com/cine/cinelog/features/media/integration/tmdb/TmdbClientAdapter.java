@@ -1,8 +1,5 @@
 package com.cine.cinelog.features.media.integration.tmdb;
 
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -18,7 +15,6 @@ import com.cine.cinelog.core.domain.model.tmdb.TmdbImageConfig;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaDetails;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaSummary;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbPersonDetails;
-import com.cine.cinelog.core.domain.model.tmdb.TmdbReviewResult;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbReviewsPage;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSearchResult;
 import com.cine.cinelog.core.domain.model.tmdb.TmdbSeasonDetails;
@@ -65,11 +61,14 @@ public class TmdbClientAdapter implements TmdbClientPort {
 
     private final WebClient tmdbWebClient;
     private final TmdbProperties properties;
+    private final TmdbResponseMapper mapper;
 
     /**
-     * Cache simples em memória da configuração de imagens do TMDb.
+     * Cache simples em memoria da configuracao de imagens do TMDb.
+     * AtomicReference para evitar double-init em cenario multi-thread.
      */
-    private volatile TmdbImageConfig cachedImageConfig;
+    private final java.util.concurrent.atomic.AtomicReference<TmdbImageConfig> cachedImageConfig =
+            new java.util.concurrent.atomic.AtomicReference<>();
 
     // ========================================================================
     // Detalhes de mídia
@@ -123,7 +122,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
                 return Optional.empty();
             }
 
-            return Optional.of(mapMovieDetailsToDomain(response));
+            return Optional.of(mapper.mapMovieDetailsToDomain(response, fetchImageConfig()));
         } catch (WebClientResponseException ex) {
             if (ex.getStatusCode().equals(HttpStatusCode.valueOf(404))) {
                 log.info("TMDb movie not found for id={}", tmdbId);
@@ -155,7 +154,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
                 return Optional.empty();
             }
 
-            return Optional.of(mapTvDetailsToDomain(response));
+            return Optional.of(mapper.mapTvDetailsToDomain(response, fetchImageConfig()));
         } catch (WebClientResponseException ex) {
             if (ex.getStatusCode().equals(HttpStatusCode.valueOf(404))) {
                 log.info("TMDb tv show not found for id={}", tmdbId);
@@ -241,7 +240,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
         }
 
         List<TmdbMediaSummary> items = response.getResults().stream()
-                .map(r -> mapMovieSearchResultToSummary(r))
+                .map(r -> mapper.mapMovieSearchResultToSummary(r, fetchImageConfig()))
                 .collect(Collectors.toList());
 
         return TmdbSearchResult.<TmdbMediaSummary>builder()
@@ -293,7 +292,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
         }
 
         List<TmdbMediaSummary> items = response.getResults().stream()
-                .map(r -> mapTvSearchResultToSummary(r))
+                .map(r -> mapper.mapTvSearchResultToSummary(r, fetchImageConfig()))
                 .collect(Collectors.toList());
 
         return TmdbSearchResult.<TmdbMediaSummary>builder()
@@ -344,7 +343,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
         }
 
         List<TmdbMediaSummary> items = response.getResults().stream()
-                .map(this::mapMovieSearchResultToSummary)
+                .map(r -> mapper.mapMovieSearchResultToSummary(r, fetchImageConfig()))
                 .collect(Collectors.toList());
 
         return TmdbSearchResult.<TmdbMediaSummary>builder()
@@ -391,7 +390,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
         }
 
         List<TmdbMediaSummary> items = response.getResults().stream()
-                .map(this::mapTvSearchResultToSummary)
+                .map(r -> mapper.mapTvSearchResultToSummary(r, fetchImageConfig()))
                 .collect(Collectors.toList());
 
         return TmdbSearchResult.<TmdbMediaSummary>builder()
@@ -492,7 +491,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
             return Optional.empty();
         }
 
-        return Optional.of(mapCreditsToDomain(response));
+        return Optional.of(mapper.mapCreditsToDomain(response, fetchImageConfig()));
     }
 
     @Override
@@ -516,7 +515,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
             return Optional.empty();
         }
 
-        return Optional.of(mapCreditsToDomain(response));
+        return Optional.of(mapper.mapCreditsToDomain(response, fetchImageConfig()));
     }
 
     // ========================================================================
@@ -527,8 +526,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
     @Retry(name = TMDB_INSTANCE)
     @CircuitBreaker(name = TMDB_INSTANCE, fallbackMethod = "fallbackFetchImageConfig")
     public TmdbImageConfig fetchImageConfig() {
-        // usa cache simples em memória
-        TmdbImageConfig localCache = cachedImageConfig;
+        TmdbImageConfig localCache = cachedImageConfig.get();
         if (localCache != null) {
             return localCache;
         }
@@ -542,8 +540,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
         if (response == null || response.getImages() == null) {
             log.warn("TMDb configuration returned null images");
             TmdbImageConfig empty = TmdbImageConfig.builder().build();
-            cachedImageConfig = empty;
-            return empty;
+            cachedImageConfig.compareAndSet(null, empty);
+            return cachedImageConfig.get();
         }
 
         TmdbConfigurationResponse.Images images = response.getImages();
@@ -556,8 +554,8 @@ public class TmdbClientAdapter implements TmdbClientPort {
                 .profileSizes(images.getProfileSizes())
                 .build();
 
-        cachedImageConfig = config;
-        return config;
+        cachedImageConfig.compareAndSet(null, config);
+        return cachedImageConfig.get();
     }
 
     // ========================================================================
@@ -593,14 +591,14 @@ public class TmdbClientAdapter implements TmdbClientPort {
                     .map(ep -> TmdbEpisodeDetails.builder()
                             .episodeNumber(ep.getEpisodeNumber())
                             .name(ep.getName())
-                            .airDate(parseDate(ep.getAirDate()))
+                            .airDate(mapper.parseDate(ep.getAirDate()))
                             .build())
                     .collect(Collectors.toList());
 
             return Optional.of(TmdbSeasonDetails.builder()
                     .seasonNumber(response.getSeasonNumber())
                     .name(response.getName())
-                    .airDate(parseDate(response.getAirDate()))
+                    .airDate(mapper.parseDate(response.getAirDate()))
                     .episodes(episodes)
                     .build());
         } catch (WebClientResponseException ex) {
@@ -681,7 +679,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
     @SuppressWarnings("unused")
     private TmdbImageConfig fallbackFetchImageConfig(Throwable ex) {
         log.warn("Fallback fetchImageConfig due to {}", ex.toString());
-        TmdbImageConfig localCache = cachedImageConfig;
+        TmdbImageConfig localCache = cachedImageConfig.get();
         if (localCache != null) {
             return localCache;
         }
@@ -692,182 +690,6 @@ public class TmdbClientAdapter implements TmdbClientPort {
     private Optional<TmdbSeasonDetails> fallbackFetchTvSeason(Long tvId, int seasonNumber, Throwable ex) {
         log.warn("Fallback fetchTvSeason(tvId={}, season={}) due to {}", tvId, seasonNumber, ex.toString());
         return Optional.empty();
-    }
-
-    // ========================================================================
-    // Mapping helpers
-    // ========================================================================
-
-    private TmdbMediaDetails mapMovieDetailsToDomain(TmdbMovieDetailsResponse dto) {
-        TmdbImageConfig imageConfig = fetchImageConfig();
-
-        return TmdbMediaDetails.builder()
-                .tmdbId(dto.getId() != null ? dto.getId().longValue() : null)
-                .type(MediaType.MOVIE)
-                .title(dto.getTitle())
-                .originalTitle(dto.getOriginalTitle())
-                .originalLanguage(dto.getOriginalLanguage())
-                .overview(dto.getOverview())
-                .releaseYear(parseYear(dto.getReleaseDate()))
-                .voteAverage(dto.getVoteAverage())
-                .runtimeMinutes(dto.getRuntime())
-                .posterUrl(buildPosterUrl(imageConfig, dto.getPosterPath()))
-                .backdropUrl(buildBackdropUrl(imageConfig, dto.getBackdropPath()))
-                .genres(dto.getGenres() == null
-                        ? Collections.emptyList()
-                        : dto.getGenres().stream()
-                                .map(TmdbMovieDetailsResponse.Genre::getName)
-                                .collect(Collectors.toList()))
-                .build();
-    }
-
-    private TmdbMediaDetails mapTvDetailsToDomain(TmdbTvDetailsResponse dto) {
-        TmdbImageConfig imageConfig = fetchImageConfig();
-
-        return TmdbMediaDetails.builder()
-                .tmdbId(dto.getId() != null ? dto.getId().longValue() : null)
-                .type(MediaType.SERIES)
-                .title(dto.getName())
-                .originalTitle(dto.getOriginalName())
-                .originalLanguage(dto.getOriginalLanguage())
-                .overview(dto.getOverview())
-                .releaseYear(parseYear(dto.getFirstAirDate()))
-                .voteAverage(dto.getVoteAverage())
-                .runtimeMinutes(null) // poderia usar avg episode runtime em outra chamada
-                .posterUrl(buildPosterUrl(imageConfig, dto.getPosterPath()))
-                .backdropUrl(buildBackdropUrl(imageConfig, dto.getBackdropPath()))
-                .genres(dto.getGenres() == null
-                        ? Collections.emptyList()
-                        : dto.getGenres().stream()
-                                .map(TmdbMovieDetailsResponse.Genre::getName)
-                                .collect(Collectors.toList()))
-                .numberOfSeasons(dto.getNumberOfSeasons())
-                .build();
-    }
-
-    private TmdbMediaSummary mapMovieSearchResultToSummary(TmdbMovieSearchResponse.Result r) {
-        TmdbImageConfig imageConfig = fetchImageConfig();
-
-        return TmdbMediaSummary.builder()
-                .tmdbId(r.getId() != null ? r.getId().longValue() : null)
-                .type(MediaType.MOVIE)
-                .title(r.getTitle())
-                .releaseYear(parseYear(r.getReleaseDate()))
-                .overview(r.getOverview())
-                .voteAverage(r.getVoteAverage())
-                .posterUrl(buildPosterUrl(imageConfig, r.getPosterPath()))
-                .build();
-    }
-
-    private TmdbMediaSummary mapTvSearchResultToSummary(TmdbTvSearchResponse.Result r) {
-        TmdbImageConfig imageConfig = fetchImageConfig();
-
-        return TmdbMediaSummary.builder()
-                .tmdbId(r.getId() != null ? r.getId().longValue() : null)
-                .type(MediaType.SERIES)
-                .title(r.getName())
-                .releaseYear(parseYear(r.getFirstAirDate()))
-                .overview(r.getOverview())
-                .voteAverage(r.getVoteAverage())
-                .posterUrl(buildPosterUrl(imageConfig, r.getPosterPath()))
-                .build();
-    }
-
-    private TmdbCredits mapCreditsToDomain(TmdbCreditsResponse dto) {
-        TmdbImageConfig imageConfig = fetchImageConfig();
-
-        List<TmdbCredits.CastMember> cast = dto.getCast() == null
-                ? Collections.emptyList()
-                : dto.getCast().stream()
-                        .map(c -> TmdbCredits.CastMember.builder()
-                                .tmdbPersonId(c.getId() != null ? c.getId().longValue() : null)
-                                .name(c.getName())
-                                .character(c.getCharacter())
-                                .castOrder(c.getCastOrder())
-                                .profileUrl(buildProfileUrl(imageConfig, c.getProfilePath()))
-                                .build())
-                        .collect(Collectors.toList());
-
-        List<TmdbCredits.CrewMember> crew = dto.getCrew() == null
-                ? Collections.emptyList()
-                : dto.getCrew().stream()
-                        .map(c -> TmdbCredits.CrewMember.builder()
-                                .tmdbPersonId(c.getId() != null ? c.getId().longValue() : null)
-                                .name(c.getName())
-                                .job(c.getJob())
-                                .department(c.getDepartment())
-                                .profileUrl(buildProfileUrl(imageConfig, c.getProfilePath()))
-                                .build())
-                        .collect(Collectors.toList());
-
-        return TmdbCredits.builder()
-                .tmdbId(dto.getId() != null ? dto.getId().longValue() : null)
-                .cast(cast)
-                .crew(crew)
-                .build();
-    }
-
-    private Integer parseYear(String dateStr) {
-        if (dateStr == null || dateStr.isBlank()) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(dateStr).getYear();
-        } catch (Exception e) {
-            log.warn("Could not parse TMDb date '{}' as LocalDate", dateStr);
-            try {
-                return Integer.parseInt(dateStr.substring(0, 4));
-            } catch (Exception ignore) {
-                return null;
-            }
-        }
-    }
-
-    private LocalDate parseDate(String dateStr) {
-        if (dateStr == null || dateStr.isBlank()) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(dateStr);
-        } catch (Exception e) {
-            log.warn("Could not parse TMDb date '{}' as LocalDate", dateStr);
-            return null;
-        }
-    }
-
-    private String buildPosterUrl(TmdbImageConfig config, String path) {
-        if (path == null || path.isBlank()) {
-            return null;
-        }
-        // escolha de tamanho padrão; poderia vir de config
-        String size = "w500";
-        if (config.getSecureBaseUrl() == null) {
-            // fallback para domínio estático padrão do TMDb
-            return "https://image.tmdb.org/t/p/" + size + path;
-        }
-        return config.buildPosterUrl(size, path);
-    }
-
-    private String buildBackdropUrl(TmdbImageConfig config, String path) {
-        if (path == null || path.isBlank()) {
-            return null;
-        }
-        String size = "w780";
-        if (config.getSecureBaseUrl() == null) {
-            return "https://image.tmdb.org/t/p/" + size + path;
-        }
-        return config.buildBackdropUrl(size, path);
-    }
-
-    private String buildProfileUrl(TmdbImageConfig config, String path) {
-        if (path == null || path.isBlank()) {
-            return null;
-        }
-        String size = "w185";
-        if (config.getSecureBaseUrl() == null) {
-            return "https://image.tmdb.org/t/p/" + size + path;
-        }
-        return config.buildProfileUrl(size, path);
     }
 
     // ================== Reviews ==================
@@ -886,12 +708,12 @@ public class TmdbClientAdapter implements TmdbClientPort {
                 .retrieve()
                 .bodyToMono(TmdbReviewListResponse.class)
                 .block();
-        return mapReviewsPage(resp, movieTmdbId);
+        return mapper.mapReviewsPage(resp, movieTmdbId);
     }
 
     public TmdbReviewsPage fallbackFetchMovieReviews(Long movieTmdbId, int page, Throwable t) {
         log.warn("Fallback fetchMovieReviews tmdbId={} page={}: {}", movieTmdbId, page, t.getMessage());
-        return emptyReviewsPage(movieTmdbId);
+        return mapper.emptyReviewsPage(movieTmdbId);
     }
 
     @Override
@@ -908,12 +730,12 @@ public class TmdbClientAdapter implements TmdbClientPort {
                 .retrieve()
                 .bodyToMono(TmdbReviewListResponse.class)
                 .block();
-        return mapReviewsPage(resp, tvTmdbId);
+        return mapper.mapReviewsPage(resp, tvTmdbId);
     }
 
     public TmdbReviewsPage fallbackFetchTvReviews(Long tvTmdbId, int page, Throwable t) {
         log.warn("Fallback fetchTvReviews tmdbId={} page={}: {}", tvTmdbId, page, t.getMessage());
-        return emptyReviewsPage(tvTmdbId);
+        return mapper.emptyReviewsPage(tvTmdbId);
     }
 
     // ================== Detalhes de Pessoa ==================
@@ -938,21 +760,7 @@ public class TmdbClientAdapter implements TmdbClientPort {
                     .block();
             if (resp == null)
                 return Optional.empty();
-            TmdbImageConfig config = fetchImageConfig();
-            TmdbPersonDetails details = new TmdbPersonDetails();
-            details.setTmdbPersonId(resp.getId());
-            details.setName(resp.getName());
-            details.setBiography(resp.getBiography());
-            details.setBirthday(parseDate(resp.getBirthday()));
-            details.setDeathday(parseDate(resp.getDeathday()));
-            details.setGender(resp.getGender());
-            details.setHomepage(resp.getHomepage());
-            details.setImdbId(resp.getImdbId());
-            details.setKnownForDepartment(resp.getKnownForDepartment());
-            details.setPlaceOfBirth(resp.getPlaceOfBirth());
-            details.setPopularity(resp.getPopularity());
-            details.setProfilePath(buildProfileUrl(config, resp.getProfilePath()));
-            return Optional.of(details);
+            return Optional.of(mapper.mapPersonDetailsToDomain(resp, fetchImageConfig()));
         } catch (WebClientResponseException.NotFound e) {
             log.warn("Person not found on TMDB tmdbPersonId={}", tmdbPersonId);
             return Optional.empty();
@@ -962,57 +770,5 @@ public class TmdbClientAdapter implements TmdbClientPort {
     public Optional<TmdbPersonDetails> fallbackFetchPersonDetails(Long tmdbPersonId, Throwable t) {
         log.warn("Fallback fetchPersonDetails tmdbPersonId={}: {}", tmdbPersonId, t.getMessage());
         return Optional.empty();
-    }
-
-    // ================== Helpers ==================
-
-    private TmdbReviewsPage mapReviewsPage(TmdbReviewListResponse resp, Long tmdbMediaId) {
-        TmdbReviewsPage page = new TmdbReviewsPage();
-        page.setTmdbMediaId(tmdbMediaId);
-        if (resp == null) {
-            page.setResults(Collections.emptyList());
-            return page;
-        }
-        page.setPage(resp.getPage());
-        page.setTotalPages(resp.getTotalPages());
-        page.setTotalResults(resp.getTotalResults());
-        List<TmdbReviewResult> results = new ArrayList<>();
-        if (resp.getResults() != null) {
-            for (TmdbReviewListResponse.ReviewItem item : resp.getResults()) {
-                TmdbReviewResult r = new TmdbReviewResult();
-                r.setId(item.getId());
-                r.setAuthor(item.getAuthor());
-                r.setContent(item.getContent());
-                r.setUrl(item.getUrl());
-                if (item.getCreatedAt() != null) {
-                    try {
-                        r.setCreatedAt(OffsetDateTime.parse(item.getCreatedAt()));
-                    } catch (Exception ignored) {
-                    }
-                }
-                if (item.getUpdatedAt() != null) {
-                    try {
-                        r.setUpdatedAt(OffsetDateTime.parse(item.getUpdatedAt()));
-                    } catch (Exception ignored) {
-                    }
-                }
-                TmdbReviewListResponse.AuthorDetails ad = item.getAuthorDetails();
-                if (ad != null) {
-                    r.setAuthorUsername(ad.getUsername());
-                    r.setAuthorAvatarPath(ad.getAvatarPath());
-                    r.setAuthorRating(ad.getRating());
-                }
-                results.add(r);
-            }
-        }
-        page.setResults(results);
-        return page;
-    }
-
-    private TmdbReviewsPage emptyReviewsPage(Long tmdbMediaId) {
-        TmdbReviewsPage p = new TmdbReviewsPage();
-        p.setTmdbMediaId(tmdbMediaId);
-        p.setResults(Collections.emptyList());
-        return p;
     }
 }
