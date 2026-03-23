@@ -24,6 +24,24 @@ public class BatchJobProperties {
     /** Tamanho de chunk para processamento em lote. */
     private int chunkSize = 20;
 
+    /** Máximo de itens pulados por step antes de falhar o job. */
+    private int skipLimit = 50;
+
+    /** Máximo de itens pulados para o syncReviewsJob (volume maior de inconsistências). */
+    private int reviewsSkipLimit = 100;
+
+    /** Número máximo de tentativas por item antes de skipar. */
+    private int retryLimit = 3;
+
+    /** Intervalo inicial de backoff entre retries (ms). */
+    private long retryBackoffInitialMs = 1000;
+
+    /** Intervalo máximo de backoff entre retries (ms). */
+    private long retryBackoffMaxMs = 10000;
+
+    /** Multiplicador do backoff exponencial. */
+    private double retryBackoffMultiplier = 2.0;
+
     /** Configurações por job. */
     private Jobs jobs = new Jobs();
 
@@ -51,6 +69,54 @@ public class BatchJobProperties {
 
     public void setChunkSize(int chunkSize) {
         this.chunkSize = chunkSize;
+    }
+
+    public int getSkipLimit() {
+        return skipLimit;
+    }
+
+    public void setSkipLimit(int skipLimit) {
+        this.skipLimit = skipLimit;
+    }
+
+    public int getReviewsSkipLimit() {
+        return reviewsSkipLimit;
+    }
+
+    public void setReviewsSkipLimit(int reviewsSkipLimit) {
+        this.reviewsSkipLimit = reviewsSkipLimit;
+    }
+
+    public int getRetryLimit() {
+        return retryLimit;
+    }
+
+    public void setRetryLimit(int retryLimit) {
+        this.retryLimit = retryLimit;
+    }
+
+    public long getRetryBackoffInitialMs() {
+        return retryBackoffInitialMs;
+    }
+
+    public void setRetryBackoffInitialMs(long retryBackoffInitialMs) {
+        this.retryBackoffInitialMs = retryBackoffInitialMs;
+    }
+
+    public long getRetryBackoffMaxMs() {
+        return retryBackoffMaxMs;
+    }
+
+    public void setRetryBackoffMaxMs(long retryBackoffMaxMs) {
+        this.retryBackoffMaxMs = retryBackoffMaxMs;
+    }
+
+    public double getRetryBackoffMultiplier() {
+        return retryBackoffMultiplier;
+    }
+
+    public void setRetryBackoffMultiplier(double retryBackoffMultiplier) {
+        this.retryBackoffMultiplier = retryBackoffMultiplier;
     }
 
     public Jobs getJobs() {

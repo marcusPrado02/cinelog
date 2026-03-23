@@ -7,7 +7,10 @@ import com.cine.cinelog.core.domain.model.tmdb.TmdbMediaDetails;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.Optional;
 
@@ -53,8 +56,15 @@ public class TmdbMediaImageProcessor implements ItemProcessor<Media, Media> {
 
             return media;
 
-        } catch (Exception e) {
-            log.warn("Falha ao buscar imagens para mídia id={} tmdbId={}: {}",
+        } catch (WebClientResponseException | RestClientException e) {
+            // Erros de rede/API — propagam para o retry do Spring Batch
+            throw e;
+        } catch (DataAccessException e) {
+            log.error("Erro de persistencia ao enriquecer imagens para midia id={}: {}",
+                    media.getId(), e.getMessage());
+            return null;
+        } catch (RuntimeException e) {
+            log.warn("Falha ao buscar imagens para midia id={} tmdbId={}: {}",
                     media.getId(), media.getTmdbId(), e.getMessage());
             return null;
         }

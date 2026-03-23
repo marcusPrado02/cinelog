@@ -3,6 +3,7 @@ package com.cine.cinelog.features.batch.jobs.people;
 import com.cine.cinelog.core.application.ports.out.PersonRepositoryPort;
 import com.cine.cinelog.core.domain.model.Person;
 
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import java.util.List;
  * biography para enriquecimento via TMDB.
  */
 @Component
+@StepScope
 public class PersonMissingProfileItemReader implements ItemReader<Person> {
 
     private final PersonRepositoryPort personRepository;

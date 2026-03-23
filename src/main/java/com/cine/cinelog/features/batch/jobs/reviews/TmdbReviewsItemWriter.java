@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,6 +30,7 @@ import java.time.LocalDate;
  */
 @Slf4j
 @Component
+@Transactional
 public class TmdbReviewsItemWriter implements ItemWriter<ReviewsBundle> {
 
     private static final String EMAIL_DOMAIN = "@tmdb.cinelog.dev";
@@ -48,12 +50,7 @@ public class TmdbReviewsItemWriter implements ItemWriter<ReviewsBundle> {
     public void write(Chunk<? extends ReviewsBundle> chunk) {
         for (ReviewsBundle bundle : chunk) {
             for (TmdbReviewResult review : bundle.reviews()) {
-                try {
-                    processReview(bundle, review);
-                } catch (Exception e) {
-                    log.warn("Erro ao processar review id={} para mídia id={}: {}",
-                            review.getId(), bundle.media().getId(), e.getMessage());
-                }
+                processReview(bundle, review);
             }
         }
     }

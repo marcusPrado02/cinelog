@@ -9,6 +9,8 @@ import com.cine.cinelog.core.domain.model.tmdb.TmdbReviewsPage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,8 +50,10 @@ public class TmdbReviewsItemProcessor implements ItemProcessor<Media, ReviewsBun
                     break;
                 }
             }
-        } catch (Exception e) {
-            log.warn("Falha ao buscar reviews para mídia id={} tmdbId={}: {}",
+        } catch (WebClientResponseException | RestClientException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            log.warn("Falha ao buscar reviews para midia id={} tmdbId={}: {}",
                     media.getId(), media.getTmdbId(), e.getMessage());
         }
 

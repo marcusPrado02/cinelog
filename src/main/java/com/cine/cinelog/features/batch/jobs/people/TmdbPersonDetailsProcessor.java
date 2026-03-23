@@ -7,6 +7,8 @@ import com.cine.cinelog.core.domain.model.tmdb.TmdbPersonDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.Optional;
 
@@ -67,7 +69,9 @@ public class TmdbPersonDetailsProcessor implements ItemProcessor<Person, Person>
 
             return person;
 
-        } catch (Exception e) {
+        } catch (WebClientResponseException | RestClientException e) {
+            throw e;
+        } catch (RuntimeException e) {
             log.warn("Falha ao buscar detalhes para pessoa id={} tmdbPersonId={}: {}",
                     person.getId(), person.getTmdbPersonId(), e.getMessage());
             return null;

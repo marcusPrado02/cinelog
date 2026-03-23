@@ -3,6 +3,7 @@ package com.cine.cinelog.features.batch.jobs.images;
 import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
 import com.cine.cinelog.core.domain.model.Media;
 
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import java.util.List;
  * backdrop) para enriquecimento via TMDB.
  */
 @Component
+@StepScope
 public class MediaMissingImagesItemReader implements ItemReader<Media> {
 
     private final MediaRepositoryPort mediaRepository;

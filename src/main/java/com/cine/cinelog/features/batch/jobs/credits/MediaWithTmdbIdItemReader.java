@@ -4,6 +4,7 @@ import com.cine.cinelog.core.application.ports.out.MediaRepositoryPort;
 import com.cine.cinelog.core.domain.enums.MediaType;
 import com.cine.cinelog.core.domain.model.Media;
 
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,7 @@ import java.util.List;
  * Lê filmes e séries em sequência.
  */
 @Component
+@StepScope
 public class MediaWithTmdbIdItemReader implements ItemReader<Media> {
 
     private final MediaRepositoryPort mediaRepository;

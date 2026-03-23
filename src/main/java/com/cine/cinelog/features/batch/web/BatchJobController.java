@@ -28,8 +28,12 @@ import java.util.Map;
  * Todos os endpoints requerem papel ADMIN e lançam jobs de forma assíncrona.
  * Retorna o executionId para rastreamento.
  * </p>
+ *
+ * @deprecated Usar SCDF Dashboard (http://localhost:9393/dashboard) ou SCDF REST API
+ * para disparo e agendamento de jobs. Estes endpoints serao removidos em versao futura.
  */
-@Tag(name = "Admin Batch", description = "Gerenciamento dos batch jobs de importação TMDB")
+@Deprecated(since = "1.0", forRemoval = true)
+@Tag(name = "Admin Batch", description = "Gerenciamento dos batch jobs de importação TMDB (deprecated — use SCDF)")
 @RestController
 @RequestMapping("/api/v1/admin/batch")
 @PreAuthorize("hasRole('ADMIN')")
@@ -47,6 +51,7 @@ public class BatchJobController {
     private final Job syncReviewsJob;
     private final Job enrichMediaImagesJob;
     private final Job enrichPersonProfilesJob;
+    private final Job linkTmdbJob;
 
     public BatchJobController(
             JobLauncher jobLauncher,
@@ -58,7 +63,8 @@ public class BatchJobController {
             @Qualifier("importSeasonsJob") Job importSeasonsJob,
             @Qualifier("syncReviewsJob") Job syncReviewsJob,
             @Qualifier("enrichMediaImagesJob") Job enrichMediaImagesJob,
-            @Qualifier("enrichPersonProfilesJob") Job enrichPersonProfilesJob) {
+            @Qualifier("enrichPersonProfilesJob") Job enrichPersonProfilesJob,
+            @Qualifier("linkTmdbJob") Job linkTmdbJob) {
         this.jobLauncher = jobLauncher;
         this.batchProperties = batchProperties;
         this.syncGenresJob = syncGenresJob;
@@ -69,6 +75,7 @@ public class BatchJobController {
         this.syncReviewsJob = syncReviewsJob;
         this.enrichMediaImagesJob = enrichMediaImagesJob;
         this.enrichPersonProfilesJob = enrichPersonProfilesJob;
+        this.linkTmdbJob = linkTmdbJob;
     }
 
     @Operation(summary = "Sincronizar gêneros do TMDB")
@@ -158,6 +165,16 @@ public class BatchJobController {
                 .addLong("run.id", System.currentTimeMillis())
                 .toJobParameters();
         JobExecution execution = jobLauncher.run(enrichPersonProfilesJob, params);
+        return buildResponse(execution);
+    }
+
+    @Operation(summary = "Vincular midias de seed ao TMDB pelo titulo e preencher imagens")
+    @PostMapping("/link-tmdb")
+    public ResponseEntity<Map<String, Object>> linkTmdb() throws Exception {
+        JobParameters params = new JobParametersBuilder()
+                .addLong("run.id", System.currentTimeMillis())
+                .toJobParameters();
+        JobExecution execution = jobLauncher.run(linkTmdbJob, params);
         return buildResponse(execution);
     }
 
