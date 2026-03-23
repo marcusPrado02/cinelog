@@ -83,7 +83,7 @@ class RateLimitFilterTest {
                 .thenReturn(1L);
         when(redisTemplate.getExpire(anyString())).thenReturn(60L);
 
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/login");
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
@@ -130,7 +130,7 @@ class RateLimitFilterTest {
                 .thenReturn(11L);
         when(redisTemplate.getExpire(anyString())).thenReturn(45L);
 
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/login");
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 

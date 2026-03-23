@@ -65,19 +65,19 @@ public class LoginAttemptService {
                 return new AttemptRecord(1, Instant.now());
             }
             record.increment();
+
+            // Check threshold inside compute() — atomic with the increment
+            if (record.getCount() >= maxAttempts) {
+                log.warn("A07:2025 — Conta bloqueada por excesso de tentativas: key_hash={}",
+                        hashKey(key));
+                securityEventLogger.log(SecurityEvent.AUTH_LOCKED, Map.of(
+                        "key_hash", hashKey(key),
+                        "attempts", record.getCount()));
+                securityMetrics.incrementAccountLockout();
+            }
+
             return record;
         });
-
-        AttemptRecord rec = attemptsMap.get(key);
-        if (rec != null && rec.getCount() >= maxAttempts) {
-            log.warn("A07:2025 — Conta bloqueada por excesso de tentativas: key_hash={}",
-                    hashKey(key));
-            // A09:2025 — Evento de segurança CRITICAL + métrica
-            securityEventLogger.log(SecurityEvent.AUTH_LOCKED, Map.of(
-                    "key_hash", hashKey(key),
-                    "attempts", rec.getCount()));
-            securityMetrics.incrementAccountLockout();
-        }
     }
 
     /**

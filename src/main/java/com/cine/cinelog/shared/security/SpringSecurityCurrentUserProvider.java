@@ -1,6 +1,8 @@
 package com.cine.cinelog.shared.security;
 
 import com.cine.cinelog.core.application.ports.in.security.CurrentUserProvider;
+import com.cine.cinelog.core.application.ports.out.WatchEntryRepositoryPort;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
@@ -41,6 +43,10 @@ public class SpringSecurityCurrentUserProvider implements CurrentUserProvider {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Lazy
+    @Autowired
+    private ObjectProvider<WatchEntryRepositoryPort> watchEntryRepositoryProvider;
+
     /**
      * Verifica se o usuário autenticado possui o ID informado.
      * Projetado para uso em expressões SpEL de {@code @PreAuthorize}.
@@ -51,6 +57,21 @@ public class SpringSecurityCurrentUserProvider implements CurrentUserProvider {
     public boolean isCurrentUser(Long id) {
         return getCurrentUser()
                 .map(u -> u.id().equals(id))
+                .orElse(false);
+    }
+
+    /**
+     * Verifica se o usuario autenticado e dono de um WatchEntry pelo seu ID.
+     */
+    public boolean ownsWatchEntry(Long watchEntryId) {
+        if (watchEntryId == null) return false;
+        WatchEntryRepositoryPort repo = watchEntryRepositoryProvider.getIfAvailable();
+        if (repo == null) return false;
+        Optional<AuthenticatedUser> currentUser = getCurrentUser();
+        if (currentUser.isEmpty()) return false;
+        Long currentUserId = currentUser.get().id();
+        return repo.findById(watchEntryId)
+                .map(entry -> currentUserId.equals(entry.getUserId()))
                 .orElse(false);
     }
 
