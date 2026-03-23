@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 /**
  * Configuração OpenAPI/Swagger com suporte dual de autenticação:
  * <ol>
- * <li><strong>BearerAuth</strong> — JWT local via {@code /api/auth/login}.</li>
+ * <li><strong>BearerAuth</strong> — JWT local via {@code /api/v1/auth/login}.</li>
  * <li><strong>keycloak-sso</strong> — Authorization Code Flow + PKCE
  * (SSO).</li>
  * </ol>
@@ -49,7 +49,7 @@ public class OpenApiConfig {
                                                 Backend para registrar e recomendar filmes/séries.
 
                                                 **Autenticação disponível:**
-                                                - **BearerAuth** — JWT local via `POST /api/auth/login`
+                                                - **BearerAuth** — JWT local via `POST /api/v1/auth/login`
                                                 - **keycloak-sso** — OAuth2 Authorization Code Flow (SSO via Keycloak + MFA)
 
                                                 Para SSO: clique em *Authorize*, selecione `keycloak-sso` e faça login.
@@ -64,7 +64,7 @@ public class OpenApiConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("Token JWT obtido via POST /api/auth/login");
+                                .description("Token JWT obtido via POST /api/v1/auth/login");
 
                 // Esquema 2: OAuth2 Keycloak — Authorization Code + PKCE (SSO)
                 String authUrl = keycloakIssuerUri + "/protocol/openid-connect/auth";

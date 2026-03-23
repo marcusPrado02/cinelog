@@ -240,7 +240,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * Endpoints de auth têm bucket próprio com limite menor.
      */
     private String classifyPath(String path) {
-        if (path.startsWith("/api/auth")) {
+        if (path.startsWith("/api/v1/auth")) {
             return "auth";
         }
         return "general";
@@ -256,7 +256,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * </p>
      */
     private int getLimit(String path) {
-        if (path.startsWith("/api/auth")) {
+        if (path.startsWith("/api/v1/auth")) {
             return AUTH_LIMIT;
         }
         return DEFAULT_LIMIT;

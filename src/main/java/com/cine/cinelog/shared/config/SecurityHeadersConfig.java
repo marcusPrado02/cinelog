@@ -113,7 +113,7 @@ public class SecurityHeadersConfig extends OncePerRequestFilter {
         // Para respostas de API, impede que proxies/browsers armazenem cache de dados
         // pessoais.
         // Sem isso, dados do usuário podem ficar no cache do browser mesmo após logout.
-        if (uri.startsWith("/api/") && !uri.startsWith("/api/auth/")) {
+        if (uri.startsWith("/api/") && !uri.startsWith("/api/v1/auth/")) {
             response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
             response.setHeader("Pragma", "no-cache");
             response.setHeader("Expires", "0");

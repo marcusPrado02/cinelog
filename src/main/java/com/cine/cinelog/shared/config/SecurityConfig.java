@@ -159,7 +159,7 @@ public class SecurityConfig {
                                 "/login/oauth2/code/**",
                                 "/oauth2/authorization/**")
                         .permitAll()
-                        .requestMatchers("/api/auth/**")
+                        .requestMatchers("/api/v1/auth/**")
                         .permitAll()
                         // Actuator: regras dedicadas em ActuatorSecurityConfig (@Order 1)
                         // Endpoints ADMIN
