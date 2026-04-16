@@ -2,6 +2,8 @@ package com.cine.cinelog.features.reports.web;
 
 import com.cine.cinelog.features.reports.data.*;
 import com.cine.cinelog.features.reports.email.ReportEmailService;
+import com.cine.cinelog.features.reports.pdf.GotenbergPdfService;
+import com.cine.cinelog.features.reports.pdf.PdfOptions;
 import com.cine.cinelog.features.reports.query.*;
 import com.cine.cinelog.features.reports.web.dto.SendReportRequest;
 import com.cine.cinelog.shared.observability.aop.Measured;
@@ -14,6 +16,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,27 +29,33 @@ import java.util.Map;
 /**
  * REST endpoints para geração e envio de relatórios por e-mail.
  *
- * <p><strong>Endpoints de usuário</strong> (qualquer usuário autenticado):
+ * <p>
+ * <strong>Endpoints de usuário</strong> (qualquer usuário autenticado):
  * <ul>
- *   <li>GET  /api/v1/reports/weekly-digest   — preview do digest semanal</li>
- *   <li>POST /api/v1/reports/weekly-digest   — envia digest por e-mail</li>
- *   <li>GET  /api/v1/reports/top-rated       — preview dos mais bem avaliados</li>
- *   <li>POST /api/v1/reports/top-rated       — envia top-rated por e-mail</li>
- *   <li>GET  /api/v1/reports/recommendations — preview de recomendações</li>
- *   <li>POST /api/v1/reports/recommendations — envia recomendações por e-mail</li>
- *   <li>GET  /api/v1/reports/trending        — preview dos em alta</li>
- *   <li>POST /api/v1/reports/trending        — envia trending por e-mail</li>
+ * <li>GET /api/v1/reports/weekly-digest — preview do digest semanal</li>
+ * <li>POST /api/v1/reports/weekly-digest — envia digest por e-mail</li>
+ * <li>GET /api/v1/reports/top-rated — preview dos mais bem avaliados</li>
+ * <li>POST /api/v1/reports/top-rated — envia top-rated por e-mail</li>
+ * <li>GET /api/v1/reports/recommendations — preview de recomendações</li>
+ * <li>POST /api/v1/reports/recommendations — envia recomendações por
+ * e-mail</li>
+ * <li>GET /api/v1/reports/trending — preview dos em alta</li>
+ * <li>POST /api/v1/reports/trending — envia trending por e-mail</li>
  * </ul>
  *
- * <p><strong>Endpoints de admin</strong>:
+ * <p>
+ * <strong>Endpoints de admin</strong>:
  * <ul>
- *   <li>GET  /api/v1/admin/reports/platform    — preview métricas da plataforma</li>
- *   <li>POST /api/v1/admin/reports/platform    — envia relatório ao admin</li>
- *   <li>POST /api/v1/admin/reports/send-to-all — envia trending para todos os usuários</li>
+ * <li>GET /api/v1/admin/reports/platform — preview métricas da plataforma</li>
+ * <li>POST /api/v1/admin/reports/platform — envia relatório ao admin</li>
+ * <li>POST /api/v1/admin/reports/send-to-all — envia trending para todos os
+ * usuários</li>
  * </ul>
  *
- * <p>Todos os envios de e-mail são assíncronos; os endpoints retornam
- * {@code 202 Accepted} imediatamente.</p>
+ * <p>
+ * Todos os envios de e-mail são assíncronos; os endpoints retornam
+ * {@code 202 Accepted} imediatamente.
+ * </p>
  *
  * @since 1.0
  */
@@ -58,6 +68,7 @@ public class ReportController {
     private static final Logger log = LoggerFactory.getLogger(ReportController.class);
 
     private final ReportEmailService reportEmailService;
+    private final GotenbergPdfService pdfService;
     private final WeeklyDigestQueryService weeklyDigestQuery;
     private final TopRatedQueryService topRatedQuery;
     private final RecommendationsQueryService recommendationsQuery;
@@ -68,15 +79,17 @@ public class ReportController {
     private final GenreSpotlightQueryService genreSpotlightQuery;
 
     public ReportController(ReportEmailService reportEmailService,
-                            WeeklyDigestQueryService weeklyDigestQuery,
-                            TopRatedQueryService topRatedQuery,
-                            RecommendationsQueryService recommendationsQuery,
-                            TrendingQueryService trendingQuery,
-                            PlatformReportQueryService platformQuery,
-                            TopActorsQueryService topActorsQuery,
-                            NewReleasesQueryService newReleasesQuery,
-                            GenreSpotlightQueryService genreSpotlightQuery) {
+            GotenbergPdfService pdfService,
+            WeeklyDigestQueryService weeklyDigestQuery,
+            TopRatedQueryService topRatedQuery,
+            RecommendationsQueryService recommendationsQuery,
+            TrendingQueryService trendingQuery,
+            PlatformReportQueryService platformQuery,
+            TopActorsQueryService topActorsQuery,
+            NewReleasesQueryService newReleasesQuery,
+            GenreSpotlightQueryService genreSpotlightQuery) {
         this.reportEmailService = reportEmailService;
+        this.pdfService = pdfService;
         this.weeklyDigestQuery = weeklyDigestQuery;
         this.topRatedQuery = topRatedQuery;
         this.recommendationsQuery = recommendationsQuery;
@@ -85,6 +98,17 @@ public class ReportController {
         this.topActorsQuery = topActorsQuery;
         this.newReleasesQuery = newReleasesQuery;
         this.genreSpotlightQuery = genreSpotlightQuery;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helper — build PDF ResponseEntity
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String filename) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(pdf);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -104,7 +128,8 @@ public class ReportController {
         try {
             WeeklyDigestData data = weeklyDigestQuery.buildForUser(user.getUserId());
             log.info("Preview do digest semanal gerado com sucesso. UserId: {}", user.getUserId());
-            log.debug("Finalizando previewWeeklyDigest. Resultado: {} itens", data.getRecentlyWatched() != null ? data.getRecentlyWatched().size() : 0);
+            log.debug("Finalizando previewWeeklyDigest. Resultado: {} itens",
+                    data.getRecentlyWatched() != null ? data.getRecentlyWatched().size() : 0);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             log.error("Erro ao gerar preview do digest semanal. Parâmetros: {}. Erro: {}",
@@ -147,7 +172,8 @@ public class ReportController {
         try {
             TopRatedData data = topRatedQuery.build(limit);
             log.info("Preview top-rated gerado com sucesso. Quantidade: {}", limit);
-            log.debug("Finalizando previewTopRated. Resultado: {} itens", data.getItems() != null ? data.getItems().size() : 0);
+            log.debug("Finalizando previewTopRated. Resultado: {} itens",
+                    data.getItems() != null ? data.getItems().size() : 0);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             log.error("Erro ao gerar preview top-rated. Parâmetros: {}. Erro: {}",
@@ -193,7 +219,8 @@ public class ReportController {
         try {
             RecommendationsData data = recommendationsQuery.buildForUser(user.getUserId());
             log.info("Preview de recomendações gerado com sucesso. UserId: {}", user.getUserId());
-            log.debug("Finalizando previewRecommendations. Resultado: {} itens", data.getRecommendations() != null ? data.getRecommendations().size() : 0);
+            log.debug("Finalizando previewRecommendations. Resultado: {} itens",
+                    data.getRecommendations() != null ? data.getRecommendations().size() : 0);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             log.error("Erro ao gerar preview de recomendações. Parâmetros: {}. Erro: {}",
@@ -237,7 +264,8 @@ public class ReportController {
         try {
             TrendingData data = trendingQuery.build(days, limit);
             log.info("Preview de trending gerado com sucesso. Dias: {}, Limite: {}", days, limit);
-            log.debug("Finalizando previewTrending. Resultado: {} itens", data.getItems() != null ? data.getItems().size() : 0);
+            log.debug("Finalizando previewTrending. Resultado: {} itens",
+                    data.getItems() != null ? data.getItems().size() : 0);
             return ResponseEntity.ok(data);
         } catch (Exception e) {
             log.error("Erro ao gerar preview de trending. Parâmetros: {}. Erro: {}",
@@ -374,10 +402,141 @@ public class ReportController {
             @RequestParam(required = false) String genre,
             @Valid @RequestBody(required = false) SendReportRequest body) {
         String toEmail = (body != null && body.email() != null) ? body.email() : user.getUsername();
-        log.debug("Iniciando sendGenreSpotlight. Parâmetros: {}", Map.of("toEmail", toEmail, "genre", genre != null ? genre : "auto"));
+        log.debug("Iniciando sendGenreSpotlight. Parâmetros: {}",
+                Map.of("toEmail", toEmail, "genre", genre != null ? genre : "auto"));
         reportEmailService.sendGenreSpotlight(toEmail, genre);
         log.info("Relatório genre-spotlight enfileirado com sucesso. Para: {}", toEmail);
         return ResponseEntity.accepted().body(Map.of("message", "Relatório genre-spotlight enfileirado para envio."));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PDF downloads — relatórios de usuário
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @GetMapping("/api/v1/reports/weekly-digest/pdf")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.weekly_digest.pdf")
+    @Operation(summary = "Download do digest semanal em PDF", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<byte[]> weeklyDigestPdf(
+            @AuthenticationPrincipal CinelogUserDetails user) {
+        log.debug("Gerando PDF weekly-digest para userId={}", user.getUserId());
+        WeeklyDigestData data = weeklyDigestQuery.buildForUser(user.getUserId());
+        byte[] pdf = pdfService.generate(PdfOptions.a4("weekly-digest"), Map.of("data", data));
+        return pdfResponse(pdf, "weekly-digest.pdf");
+    }
+
+    @GetMapping("/api/v1/reports/top-rated/pdf")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.top_rated.pdf")
+    @Operation(summary = "Download do relatório top-rated em PDF", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<byte[]> topRatedPdf(
+            @RequestParam(defaultValue = "10") int limit) {
+        log.debug("Gerando PDF top-rated. Limite: {}", limit);
+        TopRatedData data = topRatedQuery.build(limit);
+        byte[] pdf = pdfService.generate(PdfOptions.a4("top-rated"), Map.of("data", data));
+        return pdfResponse(pdf, "top-rated.pdf");
+    }
+
+    @GetMapping("/api/v1/reports/recommendations/pdf")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.recommendations.pdf")
+    @Operation(summary = "Download de recomendações personalizadas em PDF", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<byte[]> recommendationsPdf(
+            @AuthenticationPrincipal CinelogUserDetails user) {
+        log.debug("Gerando PDF recommendations para userId={}", user.getUserId());
+        RecommendationsData data = recommendationsQuery.buildForUser(user.getUserId());
+        byte[] pdf = pdfService.generate(PdfOptions.a4("recommendations"), Map.of("data", data));
+        return pdfResponse(pdf, "recommendations.pdf");
+    }
+
+    @GetMapping("/api/v1/reports/trending/pdf")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.trending.pdf")
+    @Operation(summary = "Download do relatório trending em PDF", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<byte[]> trendingPdf(
+            @RequestParam(defaultValue = "7") int days,
+            @RequestParam(defaultValue = "10") int limit) {
+        log.debug("Gerando PDF trending. Dias: {}, Limite: {}", days, limit);
+        TrendingData data = trendingQuery.build(days, limit);
+        byte[] pdf = pdfService.generate(PdfOptions.a4("trending"), Map.of("data", data));
+        return pdfResponse(pdf, "trending.pdf");
+    }
+
+    @GetMapping("/api/v1/reports/top-actors/pdf")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.top_actors.pdf")
+    @Operation(summary = "Download do relatório top-actors em PDF", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<byte[]> topActorsPdf(
+            @RequestParam(defaultValue = "10") int limit) {
+        log.debug("Gerando PDF top-actors. Limite: {}", limit);
+        TopActorsData data = topActorsQuery.build(limit);
+        byte[] pdf = pdfService.generate(PdfOptions.a4("top-actors"), Map.of("data", data));
+        return pdfResponse(pdf, "top-actors.pdf");
+    }
+
+    @GetMapping("/api/v1/reports/new-releases/pdf")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.new_releases.pdf")
+    @Operation(summary = "Download do relatório de novos lançamentos em PDF", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<byte[]> newReleasesPdf(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "20") int limit) {
+        log.debug("Gerando PDF new-releases. Dias: {}, Limite: {}", days, limit);
+        NewReleasesData data = newReleasesQuery.build(days, limit);
+        byte[] pdf = pdfService.generate(PdfOptions.a4("new-releases"), Map.of("data", data));
+        return pdfResponse(pdf, "new-releases.pdf");
+    }
+
+    @GetMapping("/api/v1/reports/genre-spotlight/pdf")
+    @PreAuthorize("isAuthenticated()")
+    @Measured("cinelog.controller.reports.genre_spotlight.pdf")
+    @Operation(summary = "Download do relatório genre-spotlight em PDF", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<byte[]> genreSpotlightPdf(
+            @RequestParam(required = false) String genre) {
+        log.debug("Gerando PDF genre-spotlight. Gênero: {}", genre != null ? genre : "auto");
+        GenreSpotlightData data = genreSpotlightQuery.build(genre);
+        byte[] pdf = pdfService.generate(PdfOptions.a4("genre-spotlight"), Map.of("data", data));
+        return pdfResponse(pdf, "genre-spotlight.pdf");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PDF download — admin
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @GetMapping("/api/v1/admin/reports/platform/pdf")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Measured("cinelog.controller.reports.platform.pdf")
+    @SecureOperation(module = "REPORTS", value = "ADMIN")
+    @Operation(summary = "Download do relatório da plataforma em PDF (somente admin)", responses = {
+            @ApiResponse(responseCode = "200", description = "PDF gerado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado")
+    })
+    public ResponseEntity<byte[]> platformReportPdf() {
+        log.debug("Gerando PDF platform-report (admin)");
+        PlatformReportData data = platformQuery.build();
+        byte[] pdf = pdfService.generate(PdfOptions.a4Landscape("platform-report"), Map.of("data", data));
+        return pdfResponse(pdf, "platform-report.pdf");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

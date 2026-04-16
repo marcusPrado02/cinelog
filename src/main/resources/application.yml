@@ -272,6 +272,11 @@ cinelog:
         from-email: ${REPORT_FROM_EMAIL:noreply@cinelog.dev}
         from-name: CineLog
         base-url: ${APP_BASE_URL:http://localhost:8080}
+        pdf:
+            enabled: true
+            gotenberg-url: ${GOTENBERG_URL:http://localhost:3001}
+            timeout-seconds: 30
+            attach-to-email: false
         cron:
             weekly-digest: "0 0 8 * * MON"
             trending: "0 0 18 * * FRI"
