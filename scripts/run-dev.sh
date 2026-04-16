@@ -64,6 +64,7 @@ fi
 
 echo "Iniciando CinelogApplication com perfil: ${SPRING_PROFILES_ACTIVE:-dev}"
 
+cd "$ROOT_DIR"
 exec "$ROOT_DIR/mvnw" spring-boot:run \
   -Dspring-boot.run.profiles="${SPRING_PROFILES_ACTIVE:-dev}" \
   "$@"
