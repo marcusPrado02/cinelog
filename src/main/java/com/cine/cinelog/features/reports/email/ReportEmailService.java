@@ -1,6 +1,9 @@
 package com.cine.cinelog.features.reports.email;
 
+import com.cine.cinelog.features.reports.config.ReportProperties;
 import com.cine.cinelog.features.reports.data.*;
+import com.cine.cinelog.features.reports.pdf.GotenbergPdfService;
+import com.cine.cinelog.features.reports.pdf.PdfOptions;
 import com.cine.cinelog.features.reports.query.*;
 import com.cine.cinelog.features.users.repository.UserJpaRepository;
 import com.cine.cinelog.features.users.persistence.entity.UserEntity;
@@ -27,6 +30,8 @@ public class ReportEmailService {
     private static final Logger log = LoggerFactory.getLogger(ReportEmailService.class);
 
     private final EmailService emailService;
+    private final GotenbergPdfService pdfService;
+    private final ReportProperties reportProps;
     private final WeeklyDigestQueryService weeklyDigest;
     private final TopRatedQueryService topRated;
     private final RecommendationsQueryService recommendations;
@@ -38,6 +43,8 @@ public class ReportEmailService {
     private final UserJpaRepository userRepository;
 
     public ReportEmailService(EmailService emailService,
+            GotenbergPdfService pdfService,
+            ReportProperties reportProps,
             WeeklyDigestQueryService weeklyDigest,
             TopRatedQueryService topRated,
             RecommendationsQueryService recommendations,
@@ -48,6 +55,8 @@ public class ReportEmailService {
             GenreSpotlightQueryService genreSpotlight,
             UserJpaRepository userRepository) {
         this.emailService = emailService;
+        this.pdfService = pdfService;
+        this.reportProps = reportProps;
         this.weeklyDigest = weeklyDigest;
         this.topRated = topRated;
         this.recommendations = recommendations;
@@ -60,6 +69,35 @@ public class ReportEmailService {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Helper — optionally attach PDF
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private boolean shouldAttachPdf() {
+        return reportProps.getPdf().isEnabled() && reportProps.getPdf().isAttachToEmail();
+    }
+
+    private byte[] tryGeneratePdf(String templateName, Map<String, Object> data) {
+        try {
+            return pdfService.generate(PdfOptions.a4(templateName), data);
+        } catch (Exception e) {
+            log.warn("PDF generation failed for {}, sending email without attachment: {}",
+                    templateName, e.getMessage());
+            return new byte[0];
+        }
+    }
+
+    private void sendWithOptionalPdf(String to, String subject, String emailTemplate,
+            String pdfTemplate, Map<String, Object> variables) {
+        if (shouldAttachPdf()) {
+            byte[] pdf = tryGeneratePdf(pdfTemplate, variables);
+            emailService.sendHtmlWithAttachment(to, subject, emailTemplate, variables,
+                    pdf, pdfTemplate + ".pdf");
+        } else {
+            emailService.sendHtml(to, subject, emailTemplate, variables);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Weekly Digest
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -67,10 +105,10 @@ public class ReportEmailService {
     public void sendWeeklyDigest(Long userId) {
         try {
             WeeklyDigestData data = weeklyDigest.buildForUser(userId);
-            emailService.sendHtml(
+            sendWithOptionalPdf(
                     data.getUserEmail(),
                     "📽️ Seu resumo semanal no CineLog",
-                    "weekly-digest",
+                    "weekly-digest", "weekly-digest",
                     Map.of("data", data));
         } catch (Exception e) {
             log.error("Failed to send weekly digest to userId={}: {}", userId, e.getMessage(), e);
@@ -84,7 +122,10 @@ public class ReportEmailService {
         users.forEach(u -> sendWeeklyDigest(u.getId()));
     }
 
-    /** Blocking variant for batch/task containers that shut down after job completion. */
+    /**
+     * Blocking variant for batch/task containers that shut down after job
+     * completion.
+     */
     public void sendWeeklyDigestToAllBlocking() {
         List<UserEntity> users = userRepository.findAll();
         log.info("[BATCH-SYNC] Sending weekly digest to {} users", users.size());
@@ -109,10 +150,10 @@ public class ReportEmailService {
     @Async("reportTaskExecutor")
     public void sendTopRated(String toEmail, int limit) {
         TopRatedData data = topRated.build(limit);
-        emailService.sendHtml(
+        sendWithOptionalPdf(
                 toEmail,
                 "⭐ Top " + limit + " mídias mais bem avaliadas no CineLog",
-                "top-rated",
+                "top-rated", "top-rated",
                 Map.of("data", data));
     }
 
@@ -124,10 +165,10 @@ public class ReportEmailService {
     public void sendRecommendations(Long userId) {
         try {
             RecommendationsData data = recommendations.buildForUser(userId);
-            emailService.sendHtml(
+            sendWithOptionalPdf(
                     data.getUserEmail(),
                     "🎬 Recomendações personalizadas para você no CineLog",
-                    "recommendations",
+                    "recommendations", "recommendations",
                     Map.of("data", data));
         } catch (Exception e) {
             log.error("Failed to send recommendations to userId={}: {}", userId, e.getMessage(), e);
@@ -141,10 +182,10 @@ public class ReportEmailService {
     @Async("reportTaskExecutor")
     public void sendTrending(String toEmail) {
         TrendingData data = trending.build();
-        emailService.sendHtml(
+        sendWithOptionalPdf(
                 toEmail,
                 "🔥 Em alta esta semana no CineLog",
-                "trending",
+                "trending", "trending",
                 Map.of("data", data));
     }
 
@@ -180,10 +221,10 @@ public class ReportEmailService {
     @Async("reportTaskExecutor")
     public void sendPlatformReport(String toEmail) {
         PlatformReportData data = platform.build();
-        emailService.sendHtml(
+        sendWithOptionalPdf(
                 toEmail,
                 "📊 Relatório da plataforma CineLog",
-                "platform-report",
+                "platform-report", "platform-report",
                 Map.of("data", data));
     }
 
@@ -205,10 +246,10 @@ public class ReportEmailService {
     @Async("reportTaskExecutor")
     public void sendTopActors(String toEmail, int limit) {
         TopActorsData data = topActors.build(limit);
-        emailService.sendHtml(
+        sendWithOptionalPdf(
                 toEmail,
                 "🌟 Top " + limit + " atores com filmes mais bem avaliados no CineLog",
-                "top-actors",
+                "top-actors", "top-actors",
                 Map.of("data", data));
     }
 
@@ -219,10 +260,10 @@ public class ReportEmailService {
     @Async("reportTaskExecutor")
     public void sendNewReleases(String toEmail, int days, int limit) {
         NewReleasesData data = newReleases.build(days, limit);
-        emailService.sendHtml(
+        sendWithOptionalPdf(
                 toEmail,
                 "🎬 " + data.getTotalNewMedia() + " novos títulos nos últimos " + days + " dias no CineLog",
-                "new-releases",
+                "new-releases", "new-releases",
                 Map.of("data", data));
     }
 
@@ -233,10 +274,10 @@ public class ReportEmailService {
     @Async("reportTaskExecutor")
     public void sendGenreSpotlight(String toEmail, String genreName) {
         GenreSpotlightData data = genreSpotlight.build(genreName);
-        emailService.sendHtml(
+        sendWithOptionalPdf(
                 toEmail,
                 "🎯 Gênero em destaque: " + data.getGenreName() + " — CineLog",
-                "genre-spotlight",
+                "genre-spotlight", "genre-spotlight",
                 Map.of("data", data));
     }
 }

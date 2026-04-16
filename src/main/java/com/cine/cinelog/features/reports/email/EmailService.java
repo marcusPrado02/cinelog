@@ -5,6 +5,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -16,8 +17,10 @@ import java.util.Map;
 /**
  * Low-level email sending service that wraps JavaMailSender and Thymeleaf.
  *
- * <p>All send operations are {@code @Async} — they execute in a separate thread
- * so that the calling request returns immediately with 202 Accepted.</p>
+ * <p>
+ * All send operations are {@code @Async} — they execute in a separate thread
+ * so that the calling request returns immediately with 202 Accepted.
+ * </p>
  */
 @Service
 public class EmailService {
@@ -29,8 +32,8 @@ public class EmailService {
     private final ReportProperties props;
 
     public EmailService(JavaMailSender mailSender,
-                        TemplateEngine templateEngine,
-                        ReportProperties props) {
+            TemplateEngine templateEngine,
+            ReportProperties props) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
         this.props = props;
@@ -41,7 +44,8 @@ public class EmailService {
      *
      * @param to           recipient email address
      * @param subject      email subject
-     * @param templateName template path under {@code templates/email/} (without extension)
+     * @param templateName template path under {@code templates/email/} (without
+     *                     extension)
      * @param variables    variables to pass to the template context
      */
     public void sendHtml(String to, String subject, String templateName, Map<String, Object> variables) {
@@ -62,6 +66,51 @@ public class EmailService {
 
             mailSender.send(msg);
             log.info("Email sent: to={} subject={}", to, subject);
+        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
+            log.error("Failed to send email to {}: {}", to, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Sends an HTML email rendered from a Thymeleaf template with an optional PDF
+     * attachment.
+     *
+     * @param to            recipient email address
+     * @param subject       email subject
+     * @param templateName  template path under {@code templates/email/} (without
+     *                      extension)
+     * @param variables     variables to pass to the template context
+     * @param pdfAttachment PDF bytes to attach (may be {@code null})
+     * @param pdfFilename   filename for the attachment (e.g.
+     *                      {@code "weekly-digest.pdf"})
+     */
+    public void sendHtmlWithAttachment(String to, String subject, String templateName,
+            Map<String, Object> variables,
+            byte[] pdfAttachment, String pdfFilename) {
+        try {
+            Context ctx = new Context();
+            variables.forEach(ctx::setVariable);
+            ctx.setVariable("baseUrl", props.getBaseUrl());
+            ctx.setVariable("appName", props.getFromName());
+
+            String html = templateEngine.process("email/" + templateName, ctx);
+
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+            helper.setFrom(props.getFromEmail(), props.getFromName());
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(html, true);
+
+            if (pdfAttachment != null && pdfAttachment.length > 0 && pdfFilename != null) {
+                helper.addAttachment(pdfFilename,
+                        new ByteArrayResource(pdfAttachment), "application/pdf");
+                log.debug("PDF attachment added: {} ({} bytes)", pdfFilename, pdfAttachment.length);
+            }
+
+            mailSender.send(msg);
+            log.info("Email sent: to={} subject={} attachment={}", to, subject,
+                    pdfFilename != null ? pdfFilename : "none");
         } catch (MessagingException | java.io.UnsupportedEncodingException e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage(), e);
         }
