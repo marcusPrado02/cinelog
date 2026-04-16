@@ -240,6 +240,24 @@ services:
             - "1025:1025" # SMTP
             - "8025:8025" # Web UI
 
+    # ========= Gotenberg (HTML → PDF via Chromium headless) =========
+    gotenberg:
+        image: gotenberg/gotenberg:8
+        container_name: cinelog-gotenberg
+        ports:
+            - "3001:3000"
+        environment:
+            - GOTENBERG_LOG_LEVEL=info
+            - GOTENBERG_CHROMIUM_DISABLE_JAVASCRIPT=false
+        restart: unless-stopped
+        healthcheck:
+            test:
+                ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+            interval: 15s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
     # ========= Spring Cloud Data Flow =========
     # SCDF Server 2.11.5 — orquestra batch jobs (tasks) via dashboard web.
     # Suporta launch de apps Spring Boot 3 com bootVersion=3 e schemaTarget=boot3.
@@ -274,7 +292,11 @@ services:
             - ./docker/scdf/docker-cli:/usr/local/bin/docker-real:ro
             - ./docker/scdf/docker-wrapper.sh:/usr/local/bin/docker:ro
         healthcheck:
-            test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9393' || exit 1"]
+            test:
+                [
+                    "CMD-SHELL",
+                    "bash -c 'echo > /dev/tcp/localhost/9393' || exit 1",
+                ]
             interval: 30s
             timeout: 10s
             retries: 5
@@ -307,7 +329,11 @@ services:
             - ./docker/scdf/docker-cli:/usr/local/bin/docker-real:ro
             - ./docker/scdf/docker-wrapper.sh:/usr/local/bin/docker:ro
         healthcheck:
-            test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/7577' || exit 1"]
+            test:
+                [
+                    "CMD-SHELL",
+                    "bash -c 'echo > /dev/tcp/localhost/7577' || exit 1",
+                ]
             interval: 30s
             timeout: 10s
             retries: 5
