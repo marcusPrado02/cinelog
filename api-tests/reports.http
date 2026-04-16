@@ -1,18 +1,32 @@
 # =============================================================================
-# CineLog API – Relatórios por E-mail                           [reports.http]
+# CineLog API – Relatórios por E-mail & PDF                     [reports.http]
 # =============================================================================
 #
 #  Endpoints:
 #   GET  /api/v1/reports/weekly-digest       → Preview digest semanal
 #   POST /api/v1/reports/weekly-digest       → Envia digest por e-mail (202)
+#   GET  /api/v1/reports/weekly-digest/pdf   → 📄 Download PDF
 #   GET  /api/v1/reports/top-rated           → Preview top avaliados
 #   POST /api/v1/reports/top-rated           → Envia top-rated por e-mail (202)
+#   GET  /api/v1/reports/top-rated/pdf       → 📄 Download PDF
 #   GET  /api/v1/reports/recommendations     → Preview recomendações
 #   POST /api/v1/reports/recommendations     → Envia recomendações por e-mail (202)
+#   GET  /api/v1/reports/recommendations/pdf → 📄 Download PDF
 #   GET  /api/v1/reports/trending            → Preview em alta
 #   POST /api/v1/reports/trending            → Envia trending por e-mail (202)
+#   GET  /api/v1/reports/trending/pdf        → 📄 Download PDF
+#   GET  /api/v1/reports/top-actors          → Preview top atores
+#   POST /api/v1/reports/top-actors          → Envia top-actors por e-mail (202)
+#   GET  /api/v1/reports/top-actors/pdf      → 📄 Download PDF
+#   GET  /api/v1/reports/new-releases        → Preview novos lançamentos
+#   POST /api/v1/reports/new-releases        → Envia new-releases por e-mail (202)
+#   GET  /api/v1/reports/new-releases/pdf    → 📄 Download PDF
+#   GET  /api/v1/reports/genre-spotlight     → Preview destaque de gênero
+#   POST /api/v1/reports/genre-spotlight     → Envia genre-spotlight por e-mail (202)
+#   GET  /api/v1/reports/genre-spotlight/pdf → 📄 Download PDF
 #   GET  /api/v1/admin/reports/platform      → Preview plataforma (ADMIN)
 #   POST /api/v1/admin/reports/platform      → Envia plataforma por e-mail (ADMIN)
+#   GET  /api/v1/admin/reports/platform/pdf  → 📄 Download PDF landscape (ADMIN)
 #   POST /api/v1/admin/reports/send-to-all   → E-mail para TODOS os usuários (ADMIN)
 #
 # ┌──────────────────────────────────────────────────────────────────────────┐
@@ -22,6 +36,7 @@
 # │  3. Configure REST Client env (rest-client.env.json – gitignored):      │
 # │       { "test": { "testEmail": "seu.email@dominio.com" } }              │
 # │  4. MailHog (captura local): http://localhost:8025                      │
+# │  5. Gotenberg (PDF):         docker compose up -d gotenberg             │
 # │                                                                          │
 # │  ⚠️  NÃO faça commit de endereços de e-mail reais neste arquivo.        │
 # │     Use sempre a variável {{testEmail}} que vem de rest-client.env.json │
@@ -69,6 +84,14 @@ Content-Type: application/json
 {
   "email": "{{testEmail}}"
 }
+
+###
+# @name pdfWeeklyDigest
+# 📄 Download PDF do digest semanal.
+# Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/reports/weekly-digest/pdf
+Authorization: Bearer {{token}}
+Accept: application/pdf
 
 
 # =============================================================================
@@ -138,6 +161,14 @@ Content-Type: application/json
   "limit": 5
 }
 
+###
+# @name pdfTopRated
+# 📄 Download PDF top-rated.
+# Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/reports/top-rated/pdf?limit=10
+Authorization: Bearer {{token}}
+Accept: application/pdf
+
 
 # =============================================================================
 # RECOMMENDATIONS
@@ -170,6 +201,14 @@ Content-Type: application/json
 {
   "email": "{{testEmail}}"
 }
+
+###
+# @name pdfRecommendations
+# 📄 Download PDF de recomendações.
+# Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/reports/recommendations/pdf
+Authorization: Bearer {{token}}
+Accept: application/pdf
 
 
 # =============================================================================
@@ -212,6 +251,145 @@ Content-Type: application/json
   "limit": 10
 }
 
+###
+# @name pdfTrending
+# 📄 Download PDF trending.
+# Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/reports/trending/pdf?days=7&limit=10
+Authorization: Bearer {{token}}
+Accept: application/pdf
+
+
+# =============================================================================
+# TOP ACTORS
+# =============================================================================
+
+###
+# @name previewTopActors
+# Preview: atores com filmes mais bem avaliados.
+# Espera: 200 OK + JSON com lista de atores
+GET {{baseUrl}}/api/v1/reports/top-actors?limit=10
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+# @name sendTopActorsToSelf
+# Envia relatório top-actors ao e-mail do usuário autenticado.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/top-actors
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+# @name sendTopActorsToEmail
+# Envia relatório top-actors a um endereço explícito.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/top-actors
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "limit": 10
+}
+
+###
+# @name pdfTopActors
+# 📄 Download PDF top-actors.
+# Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/reports/top-actors/pdf?limit=10
+Authorization: Bearer {{token}}
+Accept: application/pdf
+
+
+# =============================================================================
+# NEW RELEASES
+# =============================================================================
+
+###
+# @name previewNewReleases
+# Preview: títulos adicionados recentemente.
+# Espera: 200 OK + JSON com lista de media
+GET {{baseUrl}}/api/v1/reports/new-releases?days=30&limit=10
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+# @name sendNewReleasesToSelf
+# Envia relatório new-releases ao e-mail do usuário autenticado.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/new-releases
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+# @name sendNewReleasesToEmail
+# Envia relatório new-releases a um endereço explícito.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/new-releases
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "days": 30,
+  "limit": 10
+}
+
+###
+# @name pdfNewReleases
+# 📄 Download PDF new-releases.
+# Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/reports/new-releases/pdf?days=30&limit=10
+Authorization: Bearer {{token}}
+Accept: application/pdf
+
+
+# =============================================================================
+# GENRE SPOTLIGHT
+# =============================================================================
+
+###
+# @name previewGenreSpotlight
+# Preview: análise profunda de um gênero.
+# Espera: 200 OK + JSON com dados do gênero
+GET {{baseUrl}}/api/v1/reports/genre-spotlight?genre=Action
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+# @name sendGenreSpotlightToSelf
+# Envia relatório genre-spotlight ao e-mail do usuário autenticado.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/genre-spotlight
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "genre": "Action"
+}
+
+###
+# @name sendGenreSpotlightToEmail
+# Envia relatório genre-spotlight a um endereço explícito.
+# Espera: 202 Accepted
+POST {{baseUrl}}/api/v1/reports/genre-spotlight
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "genre": "Drama"
+}
+
+###
+# @name pdfGenreSpotlight
+# 📄 Download PDF genre-spotlight.
+# Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/reports/genre-spotlight/pdf?genre=Action
+Authorization: Bearer {{token}}
+Accept: application/pdf
+
 
 # =============================================================================
 # PLATFORM REPORT (ADMIN)
@@ -247,6 +425,21 @@ Content-Type: application/json
 {
   "email": "{{testEmail}}"
 }
+
+###
+# @name pdfPlatformReport
+# 📄 Download PDF do relatório de plataforma (landscape).
+# Requer role ADMIN. Espera: 200 OK + application/pdf
+GET {{baseUrl}}/api/v1/admin/reports/platform/pdf
+Authorization: Bearer {{adminToken}}
+Accept: application/pdf
+
+###
+# @name pdfPlatformReportForbidden
+# PDF platform sem admin token → deve retornar 403 Forbidden.
+GET {{baseUrl}}/api/v1/admin/reports/platform/pdf
+Authorization: Bearer {{token}}
+Accept: application/pdf
 
 
 # =============================================================================

@@ -317,6 +317,14 @@ services:
             - cinelog-network
         restart: unless-stopped
 
+    gotenberg:
+        image: gotenberg/gotenberg:8
+        ports:
+            - "3001:3000"
+        networks:
+            - cinelog-network
+        restart: unless-stopped
+
 volumes:
     mysql-data:
 

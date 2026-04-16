@@ -17,18 +17,17 @@
 
 ### Pré-requisitos
 
--   Java 21 (JDK)
--   Maven 3.9+
--   Docker Desktop
--   IDE (IntelliJ IDEA recomendado)
--   Git
+- Java 21 (JDK)
+- Maven 3.9+
+- Docker Desktop
+- IDE (IntelliJ IDEA recomendado)
+- Git
 
 ### Configuração da IDE
 
 #### IntelliJ IDEA
 
 1. **Instale Plugins**:
-
     - Lombok
     - MapStruct Support
     - SonarLint
@@ -58,7 +57,6 @@
 #### VS Code
 
 1. **Instale Extensions**:
-
     - Extension Pack for Java
     - Spring Boot Extension Pack
     - Lombok Annotations Support
@@ -130,6 +128,12 @@ com.cine.cinelog/
 │   ├── users/
 │   ├── genres/
 │   └── ...
+│
+├── reports/                    # Relatórios, e-mail e PDF
+│   ├── controller/             # ReportController (preview, email, PDF)
+│   ├── service/                # Services de geração de relatórios
+│   ├── email/                  # EmailService, ReportEmailService
+│   └── pdf/                    # GotenbergPdfService, PdfOptions
 │
 └── shared/                     # Cross-cutting concerns
     ├── config/                 # Configurações globais
@@ -732,16 +736,16 @@ public Page<Media> findAll(Pageable pageable) {
 
 ### Checklist
 
--   [ ] Validar todos os inputs
--   [ ] Usar @Valid em DTOs
--   [ ] Sanitizar SQL (usar JPA/Prepared Statements)
--   [ ] Não expor stack traces
--   [ ] Usar HTTPS em produção
--   [ ] Implementar rate limiting
--   [ ] Habilitar CORS apenas para domínios conhecidos
--   [ ] Criptografar senhas (BCrypt)
--   [ ] Validar tokens JWT
--   [ ] Logs não devem conter dados sensíveis
+- [ ] Validar todos os inputs
+- [ ] Usar @Valid em DTOs
+- [ ] Sanitizar SQL (usar JPA/Prepared Statements)
+- [ ] Não expor stack traces
+- [ ] Usar HTTPS em produção
+- [ ] Implementar rate limiting
+- [ ] Habilitar CORS apenas para domínios conhecidos
+- [ ] Criptografar senhas (BCrypt)
+- [ ] Validar tokens JWT
+- [ ] Logs não devem conter dados sensíveis
 
 ---
 
@@ -754,10 +758,10 @@ de desenvolvimento ao trabalhar com essa integracao.
 
 ### Executando batch jobs localmente vs via SCDF
 
-| Modo | Quando usar | Como executar |
-|------|-------------|---------------|
-| **Local (sem SCDF)** | Desenvolvimento e debug rapido | `./mvnw spring-boot:run` com agendamento habilitado ou disparo via endpoint `/api/v1/admin/batch/trigger/{jobName}` |
-| **Via SCDF** | Testar o fluxo real de orquestracao | Subir o stack SCDF com `docker-compose up -d`, registrar tasks e lancar pelo Dashboard |
+| Modo                 | Quando usar                         | Como executar                                                                                                       |
+| -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Local (sem SCDF)** | Desenvolvimento e debug rapido      | `./mvnw spring-boot:run` com agendamento habilitado ou disparo via endpoint `/api/v1/admin/batch/trigger/{jobName}` |
+| **Via SCDF**         | Testar o fluxo real de orquestracao | Subir o stack SCDF com `docker-compose up -d`, registrar tasks e lancar pelo Dashboard                              |
 
 ### Configuracao inicial do SCDF
 
@@ -778,13 +782,13 @@ Apos subir o stack, acesse o Dashboard em:
 
 ### Arquivos-chave da integracao SCDF
 
-| Arquivo | Descricao |
-|---------|-----------|
+| Arquivo                                          | Descricao                                                                                 |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------- |
 | `src/main/java/.../batch/config/TaskConfig.java` | Configuracao do Spring Cloud Task (`CustomTaskConfigurer`, `@Primary TransactionManager`) |
-| `src/main/resources/application-task.yml` | Configuracoes especificas do profile `task` (logging, desabilita scheduler) |
-| `Dockerfile` | Imagem Docker usada pelo SCDF para lancar containers efemeros |
-| `docker/scdf/init-scdf.sh` | Script para registrar tasks no SCDF via REST API |
-| `docker-compose.yml` | Define os servicos `skipper-server` e `dataflow-server` |
+| `src/main/resources/application-task.yml`        | Configuracoes especificas do profile `task` (logging, desabilita scheduler)               |
+| `Dockerfile`                                     | Imagem Docker usada pelo SCDF para lancar containers efemeros                             |
+| `docker/scdf/init-scdf.sh`                       | Script para registrar tasks no SCDF via REST API                                          |
+| `docker-compose.yml`                             | Define os servicos `skipper-server` e `dataflow-server`                                   |
 
 ### Dicas de desenvolvimento
 

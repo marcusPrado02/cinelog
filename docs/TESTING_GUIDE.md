@@ -496,40 +496,74 @@ GET /api/media/search/text?q=Matrix
 
 ---
 
-### 7.17. Reports & Email
+### 7.17. Reports, Email & PDF
 
 > Requer autenticação. Endpoints `/admin/reports/*` requerem role **ADMIN**.
 > Os emails são enviados via MailHog (http://localhost:8025) em ambiente de desenvolvimento.
+> PDFs são gerados sob demanda via **Gotenberg** (`docker compose up -d gotenberg`).
 
 #### User Reports (autenticado)
 
-| Ação                     | Endpoint                               | Descrição                          |
-| ------------------------ | -------------------------------------- | ---------------------------------- |
-| **Ver digest semanal**   | `GET /api/v1/reports/weekly-digest`    | HTML/JSON do resumo semanal        |
-| **Enviar digest**        | `POST /api/v1/reports/weekly-digest`   | Envio imediato por email           |
-| **Ver top avaliados**    | `GET /api/v1/reports/top-rated`        | Relatório de mídias mais avaliadas |
-| **Enviar top avaliados** | `POST /api/v1/reports/top-rated`       | Envio imediato por email           |
-| **Ver recomendações**    | `GET /api/v1/reports/recommendations`  | Relatório de recomendações         |
-| **Enviar recomendações** | `POST /api/v1/reports/recommendations` | Envio imediato por email           |
-| **Ver trending**         | `GET /api/v1/reports/trending`         | Relatório de trending              |
-| **Enviar trending**      | `POST /api/v1/reports/trending`        | Envio imediato por email           |
+| Ação                       | Endpoint                                  | Descrição                            |
+| -------------------------- | ----------------------------------------- | ------------------------------------ |
+| **Ver digest semanal**     | `GET /api/v1/reports/weekly-digest`       | JSON do resumo semanal               |
+| **Enviar digest**          | `POST /api/v1/reports/weekly-digest`      | Envio imediato por email             |
+| **📄 PDF digest**          | `GET /api/v1/reports/weekly-digest/pdf`   | Download PDF                         |
+| **Ver top avaliados**      | `GET /api/v1/reports/top-rated`           | Relatório de mídias mais avaliadas   |
+| **Enviar top avaliados**   | `POST /api/v1/reports/top-rated`          | Envio imediato por email             |
+| **📄 PDF top-rated**       | `GET /api/v1/reports/top-rated/pdf`       | Download PDF                         |
+| **Ver recomendações**      | `GET /api/v1/reports/recommendations`     | Relatório de recomendações           |
+| **Enviar recomendações**   | `POST /api/v1/reports/recommendations`    | Envio imediato por email             |
+| **📄 PDF recomendações**   | `GET /api/v1/reports/recommendations/pdf` | Download PDF                         |
+| **Ver trending**           | `GET /api/v1/reports/trending`            | Relatório de trending                |
+| **Enviar trending**        | `POST /api/v1/reports/trending`           | Envio imediato por email             |
+| **📄 PDF trending**        | `GET /api/v1/reports/trending/pdf`        | Download PDF                         |
+| **Ver top actors**         | `GET /api/v1/reports/top-actors`          | Atores com filmes mais bem avaliados |
+| **Enviar top actors**      | `POST /api/v1/reports/top-actors`         | Envio imediato por email             |
+| **📄 PDF top-actors**      | `GET /api/v1/reports/top-actors/pdf`      | Download PDF                         |
+| **Ver new releases**       | `GET /api/v1/reports/new-releases`        | Novos títulos adicionados            |
+| **Enviar new releases**    | `POST /api/v1/reports/new-releases`       | Envio imediato por email             |
+| **📄 PDF new-releases**    | `GET /api/v1/reports/new-releases/pdf`    | Download PDF                         |
+| **Ver genre spotlight**    | `GET /api/v1/reports/genre-spotlight`     | Análise profunda de um gênero        |
+| **Enviar genre spotlight** | `POST /api/v1/reports/genre-spotlight`    | Envio imediato por email             |
+| **📄 PDF genre-spotlight** | `GET /api/v1/reports/genre-spotlight/pdf` | Download PDF                         |
 
 #### Admin Reports
 
-| Ação                         | Endpoint                                 | Descrição                                   |
-| ---------------------------- | ---------------------------------------- | ------------------------------------------- |
-| **Ver platform report**      | `GET /api/v1/admin/reports/platform`     | Relatório geral da plataforma               |
-| **Enviar platform report**   | `POST /api/v1/admin/reports/platform`    | Enviar por email (admin)                    |
-| **Disparar envios em massa** | `POST /api/v1/admin/reports/send-to-all` | Enviar digest para todos os usuários ativos |
+| Ação                         | Endpoint                                 | Descrição                                     |
+| ---------------------------- | ---------------------------------------- | --------------------------------------------- |
+| **Ver platform report**      | `GET /api/v1/admin/reports/platform`     | Relatório geral da plataforma                 |
+| **Enviar platform report**   | `POST /api/v1/admin/reports/platform`    | Enviar por email (admin)                      |
+| **📄 PDF platform**          | `GET /api/v1/admin/reports/platform/pdf` | Download PDF (landscape)                      |
+| **Disparar envios em massa** | `POST /api/v1/admin/reports/send-to-all` | Enviar trending para todos os usuários ativos |
 
-**Como testar o envio de email:**
+#### Como testar o envio de email
 
 1. Execute `POST /api/v1/reports/weekly-digest` no Swagger
 2. Abra http://localhost:8025 (MailHog)
 3. O email com o template dark/cinema deve aparecer na caixa de entrada
 4. Inspecione o HTML para ver o template renderizado
 
-**Templates disponíveis:** `weekly-digest`, `top-rated`, `recommendations`, `trending`, `platform-report`
+#### Como testar a geração de PDF
+
+1. Garanta que o Gotenberg está rodando: `docker compose up -d gotenberg`
+2. Execute `GET /api/v1/reports/weekly-digest/pdf` no Swagger ou via cURL:
+    ```bash
+    curl -s -H "Authorization: Bearer $TOKEN" \
+      http://localhost:8080/api/v1/reports/weekly-digest/pdf -o digest.pdf
+    ```
+3. Abra o arquivo `digest.pdf` — deve conter o relatório com tema dark/cinema CineLog
+4. Para relatórios com parâmetros: `GET /api/v1/reports/trending/pdf?days=30&limit=5`
+5. O relatório de plataforma (admin) é gerado em **paisagem**: `GET /api/v1/admin/reports/platform/pdf`
+
+#### PDF como anexo de email
+
+Quando configurado `cinelog.reports.pdf.attach-to-email=true`, os POSTs de envio anexam o PDF automaticamente.
+Se o Gotenberg estiver offline, o email é enviado normalmente sem anexo (fail-safe).
+
+**Templates de e-mail:** `weekly-digest`, `top-rated`, `recommendations`, `trending`, `platform-report`, `top-actors`, `new-releases`, `genre-spotlight`
+
+**Templates de PDF:** mesmos nomes, em `templates/pdf/` — tema dark com CSS inline para Gotenberg
 
 ---
 
