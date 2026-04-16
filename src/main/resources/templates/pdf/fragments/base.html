@@ -1,0 +1,194 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8" />
+        <style>
+            /* ═══════════════════════════════════════════════════════════
+           CineLog PDF — Shared Base Styles
+           Gotenberg usa Chromium headless → CSS moderno funciona.
+           ═══════════════════════════════════════════════════════════ */
+
+            @page {
+                margin: 0;
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family:
+                    "Segoe UI",
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    Roboto,
+                    sans-serif;
+                color: #e0e0e0;
+                background: #0d0d0d;
+                font-size: 11px;
+                line-height: 1.5;
+            }
+
+            /* ── Header ─────────────────────────────────────────────── */
+            .report-header {
+                background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+                color: #fff;
+                padding: 28px 36px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .report-header h1 {
+                font-size: 22px;
+                font-weight: 700;
+                letter-spacing: -0.5px;
+            }
+            .report-header .subtitle {
+                font-size: 12px;
+                opacity: 0.85;
+                margin-top: 4px;
+            }
+            .report-header .logo {
+                font-size: 28px;
+                font-weight: 800;
+                letter-spacing: 2px;
+            }
+
+            /* ── Content ────────────────────────────────────────────── */
+            .content {
+                padding: 24px 36px 40px;
+            }
+
+            /* ── Metric Cards ───────────────────────────────────────── */
+            .metrics-row {
+                display: flex;
+                gap: 16px;
+                margin-bottom: 28px;
+            }
+            .metric-card {
+                flex: 1;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                border-radius: 10px;
+                padding: 18px;
+                text-align: center;
+            }
+            .metric-card .value {
+                font-size: 28px;
+                font-weight: 700;
+                color: #e50914;
+            }
+            .metric-card .label {
+                font-size: 10px;
+                color: #999;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-top: 4px;
+            }
+
+            /* ── Tables ─────────────────────────────────────────────── */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 12px;
+            }
+            thead th {
+                background: #1a1a1a;
+                color: #e50914;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                padding: 10px 12px;
+                text-align: left;
+                border-bottom: 2px solid #e50914;
+            }
+            tbody td {
+                padding: 10px 12px;
+                border-bottom: 1px solid #1e1e1e;
+                vertical-align: middle;
+            }
+            tbody tr:nth-child(even) {
+                background: #111;
+            }
+            tbody tr:hover {
+                background: #1a1a1a;
+            }
+
+            /* ── Badges ─────────────────────────────────────────────── */
+            .badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .badge-movie {
+                background: #e50914;
+                color: #fff;
+            }
+            .badge-tv {
+                background: #0077cc;
+                color: #fff;
+            }
+
+            /* ── Rating ─────────────────────────────────────────────── */
+            .rating {
+                color: #f5c518;
+                font-weight: 700;
+            }
+
+            /* ── Section ────────────────────────────────────────────── */
+            .section-title {
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+                margin: 24px 0 12px;
+                padding-bottom: 6px;
+                border-bottom: 2px solid #e50914;
+            }
+
+            /* ── Footer ─────────────────────────────────────────────── */
+            .report-footer {
+                text-align: center;
+                font-size: 9px;
+                color: #666;
+                padding: 20px 36px;
+                border-top: 1px solid #1e1e1e;
+            }
+
+            /* ── Thumbnail images ───────────────────────────────────── */
+            .poster-thumb {
+                width: 36px;
+                height: 54px;
+                border-radius: 4px;
+                object-fit: cover;
+            }
+            .profile-thumb {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                object-fit: cover;
+            }
+
+            /* ── Rank number ────────────────────────────────────────── */
+            .rank {
+                font-size: 14px;
+                font-weight: 800;
+                color: #e50914;
+                text-align: center;
+                min-width: 24px;
+            }
+
+            /* ── Page break helper ──────────────────────────────────── */
+            .page-break {
+                page-break-before: always;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Conteúdo substituído pelos templates filhos via th:replace -->
+    </body>
+</html>

@@ -1,0 +1,277 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8" />
+        <link th:replace="~{pdf/fragments/base :: head}" />
+        <style>
+            /* Herdado de base.html — estilos estão no fragment acima (incluído via Gotenberg) */
+            /* Estilos inline para Gotenberg (que não suporta th:replace no <head>) */
+            @page {
+                margin: 0;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    "Segoe UI",
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    Roboto,
+                    sans-serif;
+                color: #e0e0e0;
+                background: #0d0d0d;
+                font-size: 11px;
+                line-height: 1.5;
+            }
+            .report-header {
+                background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+                color: #fff;
+                padding: 28px 36px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .report-header h1 {
+                font-size: 22px;
+                font-weight: 700;
+                letter-spacing: -0.5px;
+            }
+            .report-header .subtitle {
+                font-size: 12px;
+                opacity: 0.85;
+                margin-top: 4px;
+            }
+            .report-header .logo {
+                font-size: 28px;
+                font-weight: 800;
+                letter-spacing: 2px;
+            }
+            .content {
+                padding: 24px 36px 40px;
+            }
+            .metrics-row {
+                display: flex;
+                gap: 16px;
+                margin-bottom: 28px;
+            }
+            .metric-card {
+                flex: 1;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                border-radius: 10px;
+                padding: 18px;
+                text-align: center;
+            }
+            .metric-card .value {
+                font-size: 28px;
+                font-weight: 700;
+                color: #e50914;
+            }
+            .metric-card .label {
+                font-size: 10px;
+                color: #999;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-top: 4px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 12px;
+            }
+            thead th {
+                background: #1a1a1a;
+                color: #e50914;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                padding: 10px 12px;
+                text-align: left;
+                border-bottom: 2px solid #e50914;
+            }
+            tbody td {
+                padding: 10px 12px;
+                border-bottom: 1px solid #1e1e1e;
+                vertical-align: middle;
+            }
+            tbody tr:nth-child(even) {
+                background: #111;
+            }
+            .badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .badge-movie {
+                background: #e50914;
+                color: #fff;
+            }
+            .badge-tv {
+                background: #0077cc;
+                color: #fff;
+            }
+            .rating {
+                color: #f5c518;
+                font-weight: 700;
+            }
+            .section-title {
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+                margin: 24px 0 12px;
+                padding-bottom: 6px;
+                border-bottom: 2px solid #e50914;
+            }
+            .report-footer {
+                text-align: center;
+                font-size: 9px;
+                color: #666;
+                padding: 20px 36px;
+                border-top: 1px solid #1e1e1e;
+            }
+            .poster-thumb {
+                width: 36px;
+                height: 54px;
+                border-radius: 4px;
+                object-fit: cover;
+            }
+            .rank {
+                font-size: 14px;
+                font-weight: 800;
+                color: #e50914;
+                text-align: center;
+                min-width: 24px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Header -->
+        <div class="report-header">
+            <div>
+                <h1>Resumo Semanal</h1>
+                <div class="subtitle">
+                    <span th:text="${data.userName}">Usuário</span> —
+                    <span
+                        th:text="${#temporals.format(data.weekStart, 'dd/MM/yyyy')}"
+                        >01/01</span
+                    >
+                    a
+                    <span
+                        th:text="${#temporals.format(data.weekEnd, 'dd/MM/yyyy')}"
+                        >07/01</span
+                    >
+                </div>
+            </div>
+            <div class="logo">CINELOG</div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Metric Cards -->
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="value" th:text="${data.totalWatchedThisWeek}">
+                        12
+                    </div>
+                    <div class="label">Assistidos esta semana</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value" th:text="${data.totalMoviesThisWeek}">
+                        8
+                    </div>
+                    <div class="label">Filmes</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value" th:text="${data.totalSeriesThisWeek}">
+                        4
+                    </div>
+                    <div class="label">Séries</div>
+                </div>
+                <div class="metric-card">
+                    <div
+                        class="value rating"
+                        th:text="${data.avgRatingOverall != null ? data.avgRatingOverall : '—'}"
+                    >
+                        8.5
+                    </div>
+                    <div class="label">Nota média</div>
+                </div>
+            </div>
+
+            <!-- Gênero favorito -->
+            <div th:if="${data.favoriteGenre}" style="margin-bottom: 20px">
+                <span
+                    style="
+                        color: #999;
+                        font-size: 10px;
+                        text-transform: uppercase;
+                    "
+                    >Gênero favorito da semana:</span
+                >
+                <span
+                    style="color: #e50914; font-weight: 700; margin-left: 6px"
+                    th:text="${data.favoriteGenre}"
+                    >Ação</span
+                >
+            </div>
+
+            <!-- Tabela de assistidos -->
+            <div class="section-title">Assistidos Recentemente</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Título</th>
+                        <th>Tipo</th>
+                        <th>Ano</th>
+                        <th>Nota</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item, idx : ${data.recentlyWatched}">
+                        <td class="rank" th:text="${idx.count}">1</td>
+                        <td th:text="${item.title}">Título</td>
+                        <td>
+                            <span
+                                class="badge badge-movie"
+                                th:if="${item.type == 'MOVIE'}"
+                                >Filme</span
+                            >
+                            <span
+                                class="badge badge-tv"
+                                th:if="${item.type == 'TV_SHOW'}"
+                                >Série</span
+                            >
+                        </td>
+                        <td th:text="${item.releaseYear}">2024</td>
+                        <td
+                            class="rating"
+                            th:text="${item.avgRating != null ? item.avgRating : '—'}"
+                        >
+                            8.5
+                        </td>
+                    </tr>
+                    <tr
+                        th:if="${data.recentlyWatched == null or data.recentlyWatched.empty}"
+                    >
+                        <td colspan="5" style="text-align: center; color: #666">
+                            Nenhuma mídia assistida esta semana
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="report-footer">
+            CineLog — Relatório gerado automaticamente |
+            <span th:text="${appName}">CineLog</span>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,289 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8" />
+        <style>
+            @page {
+                margin: 0;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family:
+                    "Segoe UI",
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    Roboto,
+                    sans-serif;
+                color: #e0e0e0;
+                background: #0d0d0d;
+                font-size: 11px;
+                line-height: 1.5;
+            }
+            .report-header {
+                background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+                color: #fff;
+                padding: 28px 36px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .report-header h1 {
+                font-size: 22px;
+                font-weight: 700;
+            }
+            .report-header .subtitle {
+                font-size: 12px;
+                opacity: 0.85;
+                margin-top: 4px;
+            }
+            .report-header .logo {
+                font-size: 28px;
+                font-weight: 800;
+                letter-spacing: 2px;
+            }
+            .content {
+                padding: 24px 36px 40px;
+            }
+            .metrics-row {
+                display: flex;
+                gap: 14px;
+                margin-bottom: 28px;
+            }
+            .metric-card {
+                flex: 1;
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                border-radius: 10px;
+                padding: 18px;
+                text-align: center;
+            }
+            .metric-card .value {
+                font-size: 26px;
+                font-weight: 700;
+                color: #e50914;
+            }
+            .metric-card .label {
+                font-size: 10px;
+                color: #999;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-top: 4px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 12px;
+            }
+            thead th {
+                background: #1a1a1a;
+                color: #e50914;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                padding: 10px 12px;
+                text-align: left;
+                border-bottom: 2px solid #e50914;
+            }
+            tbody td {
+                padding: 10px 12px;
+                border-bottom: 1px solid #1e1e1e;
+                vertical-align: middle;
+            }
+            tbody tr:nth-child(even) {
+                background: #111;
+            }
+            .badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .badge-movie {
+                background: #e50914;
+                color: #fff;
+            }
+            .badge-tv {
+                background: #0077cc;
+                color: #fff;
+            }
+            .rating {
+                color: #f5c518;
+                font-weight: 700;
+            }
+            .section-title {
+                font-size: 15px;
+                font-weight: 700;
+                color: #fff;
+                margin: 24px 0 12px;
+                padding-bottom: 6px;
+                border-bottom: 2px solid #e50914;
+            }
+            .genre-badge {
+                font-size: 24px;
+                font-weight: 700;
+                color: #e50914;
+                display: inline-block;
+                background: #1a1a1a;
+                padding: 6px 18px;
+                border-radius: 8px;
+                border: 1px solid #e50914;
+                margin-bottom: 8px;
+            }
+            .rank {
+                font-size: 14px;
+                font-weight: 800;
+                color: #e50914;
+                text-align: center;
+            }
+            .report-footer {
+                text-align: center;
+                font-size: 9px;
+                color: #666;
+                padding: 20px 36px;
+                border-top: 1px solid #1e1e1e;
+            }
+            .actor-table td.name {
+                font-weight: 600;
+                color: #fff;
+            }
+            .actor-table td.role {
+                color: #aaa;
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="report-header">
+            <div>
+                <h1>Genre Spotlight</h1>
+                <div class="subtitle">
+                    Análise detalhada do gênero
+                    <strong th:text="${data.genreName}">Drama</strong> — Gerado
+                    em
+                    <span
+                        th:text="${#temporals.format(data.generatedAt, 'dd/MM/yyyy HH:mm')}"
+                        >01/01/2026</span
+                    >
+                </div>
+            </div>
+            <div class="logo">CINELOG</div>
+        </div>
+
+        <div class="content">
+            <div style="text-align: center; margin-bottom: 18px">
+                <span class="genre-badge" th:text="${data.genreName}"
+                    >Drama</span
+                >
+            </div>
+
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <div class="value" th:text="${data.totalMedia}">120</div>
+                    <div class="label">Total de Títulos</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value" th:text="${data.totalMovies}">80</div>
+                    <div class="label">Filmes</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value" th:text="${data.totalSeries}">40</div>
+                    <div class="label">Séries</div>
+                </div>
+                <div class="metric-card">
+                    <div
+                        class="value"
+                        th:text="${#numbers.formatDecimal(data.avgRating, 1, 1)}"
+                    >
+                        7.8
+                    </div>
+                    <div class="label">Nota Média</div>
+                </div>
+            </div>
+
+            <!-- Melhores títulos do gênero -->
+            <div class="section-title">Melhores Avaliados no Gênero</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Título</th>
+                        <th>Tipo</th>
+                        <th>Ano</th>
+                        <th>Nota</th>
+                        <th>Assistido</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item, idx : ${data.topRatedInGenre}">
+                        <td class="rank" th:text="${idx.count}">1</td>
+                        <td th:text="${item.title}">Título</td>
+                        <td>
+                            <span
+                                class="badge badge-movie"
+                                th:if="${item.type == 'MOVIE'}"
+                                >Filme</span
+                            >
+                            <span
+                                class="badge badge-tv"
+                                th:if="${item.type == 'TV_SHOW'}"
+                                >Série</span
+                            >
+                        </td>
+                        <td th:text="${item.releaseYear}">2024</td>
+                        <td
+                            class="rating"
+                            th:text="${item.avgRating != null ? item.avgRating : '—'}"
+                        >
+                            9.1
+                        </td>
+                        <td th:text="${item.watchCount}">350</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Atores destaque no gênero -->
+            <div class="section-title">Atores Destaque no Gênero</div>
+            <table class="actor-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Ator</th>
+                        <th>Papel de Destaque</th>
+                        <th>Filmes no Gênero</th>
+                        <th>Nota Média</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="person, idx : ${data.topActorsInGenre}">
+                        <td class="rank" th:text="${idx.count}">1</td>
+                        <td class="name" th:text="${person.name}">Ator</td>
+                        <td
+                            class="role"
+                            th:text="${person.topRole != null ? person.topRole : '—'}"
+                        >
+                            Papel
+                        </td>
+                        <td th:text="${person.filmCount}">12</td>
+                        <td
+                            class="rating"
+                            th:text="${person.avgRating != null ? #numbers.formatDecimal(person.avgRating, 1, 1) : '—'}"
+                        >
+                            8.2
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="report-footer">
+            CineLog — Relatório gerado automaticamente |
+            <span th:text="${appName}">CineLog</span>
+        </div>
+    </body>
+</html>
