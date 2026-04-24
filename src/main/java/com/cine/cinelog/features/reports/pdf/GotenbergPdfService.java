@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -47,8 +48,13 @@ public class GotenbergPdfService {
     public GotenbergPdfService(WebClient.Builder webClientBuilder,
             TemplateEngine templateEngine,
             ReportProperties props) {
+        // PDFs com imagens (posters, fotos) podem ultrapassar o limite padrão de 256KB
+        ExchangeStrategies strategies = ExchangeStrategies.builder()
+                .codecs(cfg -> cfg.defaultCodecs().maxInMemorySize(16 * 1024 * 1024)) // 16 MB
+                .build();
         this.webClient = webClientBuilder
                 .baseUrl(props.getPdf().getGotenbergUrl())
+                .exchangeStrategies(strategies)
                 .build();
         this.templateEngine = templateEngine;
         this.props = props;

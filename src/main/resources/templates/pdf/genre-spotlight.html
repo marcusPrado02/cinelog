@@ -1,289 +1,275 @@
 <!doctype html>
 <html xmlns:th="http://www.thymeleaf.org">
-    <head>
-        <meta charset="UTF-8" />
-        <style>
-            @page {
-                margin: 0;
-            }
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-            body {
-                font-family:
-                    "Segoe UI",
-                    -apple-system,
-                    BlinkMacSystemFont,
-                    Roboto,
-                    sans-serif;
-                color: #e0e0e0;
-                background: #0d0d0d;
-                font-size: 11px;
-                line-height: 1.5;
-            }
-            .report-header {
-                background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
-                color: #fff;
-                padding: 28px 36px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .report-header h1 {
-                font-size: 22px;
-                font-weight: 700;
-            }
-            .report-header .subtitle {
-                font-size: 12px;
-                opacity: 0.85;
-                margin-top: 4px;
-            }
-            .report-header .logo {
-                font-size: 28px;
-                font-weight: 800;
-                letter-spacing: 2px;
-            }
-            .content {
-                padding: 24px 36px 40px;
-            }
-            .metrics-row {
-                display: flex;
-                gap: 14px;
-                margin-bottom: 28px;
-            }
-            .metric-card {
-                flex: 1;
-                background: #1a1a1a;
-                border: 1px solid #2a2a2a;
-                border-radius: 10px;
-                padding: 18px;
-                text-align: center;
-            }
-            .metric-card .value {
-                font-size: 26px;
-                font-weight: 700;
-                color: #e50914;
-            }
-            .metric-card .label {
-                font-size: 10px;
-                color: #999;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                margin-top: 4px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 12px;
-            }
-            thead th {
-                background: #1a1a1a;
-                color: #e50914;
-                font-size: 10px;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                padding: 10px 12px;
-                text-align: left;
-                border-bottom: 2px solid #e50914;
-            }
-            tbody td {
-                padding: 10px 12px;
-                border-bottom: 1px solid #1e1e1e;
-                vertical-align: middle;
-            }
-            tbody tr:nth-child(even) {
-                background: #111;
-            }
-            .badge {
-                display: inline-block;
-                padding: 2px 8px;
-                border-radius: 4px;
-                font-size: 9px;
-                font-weight: 600;
-                text-transform: uppercase;
-            }
-            .badge-movie {
-                background: #e50914;
-                color: #fff;
-            }
-            .badge-tv {
-                background: #0077cc;
-                color: #fff;
-            }
-            .rating {
-                color: #f5c518;
-                font-weight: 700;
-            }
-            .section-title {
-                font-size: 15px;
-                font-weight: 700;
-                color: #fff;
-                margin: 24px 0 12px;
-                padding-bottom: 6px;
-                border-bottom: 2px solid #e50914;
-            }
-            .genre-badge {
-                font-size: 24px;
-                font-weight: 700;
-                color: #e50914;
-                display: inline-block;
-                background: #1a1a1a;
-                padding: 6px 18px;
-                border-radius: 8px;
-                border: 1px solid #e50914;
-                margin-bottom: 8px;
-            }
-            .rank {
-                font-size: 14px;
-                font-weight: 800;
-                color: #e50914;
-                text-align: center;
-            }
-            .report-footer {
-                text-align: center;
-                font-size: 9px;
-                color: #666;
-                padding: 20px 36px;
-                border-top: 1px solid #1e1e1e;
-            }
-            .actor-table td.name {
-                font-weight: 600;
-                color: #fff;
-            }
-            .actor-table td.role {
-                color: #aaa;
-                font-style: italic;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="report-header">
-            <div>
-                <h1>Genre Spotlight</h1>
-                <div class="subtitle">
-                    Análise detalhada do gênero
-                    <strong th:text="${data.genreName}">Drama</strong> — Gerado
-                    em
-                    <span
-                        th:text="${#temporals.format(data.generatedAt, 'dd/MM/yyyy HH:mm')}"
-                        >01/01/2026</span
-                    >
-                </div>
+<head>
+    <meta charset="UTF-8" />
+    <style>
+@page { margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    color: #e0e0e0; background: #0d0d0d; font-size: 11px; line-height: 1.5;
+}
+
+/* ── Header ─────────────────────────────────────────── */
+.report-header {
+    background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+    color: #fff; padding: 28px 36px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.report-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.report-header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+.report-header .logo { font-size: 28px; font-weight: 800; letter-spacing: 2px; }
+.report-header .header-icon { font-size: 20px; margin-right: 8px; vertical-align: middle; }
+
+/* ── Content ────────────────────────────────────────── */
+.content { padding: 24px 36px 40px; }
+
+/* ── Metric Cards ───────────────────────────────────── */
+.metrics-row { display: flex; gap: 14px; margin-bottom: 28px; }
+.metric-card {
+    flex: 1; background: #1a1a1a; border: 1px solid #2a2a2a;
+    border-radius: 10px; padding: 16px; text-align: center;
+}
+.metric-card .icon { font-size: 22px; margin-bottom: 4px; display: block; }
+.metric-card .value { font-size: 28px; font-weight: 700; color: #e50914; }
+.metric-card .label {
+    font-size: 10px; color: #999; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-top: 4px;
+}
+.metric-card .growth { color: #4caf50; font-size: 10px; margin-top: 2px; }
+
+/* ── Tables ─────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+thead th {
+    background: #1a1a1a; color: #e50914; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 10px 12px; text-align: left; border-bottom: 2px solid #e50914;
+}
+tbody td { padding: 10px 12px; border-bottom: 1px solid #1e1e1e; vertical-align: middle; }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+/* ── Badges ─────────────────────────────────────────── */
+.badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 9px; font-weight: 600; text-transform: uppercase;
+}
+.badge-movie { background: #e50914; color: #fff; }
+.badge-tv { background: #0077cc; color: #fff; }
+
+/* ── Rating ─────────────────────────────────────────── */
+.rating { color: #f5c518; font-weight: 700; }
+.rating-pill {
+    background: rgba(245,197,24,0.12); padding: 3px 10px; border-radius: 12px;
+    color: #f5c518; font-weight: 700; font-size: 11px;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+}
+
+/* ── Section Title ──────────────────────────────────── */
+.section-title {
+    font-size: 15px; font-weight: 700; color: #fff;
+    margin: 28px 0 12px; padding-bottom: 8px;
+    border-bottom: 2px solid #e50914;
+    display: flex; align-items: center; gap: 8px;
+}
+.section-title .sec-icon { font-size: 16px; }
+
+/* ── Footer ─────────────────────────────────────────── */
+.report-footer {
+    text-align: center; font-size: 9px; color: #666;
+    padding: 20px 36px; border-top: 1px solid #1e1e1e;
+}
+
+/* ── Rank ───────────────────────────────────────────── */
+.rank {
+    font-size: 16px; font-weight: 800; color: #e50914;
+    text-align: center; min-width: 26px;
+}
+
+/* ── Media Cell (poster + title in table) ───────────── */
+.media-cell { display: flex; align-items: center; gap: 10px; }
+.poster-sm {
+    width: 40px; height: 60px; border-radius: 4px;
+    object-fit: cover; flex-shrink: 0; background: #111;
+}
+.no-poster {
+    width: 40px; height: 60px; border-radius: 4px;
+    background: linear-gradient(135deg, #252525, #1a1a1a);
+    display: flex; align-items: center; justify-content: center;
+    color: #444; font-size: 18px; flex-shrink: 0; border: 1px solid #2a2a2a;
+}
+.title-wrap .title { font-weight: 600; color: #fff; font-size: 11px; line-height: 1.3; }
+.title-wrap .year-sm { font-size: 9px; color: #777; margin-top: 1px; }
+
+/* ── Actor Cards ────────────────────────────────────── */
+.actor-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+.actor-card {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+    padding: 14px; width: calc(50% - 7px); display: flex; gap: 12px;
+    page-break-inside: avoid;
+}
+.actor-photo {
+    width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
+    flex-shrink: 0; border: 2px solid #e50914;
+}
+.no-photo {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+    display: flex; align-items: center; justify-content: center;
+    color: #444; font-size: 24px; flex-shrink: 0; border: 2px solid #333;
+}
+.actor-details { flex: 1; min-width: 0; }
+.actor-name-text { font-size: 13px; font-weight: 700; color: #fff; }
+.actor-meta { font-size: 10px; color: #999; margin-top: 2px; }
+.actor-stat-row { display: flex; gap: 14px; margin-top: 6px; font-size: 10px; color: #ccc; }
+.actor-stat-row .sv { color: #e50914; font-weight: 700; }
+.filmography { margin-top: 8px; padding-top: 8px; border-top: 1px solid #2a2a2a; }
+.filmography-label {
+    font-size: 9px; color: #666; text-transform: uppercase;
+    letter-spacing: .5px; margin-bottom: 4px;
+}
+.film-entry {
+    font-size: 10px; color: #ccc;
+    display: flex; justify-content: space-between; padding: 2px 0;
+}
+.film-entry .fr { color: #f5c518; font-weight: 600; }
+
+/* ── Genre ───────────────────────────────────────────── */
+.genre-tags { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.genre-tag {
+    background: linear-gradient(135deg, #e50914, #b20710); color: #fff;
+    padding: 5px 16px; border-radius: 20px; font-size: 10px; font-weight: 600;
+}
+.genre-badge {
+    font-size: 24px; font-weight: 700; color: #e50914;
+    display: inline-block; background: #1a1a1a;
+    padding: 8px 22px; border-radius: 10px; border: 2px solid #e50914;
+}
+
+/* ── Role badge ──────────────────────────────────────── */
+.role-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 9px; font-weight: 600; background: #333; color: #ccc;
+}
+
+/* ── Misc ────────────────────────────────────────────── */
+.highlight { color: #e50914; font-weight: 700; }
+.page-break { page-break-before: always; }
+.empty-msg { text-align: center; color: #666; padding: 24px; font-style: italic; }
+
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <div>
+            <h1><span class="header-icon">&#127917;</span> Genre Spotlight</h1>
+            <div class="subtitle">
+                Análise detalhada do gênero <strong th:text="${data.genreName}">Drama</strong> — Gerado em
+                <span th:text="${#temporals.format(data.generatedAt, 'dd/MM/yyyy HH:mm')}">01/01/2026</span>
             </div>
-            <div class="logo">CINELOG</div>
+        </div>
+        <div class="logo">CINELOG</div>
+    </div>
+
+    <div class="content">
+        <div style="text-align:center;margin-bottom:18px">
+            <span class="genre-badge" th:text="${data.genreName}">Drama</span>
         </div>
 
-        <div class="content">
-            <div style="text-align: center; margin-bottom: 18px">
-                <span class="genre-badge" th:text="${data.genreName}"
-                    >Drama</span
-                >
+        <div class="metrics-row">
+            <div class="metric-card">
+                <span class="icon">&#128218;</span>
+                <div class="value" th:text="${data.totalMedia}">120</div>
+                <div class="label">Total de Títulos</div>
             </div>
-
-            <div class="metrics-row">
-                <div class="metric-card">
-                    <div class="value" th:text="${data.totalMedia}">120</div>
-                    <div class="label">Total de Títulos</div>
-                </div>
-                <div class="metric-card">
-                    <div class="value" th:text="${data.totalMovies}">80</div>
-                    <div class="label">Filmes</div>
-                </div>
-                <div class="metric-card">
-                    <div class="value" th:text="${data.totalSeries}">40</div>
-                    <div class="label">Séries</div>
-                </div>
-                <div class="metric-card">
-                    <div
-                        class="value"
-                        th:text="${#numbers.formatDecimal(data.avgRating, 1, 1)}"
-                    >
-                        7.8
-                    </div>
-                    <div class="label">Nota Média</div>
-                </div>
+            <div class="metric-card">
+                <span class="icon">&#127909;</span>
+                <div class="value" th:text="${data.totalMovies}">80</div>
+                <div class="label">Filmes</div>
             </div>
+            <div class="metric-card">
+                <span class="icon">&#128250;</span>
+                <div class="value" th:text="${data.totalSeries}">40</div>
+                <div class="label">Séries</div>
+            </div>
+            <div class="metric-card">
+                <span class="icon">&#11088;</span>
+                <div class="value" th:text="${#numbers.formatDecimal(data.avgRating, 1, 1)}">7.8</div>
+                <div class="label">Nota Média</div>
+            </div>
+        </div>
 
-            <!-- Melhores títulos do gênero -->
-            <div class="section-title">Melhores Avaliados no Gênero</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Título</th>
-                        <th>Tipo</th>
-                        <th>Ano</th>
-                        <th>Nota</th>
-                        <th>Assistido</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="item, idx : ${data.topRatedInGenre}">
+        <!-- Melhores títulos do gênero -->
+        <div class="section-title"><span class="sec-icon">&#127942;</span> Melhores Avaliados no Gênero</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:40px">#</th>
+                    <th>Título</th>
+                    <th style="width:60px">Tipo</th>
+                    <th style="width:90px">Nota</th>
+                    <th style="width:80px">Views</th>
+                </tr>
+            </thead>
+            <tbody>
+<tr th:each="item, idx : ${data.topRatedInGenre}">
                         <td class="rank" th:text="${idx.count}">1</td>
-                        <td th:text="${item.title}">Título</td>
                         <td>
-                            <span
-                                class="badge badge-movie"
-                                th:if="${item.type == 'MOVIE'}"
-                                >Filme</span
-                            >
-                            <span
-                                class="badge badge-tv"
-                                th:if="${item.type == 'TV_SHOW'}"
-                                >Série</span
-                            >
+                            <div class="media-cell">
+                                <img th:if="${item.posterUrl != null}" th:src="${item.posterUrl}" class="poster-sm" alt="" />
+                                <div th:if="${item.posterUrl == null}" class="no-poster">&#127916;</div>
+                                <div class="title-wrap">
+                                    <div class="title" th:text="${item.title}">Título</div>
+                                    <div class="year-sm" th:text="${item.releaseYear}">2024</div>
+                                </div>
+                            </div>
                         </td>
-                        <td th:text="${item.releaseYear}">2024</td>
-                        <td
-                            class="rating"
-                            th:text="${item.avgRating != null ? item.avgRating : '—'}"
-                        >
-                            9.1
+                        <td>
+                            <span class="badge badge-movie" th:if="${item.type == 'MOVIE'}">Filme</span>
+                            <span class="badge badge-tv" th:if="${item.type == 'TV_SHOW'}">Série</span>
                         </td>
-                        <td th:text="${item.watchCount}">350</td>
+                        <td>
+                            <span class="rating-pill" th:if="${item.avgRating != null}">&#9733; <span th:text="${item.avgRating}">8.5</span></span>
+                            <span th:if="${item.avgRating == null}" style="color:#555">—</span>
+                        </td>
+                        <td style="color:#ccc">
+                            <span th:text="${item.watchCount}">150</span>
+                        </td>
                     </tr>
-                </tbody>
-            </table>
+            </tbody>
+        </table>
 
-            <!-- Atores destaque no gênero -->
-            <div class="section-title">Atores Destaque no Gênero</div>
-            <table class="actor-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Ator</th>
-                        <th>Papel de Destaque</th>
-                        <th>Filmes no Gênero</th>
-                        <th>Nota Média</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="person, idx : ${data.topActorsInGenre}">
-                        <td class="rank" th:text="${idx.count}">1</td>
-                        <td class="name" th:text="${person.name}">Ator</td>
-                        <td
-                            class="role"
-                            th:text="${person.topRole != null ? person.topRole : '—'}"
-                        >
-                            Papel
-                        </td>
-                        <td th:text="${person.filmCount}">12</td>
-                        <td
-                            class="rating"
-                            th:text="${person.avgRating != null ? #numbers.formatDecimal(person.avgRating, 1, 1) : '—'}"
-                        >
-                            8.2
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Atores destaque no gênero -->
+        <div class="section-title"><span class="sec-icon">&#127775;</span> Atores Destaque no Gênero</div>
+        <div class="actor-grid">
+            <div class="actor-card" th:each="person, idx : ${data.topActorsInGenre}">
+                <img th:if="${person.profileUrl != null}" th:src="${person.profileUrl}" class="actor-photo" alt="" />
+                <div th:if="${person.profileUrl == null}" class="no-photo">&#128100;</div>
+                <div class="actor-details">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <span class="rank" th:text="${idx.count}">1</span>
+                        <span class="actor-name-text" th:text="${person.name}">Ator</span>
+                    </div>
+                    <div class="actor-meta">
+                        <span class="role-badge" th:text="${person.topRole != null ? person.topRole : '—'}">ACTOR</span>
+                    </div>
+                    <div class="actor-stat-row">
+                        <span>&#127916; <span class="sv" th:text="${person.filmCount}">12</span> filmes</span>
+                        <span th:if="${person.avgRating != null}">&#9733; <span class="sv" style="color:#f5c518" th:text="${#numbers.formatDecimal(person.avgRating, 1, 1)}">8.2</span></span>
+                    </div>
+                    <div class="filmography" th:if="${person.topMedia != null and !person.topMedia.empty}">
+                        <div class="filmography-label">Top Filmes</div>
+                        <div class="film-entry" th:each="film : ${person.topMedia}">
+                            <span th:text="${film.title}">Filme</span>
+                            <span class="fr" th:if="${film.avgRating != null}" th:text="'★ ' + ${film.avgRating}">★ 9.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="report-footer">
-            CineLog — Relatório gerado automaticamente |
-            <span th:text="${appName}">CineLog</span>
-        </div>
-    </body>
+    <div class="report-footer">
+        CineLog — Relatório gerado automaticamente | <span th:text="${appName}">CineLog</span>
+    </div>
+</body>
 </html>
