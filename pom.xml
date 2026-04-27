@@ -43,7 +43,7 @@
         <maven.surefire.version>3.2.5</maven.surefire.version>
         <springdoc.version>1.5</springdoc.version>
         <jacoco.version>0.8.14</jacoco.version>
-        <jjwt.version>0.12.6</jjwt.version>
+        <jjwt.version>0.13.0</jjwt.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <archunit.version>1.3.0</archunit.version>
         <kafka.version>3.9.2</kafka.version>
@@ -83,7 +83,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
-                <version>1.27.1</version>
+                <version>1.28.0</version>
             </dependency>
             <!-- jackson-bom: async parser DoS (GHSA-72hv-8253-57qq) — 2.19.4 afetado, fix em 2.20.x -->
             <dependency>
