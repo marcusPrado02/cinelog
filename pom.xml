@@ -34,7 +34,7 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.42</lombok.version>
         <otel.version>1.41.0</otel.version>
-        <logstash.version>7.4</logstash.version>
+        <logstash.version>9.0</logstash.version>
         <springdoc.version>1.5</springdoc.version>
         <springdoc.version.starter>2.8.13</springdoc.version.starter>
         <datasource.proxy.version>1.11.0</datasource.proxy.version>
