@@ -39,7 +39,7 @@ jobs:
 
         steps:
             - name: "\U0001F4E5 Checkout código"
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: "☕ Setup Java 21"
               uses: actions/setup-java@v4
@@ -92,7 +92,7 @@ jobs:
 
         steps:
             - name: "\U0001F4E5 Checkout código"
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: "☕ Setup Java 21"
               uses: actions/setup-java@v4
@@ -123,7 +123,7 @@ jobs:
 
         steps:
             - name: "\U0001F4E5 Checkout código"
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: "☕ Setup Java 21"
               uses: actions/setup-java@v4
@@ -145,7 +145,7 @@ jobs:
 
         steps:
             - name: "\U0001F4E5 Checkout código"
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: "☕ Setup Java 21"
               uses: actions/setup-java@v4
